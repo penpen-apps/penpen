@@ -14,12 +14,13 @@
   function set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
 
   var TOKEN = get('pp_tok', null), ROLE = get('pp_role', ''), waiting = [], joinCode = new URLSearchParams(location.search).get('join');
-  function valid() { return TOKEN && TOKEN.exp * 1000 > Date.now() + 60000; }
+  var SESS = localStorage.getItem('pp_sess') || '';   // 30-day penpen session after one Google sign-in
+  function valid() { return !!SESS || !!(TOKEN && TOKEN.exp * 1000 > Date.now() + 60000); }
 
   /* ---------- talking to the server ---------- */
   function post(action, args) {
     return fetch(SERVER, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ token: TOKEN && TOKEN.cred, action: action, args: args || {} }) })
+      body: JSON.stringify(SESS ? { session: SESS, action: action, args: args || {} } : { token: TOKEN && TOKEN.cred, action: action, args: args || {} }) })
       .then(function (r) { return r.json(); })
       .then(function (j) { if (!j.ok) throw new Error(j.error); return j.data; });
   }
@@ -42,7 +43,7 @@
         return r;
       })
       .catch(function (e) {
-        if (e.message === 'signin') { TOKEN = null; set('pp_tok', null); showSignin('Please sign in again.'); return call(fn, args); }
+        if (e.message === 'signin') { TOKEN = null; SESS = ''; set('pp_tok', null); localStorage.removeItem('pp_sess'); showSignin('Please sign in again.'); return call(fn, args); }
         var c = get(key, undefined);
         if (isRead && c !== undefined) return c;
         if (e.message === 'personaldiary') throw new Error('Your private diary is moving to your own Google Drive — use the group diary for now.');
@@ -154,6 +155,7 @@
     var p = JSON.parse(decodeURIComponent(escape(atob(resp.credential.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))));
     TOKEN = { cred: resp.credential, exp: p.exp, email: p.email, name: p.given_name || p.name };
     set('pp_tok', TOKEN);
+    SESS = ''; localStorage.removeItem('pp_sess');   // a fresh Google sign-in gets a fresh session
     enter();
   }
   function enter() {
@@ -161,18 +163,19 @@
     step.then(function () { return post('whoami', {}); }).then(function (w) {
       if (!w.member) { ROLE = ''; set('pp_role', ''); return showNotMember(); }
       ROLE = w.member.role; set('pp_role', ROLE);
+      if (w.session && w.session !== SESS) { SESS = w.session; localStorage.setItem('pp_sess', SESS); }
       var g = document.getElementById('pp-gate'); if (g) g.style.display = 'none';
       var q = waiting; waiting = []; q.forEach(function (f) { f(); });
       if (window.ppRefreshTheme) setTimeout(window.ppRefreshTheme, 1500);
     }).catch(function (e) {
       if (e.message === 'badinvite') return showSignin('That invite link has expired — ask for a new one.');
-      if (e.message === 'signin') return showSignin('Please sign in again.');
+      if (e.message === 'signin') { SESS = ''; localStorage.removeItem('pp_sess'); return showSignin('Please sign in again.'); }
       if (!navigator.onLine) return;
       showSignin("Couldn't reach penpen — check your connection and try again.");
     });
   }
   window.ppSignOut = function () {
-    ['pp_tok', 'pp_role'].forEach(function (k) { localStorage.removeItem(k); });
+    ['pp_tok', 'pp_role', 'pp_sess'].forEach(function (k) { localStorage.removeItem(k); });
     Object.keys(localStorage).forEach(function (k) { if (k.indexOf('pp_c_') === 0) localStorage.removeItem(k); });
     try { google.accounts.id.disableAutoSelect(); } catch (e) {}
     location.reload();
