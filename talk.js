@@ -16,7 +16,8 @@
   /* ---------- screen ---------- */
   var css = '#pp-talk{position:fixed;inset:0;z-index:99995;background:linear-gradient(180deg,#DCEDE7,#F6EEDF);display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:calc(28px + env(safe-area-inset-top)) 20px calc(34px + env(safe-area-inset-bottom));font:17px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#2B2A28}' +
     'body.pp-dark #pp-talk{background:linear-gradient(180deg,#1E2422,#2A3330);color:#F1ECE2}' +
-    '#pp-talk .st{font-size:15px;color:#5E7A70;min-height:22px;text-align:center}' +
+    '#pp-talk .st{font:800 19px/1.3 Nunito,-apple-system,sans-serif;color:#13324A;background:rgba(255,255,255,.8);border-radius:99px;padding:10px 20px;min-height:24px;text-align:center;max-width:92%}' +
+    'body.pp-dark #pp-talk .st{background:rgba(0,0,0,.28);color:#F1ECE2}#pp-talk.holding .st{background:#C8553D;color:#fff}' +
     '#pp-talk .orb{position:relative;width:220px;height:220px;display:grid;place-items:center}' +
     '#pp-talk .ring{position:absolute;inset:0;border-radius:50%;background:#237566;opacity:.12;transform:scale(var(--lvl,1));transition:transform .08s}' +
     '#pp-talk .ring.b{inset:22px;opacity:.18}' +
@@ -30,7 +31,7 @@
     '#pp-talk .mute{background:#fff;color:#2B2A28}#pp-talk .mute.on{background:#2B2A28;color:#fff}' +
     '#pp-talk .end{background:#C8553D;color:#fff}' +
     '#pp-talk .ptt{display:flex;gap:12px;width:100%;max-width:440px}#pp-talk .ptt button{flex:1;min-height:96px;border-radius:24px;border:0;font:800 17px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#13324A;box-shadow:0 4px 14px rgba(0,0,0,.1);touch-action:none;user-select:none;-webkit-user-select:none}' +
-    '#pp-talk .ptt button.on{background:#237566;color:#fff;transform:scale(.98)}#pp-talk .ptt small{display:block;font-weight:700;font-size:13px;opacity:.75;margin-top:4px}' +
+    '#pp-talk .ptt button.solo{min-height:120px;font-size:21px}#pp-talk .ptt button.on{background:#C8553D;color:#fff;transform:scale(.97)}#pp-talk .ptt small{display:block;font-weight:700;font-size:13px;opacity:.75;margin-top:4px}' +
     '@media (max-height:720px){#pp-talk{padding-top:calc(16px + env(safe-area-inset-top));padding-bottom:calc(18px + env(safe-area-inset-bottom))}#pp-talk .orb{width:170px;height:170px}#pp-talk .pen{width:118px;height:118px}#pp-talk .cap{font-size:17px}}';
   var PEN = '<svg class="pen" viewBox="0 0 120 120" aria-hidden="true"><ellipse cx="60" cy="112" rx="30" ry="5" fill="#000" opacity=".08"/><path d="M60 14c-26 0-40 22-40 50 0 26 16 44 40 44s40-18 40-44c0-28-14-50-40-50z" fill="#2E3A4A"/><ellipse cx="60" cy="76" rx="25" ry="28" fill="#FFF8EE"/><circle cx="48.5" cy="50" r="13" fill="#FFF8EE"/><circle cx="71.5" cy="50" r="13" fill="#FFF8EE"/><circle cx="48.5" cy="51" r="5.2" fill="#1E1E1E"/><circle cx="71.5" cy="51" r="5.2" fill="#1E1E1E"/><circle cx="50.3" cy="49" r="1.8" fill="#fff"/><circle cx="73.3" cy="49" r="1.8" fill="#fff"/><path d="M54 60q6 7 12 0q-6 4-12 0z" fill="#F4A62A"/><ellipse cx="40" cy="62" rx="5" ry="3" fill="#F7A9A0" opacity=".6"/><ellipse cx="80" cy="62" rx="5" ry="3" fill="#F7A9A0" opacity=".6"/><ellipse cx="48" cy="106" rx="9" ry="4" fill="#F4A62A"/><ellipse cx="72" cy="106" rx="9" ry="4" fill="#F4A62A"/></svg>';
 
@@ -59,14 +60,10 @@
     w.innerHTML = '<div class="st" id="pp-t-st">Connecting…</div>' +
       '<div class="orb"><div class="ring"></div><div class="ring b"></div>' + myPenguin() + '</div>' +
       '<div class="cap" id="pp-t-cap"></div>' +
-      '<div class="bar"><button class="mute" id="pp-t-mute" aria-label="Mute microphone">🎙️</button><button class="end" id="pp-t-end" aria-label="End">✕</button></div>';
+      '<div class="bar"><button class="end" id="pp-t-end" aria-label="End">✕</button></div>';
     document.body.appendChild(w);
     S = { el: w, turns: [], inT: '', outT: '', muted: false, model: 0, nextAt: 0, sources: [], mode: opts.mode || 'talk', lang: opts.lang || '' };
     document.getElementById('pp-t-end').onclick = close;
-    document.getElementById('pp-t-mute').onclick = function () {
-      S.muted = !S.muted; this.classList.toggle('on', S.muted); this.textContent = S.muted ? '🔇' : '🎙️';
-      status(S.muted ? 'Muted' : 'Listening…');
-    };
     try { S.ctx = new (window.AudioContext || window.webkitAudioContext)(); S.ctx.resume(); } catch (e) {}
     if (S.mode === 'translate' && !S.lang) return pickLang();
     begin();
@@ -103,20 +100,31 @@
   function caption(t) { var c = document.getElementById('pp-t-cap'); if (c) c.textContent = t; }
 
 
-  /* ---------- Translate: hold-to-talk so two people never get mixed up ---------- */
+  /* ---------- hold-to-talk: press, speak, let go (Talk has one button, Translate has Me / Them) ---------- */
+  function idle() { return S && S.mode === 'translate' ? '🌐 Hold a button and speak' : '🎙️ Hold the button and talk'; }
   function showPtt() {
-    var them = S.lang.replace(/ \(.*\)/, '');
+    if (S.el.querySelector('.ptt')) return;
     var bar = S.el.querySelector('.bar');
     var box = document.createElement('div'); box.className = 'ptt';
-    box.innerHTML = '<button type="button" data-who="me">🙋 Me<small>hold · English</small></button><button type="button" data-who="them">🧑 Them<small>hold · ' + them + '</small></button>';
+    if (S.mode === 'translate') {
+      var them = S.lang.replace(/ \(.*\)/, '');
+      box.innerHTML = '<button type="button" data-who="me">🙋 Me<small>hold · English</small></button><button type="button" data-who="them">🧑 Them<small>hold · ' + them + '</small></button>';
+    } else box.innerHTML = '<button type="button" class="solo" data-who="me">🎙️ Hold to talk<small>let go when you\'re done</small></button>';
     bar.parentNode.insertBefore(box, bar);
-    document.getElementById('pp-t-mute').style.display = 'none';
     box.querySelectorAll('button').forEach(function (b) {
-      var down = function (e) { e.preventDefault(); if (!S) return; stopAudio(); S.ptt = b.dataset.who; b.classList.add('on'); status(b.dataset.who === 'me' ? '🙋 Listening to you…' : '🧑 Listening to them…'); };
+      var label = b.innerHTML;
+      var down = function (e) {
+        e.preventDefault(); if (!S || !S.ready || S.ptt) return;
+        stopAudio(); S.ptt = b.dataset.who; b.classList.add('on'); S.el.classList.add('holding');
+        b.innerHTML = '🔴 Listening…<small>let go to send</small>';
+        status(S.mode === 'translate' ? (b.dataset.who === 'me' ? '🙋 Listening to you…' : '🧑 Listening to them…') : '🔴 Listening… let go when done');
+        try { S.ws.send(JSON.stringify({ realtimeInput: { activityStart: {} } })); } catch (x) {}
+      };
       var up = function (e) {
         if (!S || S.ptt !== b.dataset.who) return; e.preventDefault();
-        S.ptt = null; b.classList.remove('on'); status('🌐 Translating…');
-        try { S.ws.send(JSON.stringify({ realtimeInput: { audioStreamEnd: true } })); } catch (x) {}
+        S.ptt = null; b.classList.remove('on'); S.el.classList.remove('holding'); b.innerHTML = label;
+        status(S.mode === 'translate' ? '🌐 Translating…' : '💭 penpen is thinking…');
+        try { S.ws.send(JSON.stringify({ realtimeInput: { activityEnd: {} } })); } catch (x) {}
       };
       b.addEventListener('pointerdown', down); b.addEventListener('pointerup', up); b.addEventListener('pointercancel', up); b.addEventListener('pointerleave', up);
       b.addEventListener('contextmenu', function (e) { e.preventDefault(); });
@@ -136,6 +144,7 @@
           model: MODELS[S.model],
           generationConfig: { responseModalities: ['AUDIO'], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: L.voice } } } },
           systemInstruction: { parts: [{ text: L.system }] },
+          realtimeInputConfig: { automaticActivityDetection: { disabled: true } },   // we say when someone starts and stops talking
           inputAudioTranscription: {}, outputAudioTranscription: {},
           tools: S.mode === 'translate' ? [] : [{ functionDeclarations: [{ name: 'penpen_action',
             description: 'Record or change something on the trip, or calculate money: log an expense or payment, split, settle up, undo, who owes who, totals.',
@@ -158,8 +167,8 @@
     if (!S) return;
     if (j.setupComplete) {
       S.ready = true;
-      if (S.mode === 'translate') { status('🌐 Hold a button and speak'); showPtt(); return; }
-      status('Listening…');
+      showPtt(); status(idle());
+      if (S.mode === 'translate') return;
       // let penpen open with a short hello
       S.ws.send(JSON.stringify({ clientContent: { turns: [{ role: 'user', parts: [{ text: '(The user just opened voice chat. Greet them in a few words.)' }] }], turnComplete: true } }));
       return;
@@ -174,7 +183,7 @@
       if (S.inT.trim() && S.inT.indexOf('(The user just opened') < 0) S.turns.push({ who: 'me', t: S.inT.trim() });
       if (S.outT.trim()) S.turns.push({ who: 'pp', t: S.outT.trim() });
       S.inT = ''; S.outT = '';
-      setTimeout(function () { if (S && !S.sources.length) { S.el.classList.remove('speaking'); status(S.mode === 'translate' ? '🌐 Hold a button and speak' : S.muted ? 'Muted' : 'Listening…'); } }, 300);
+      setTimeout(function () { if (S && !S.sources.length) { S.el.classList.remove('speaking'); status(idle()); } }, 300);
     }
   }
 
@@ -202,8 +211,8 @@
         for (var i = 0; i < n; i++) { var s = input[Math.floor(i * ratio)]; sum += s * s; s = Math.max(-1, Math.min(1, s)); out[i] = s < 0 ? s * 0x8000 : s * 0x7fff; }
         var lvl = Math.sqrt(sum / n);
         if (ring && !S.el.classList.contains('speaking')) ring.style.setProperty('--lvl', String(1 + Math.min(lvl * 6, 0.35)));
-        if (S.muted || !S.ready || !S.ws || S.ws.readyState !== 1) return;
-        if (S.mode === 'translate' && !S.ptt) return;   // hold-to-talk: only listen while someone holds a button
+        if (!S.ready || !S.ws || S.ws.readyState !== 1) return;
+        if (!S.ptt) return;   // hold-to-talk: only listen while the button is held
         var bytes = new Uint8Array(out.buffer), bin = '';
         for (var k = 0; k < bytes.length; k += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(k, k + 0x8000));
         S.ws.send(JSON.stringify({ realtimeInput: { audio: { data: btoa(bin), mimeType: 'audio/pcm;rate=16000' } } }));
@@ -222,11 +231,11 @@
     for (var i = 0; i < n; i++) { var v = (bin.charCodeAt(2 * i + 1) << 8) | bin.charCodeAt(2 * i); if (v & 0x8000) v -= 0x10000; ch[i] = v / 32768; }
     var src = ctx.createBufferSource(); src.buffer = buf; src.connect(ctx.destination);
     var at = Math.max(ctx.currentTime + 0.02, S.nextAt); src.start(at); S.nextAt = at + buf.duration;
-    S.sources.push(src); S.el.classList.add('speaking'); status('penpen is talking…');
+    S.sources.push(src); S.el.classList.add('speaking'); status(S.mode === 'translate' ? '🔊 Translation' : '🔊 penpen is talking…');
     src.onended = function () {
       if (!S) return;
       S.sources = S.sources.filter(function (x) { return x !== src; });
-      if (!S.sources.length) { S.el.classList.remove('speaking'); status(S.mode === 'translate' ? '🌐 Hold a button and speak' : S.muted ? 'Muted' : 'Listening…'); }
+      if (!S.sources.length) { S.el.classList.remove('speaking'); status(idle()); }
     };
   }
   function stopAudio() {
