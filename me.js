@@ -13,7 +13,7 @@
     /* My profile */
     '#pp-me{position:fixed;inset:0;z-index:99960;background:var(--bg);color:var(--ink);overflow:auto;padding:calc(14px + env(safe-area-inset-top)) 16px calc(30px + env(safe-area-inset-bottom));font:16px/1.4 ' + F + '}' +
     '#pp-me .top{display:flex;align-items:center;gap:10px;max-width:560px;margin:0 auto 6px}#pp-me .top h2{flex:1;margin:0;font:900 24px ' + F + '}' +
-    '#pp-me .back{border:0;background:var(--card);color:var(--ink);border-radius:50%;width:40px;height:40px;font-size:22px;cursor:pointer}' +
+    '#pp-me .back{border:0;background:var(--card);color:var(--ink);border-radius:50%;width:40px;height:40px;font-size:24px;line-height:1;padding:0 0 3px;display:grid;place-items:center;cursor:pointer}' +
     '#pp-me .wrapme{max-width:560px;margin:0 auto}' +
     '#pp-me .mecard{display:flex;align-items:center;gap:14px;background:var(--card);border-radius:20px;padding:16px;margin-top:12px}' +
     '#pp-me .mecard .av{width:72px;height:72px;flex:0 0 72px;display:grid;place-items:center}#pp-me .mecard .av svg{width:72px;height:72px}' +
