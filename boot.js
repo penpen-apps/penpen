@@ -105,30 +105,6 @@
   })();
 
 
-  /* ---------- cleaner, Google-like map style (free CARTO "Voyager" tiles instead of the busy default) ---------- */
-  (function () {
-    function wrap(L) {
-      if (!L || !L.tileLayer || L.__ppWrapped) return L;
-      var orig = L.tileLayer;
-      L.tileLayer = function (url, opts) {
-        if (/openstreetmap\.org/.test(String(url))) {
-          url = 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
-          opts = Object.assign({}, opts || {}, { subdomains: 'abcd', maxZoom: 20,
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>' });
-        }
-        return orig.call(this, url, opts);
-      };
-      L.__ppWrapped = true;
-      return L;
-    }
-    var cur = window.L;
-    if (cur) wrap(cur);
-    else try {
-      Object.defineProperty(window, 'L', { configurable: true, enumerable: true,
-        get: function () { return cur; }, set: function (v) { cur = wrap(v); } });
-    } catch (e) {}
-  })();
-
   /* ---------- sign in ---------- */
   var css = '#pp-gate{position:fixed;inset:0;z-index:99999;background:#F6EEDF;display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;font:16px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#2B2A28}' +
     '#pp-gate h1{font-size:28px;margin:10px 0 4px}#pp-gate p{color:#7A7468;max-width:320px;margin:6px auto}#pp-gate .b{margin:20px 0}' +
