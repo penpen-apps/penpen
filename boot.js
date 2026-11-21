@@ -26,6 +26,8 @@
   function ready() { return new Promise(function (res) { if (valid() && ROLE) res(); else waiting.push(res); }); }
 
   function call(fn, args) {
+    var hk = window.ppChatHook && window.ppChatHook(fn, args);
+    if (hk) return call(hk.fn, hk.args).then(function (r) { try { hk.after(r); } catch (e) {} return r; });
     var key = 'pp_c_' + fn + ':' + JSON.stringify(args).slice(0, 200);
     var isRead = READS.indexOf(fn) >= 0;
     if (!navigator.onLine) {
@@ -66,6 +68,7 @@
       };
     } });
   }
+  window.ppCall = call;
   window.google = window.google || {};
   window.google.script = { run: runner({}) };
 
