@@ -16,7 +16,7 @@
 
   var TOKEN = get('pp_tok', null), ROLE = get('pp_role', ''), waiting = [], joinCode = new URLSearchParams(location.search).get('join');
   var SESS = localStorage.getItem('pp_sess') || '';   // 30-day penpen session after one Google sign-in
-  var TRIP = localStorage.getItem('pp_trip') || '';   // which trip this phone is looking at ('' = the first trip)
+  var TRIP = localStorage.getItem('pp_trip_id') || '';   // which trip this phone is looking at ('' = the first trip)
   function valid() { return !!SESS || !!(TOKEN && TOKEN.exp * 1000 > Date.now() + 60000); }
 
   /* ---------- talking to the server ---------- */
@@ -199,7 +199,7 @@
   /* ---------- many trips ---------- */
   function clearCache() { Object.keys(localStorage).forEach(function (k) { if (k.indexOf('pp_c_') === 0) localStorage.removeItem(k); }); }
   function setTrip(id, name) {
-    TRIP = id || ''; localStorage.setItem('pp_trip', TRIP);
+    TRIP = id || ''; localStorage.setItem('pp_trip_id', TRIP);
     if (name) localStorage.setItem('pp_trip_name', name);
     clearCache(); localStorage.removeItem('pp_trip_theme'); localStorage.removeItem('pp_scene_own');
   }
@@ -211,7 +211,7 @@
   };
 
   window.ppSignOut = function () {
-    ['pp_tok', 'pp_role', 'pp_sess', 'pp_trip', 'pp_trip_name'].forEach(function (k) { localStorage.removeItem(k); });
+    ['pp_tok', 'pp_role', 'pp_sess', 'pp_trip_id', 'pp_trip_name'].forEach(function (k) { localStorage.removeItem(k); });
     Object.keys(localStorage).forEach(function (k) { if (k.indexOf('pp_c_') === 0) localStorage.removeItem(k); });
     try { google.accounts.id.disableAutoSelect(); } catch (e) {}
     location.reload();
