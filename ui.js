@@ -54,8 +54,8 @@
 
   /* ---------- clearer action buttons (Directions, Call…) ---------- */
   var css2 =
-    '.acts .act,.ctb .act{background:#237566!important;color:#fff!important;border:0!important;font-weight:600!important;box-shadow:0 2px 8px rgba(35,117,102,.25)!important;display:inline-flex!important;align-items:center;gap:6px}' +
-    '.acts .act:active,.ctb .act:active{transform:scale(.97)}' +
+    '.acts .act,.ctb .act,.ctb > a,.ctb > button{background:#237566!important;color:#fff!important;border:0!important;font-weight:600!important;box-shadow:0 2px 8px rgba(35,117,102,.25)!important;display:inline-flex!important;align-items:center;gap:6px}' +
+    '.acts .act:active,.ctb .act:active,.ctb > a:active{transform:scale(.97)}' +
     '.pp-num{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}' +
     '.pp-num button,.pp-num a{font:inherit;font-size:14px;border-radius:12px;padding:8px 12px;border:1.5px solid #237566;background:none;color:#237566;text-decoration:none;font-weight:600}' +
     '.pp-num input{flex:1;min-width:150px;font:inherit;font-size:15px;padding:8px 10px;border-radius:12px;border:1.5px solid #E8DDC8;background:#fff}' +
