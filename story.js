@@ -47,6 +47,7 @@
     '.pp-sheet .it{display:flex;gap:12px;align-items:flex-start;width:100%;text-align:left;border:0;background:#FFFDF8;border-radius:16px;padding:13px 14px;margin:0 0 8px;font:inherit;color:inherit;cursor:pointer}' +
     '.pp-sheet .it .ic{font-size:22px;line-height:1.1}.pp-sheet .it b{display:block;font-weight:800}.pp-sheet .it small{display:block;color:#5C6E7C;font-size:13.5px}' +
     '.pp-sheet .it.new{box-shadow:inset 4px 0 0 #C8553D}.pp-sheet .it.on{box-shadow:inset 0 0 0 2px #237566}.pp-sheet .it .ok{margin-left:auto;color:#237566;font-weight:900}' +
+    '.pp-sheet .it .del{margin-left:auto;align-self:center;font-size:13px;font-weight:800;color:#C8553D;padding:6px 8px;border-radius:10px}.pp-sheet .it .del.sure{background:#C8553D;color:#fff}' +
     '.pp-sheet .empty{text-align:center;color:#5C6E7C;padding:18px 8px}' +
     '.pp-sheet label{display:block;font:800 13px Nunito,-apple-system,sans-serif;margin:12px 2px 4px;color:#4F6475}' +
     '.pp-sheet input{width:100%;box-sizing:border-box;border:1.5px solid #E3D6BE;border-radius:14px;padding:12px;font:16px Nunito,-apple-system,sans-serif;background:#fff;color:#13324A}' +
@@ -234,10 +235,18 @@
       bd.innerHTML = l.map(function (x, i) {
         var on = (x.id || '') === (cur || '') || (!cur && x.home);
         var dates = x.start ? x.start + (x.end ? ' → ' + x.end : '') : (x.home ? 'Your first trip' : '');
-        return '<button type="button" class="it' + (on ? ' on' : '') + '" data-i="' + i + '"><span class="ic">' + (on ? '🧳' : '🗺️') + '</span><span><b>' + esc(x.name) + '</b><small>' + esc(dates) + ' · ' + esc(x.role) + '</small></span>' + (on ? '<span class="ok">✓</span>' : '') + '</button>';
+        return '<button type="button" class="it' + (on ? ' on' : '') + '" data-i="' + i + '"><span class="ic">' + (on ? '🧳' : '🗺️') + '</span><span><b>' + esc(x.name) + '</b><small>' + esc(dates) + ' · ' + esc(x.role) + '</small></span>' + (on ? '<span class="ok">✓</span>' : (!x.home && x.role === 'creator' ? '<span class="del" data-del="' + i + '">Delete</span>' : '')) + '</button>';
       }).join('') + '<button type="button" class="go" data-new="1">＋ New trip</button>';
       bd.onclick = function (e) {
         if (e.target.closest('[data-new]')) return newTrip(s);
+        var del = e.target.closest('.del');
+        if (del) {
+          e.stopPropagation();
+          if (!del.classList.contains('sure')) { del.classList.add('sure'); del.textContent = 'Tap again to delete'; return; }
+          del.textContent = 'Deleting…';
+          window.ppTrips.remove(l[+del.dataset.del].id).then(function () { s.remove(); openTrips(); }, function (er) { del.textContent = 'Couldn\'t delete'; });
+          return;
+        }
         var b = e.target.closest('.it'); if (!b) return;
         var x = l[+b.dataset.i]; if ((x.id || '') === (cur || '')) return s.remove();
         bd.innerHTML = '<div class="empty">🐧 Opening ' + esc(x.name) + '…</div>';
@@ -257,7 +266,7 @@
     go.onclick = function () {
       var v = function (id) { return document.getElementById(id).value.trim(); };
       if (!v('pp-nt-name')) { document.getElementById('pp-nt-name').focus(); return; }
-      go.disabled = true; go.textContent = '🐧 Packing your new trip… (about 20 seconds)';
+      go.disabled = true; go.textContent = '🐧 Packing your new trip… (up to a minute)';
       window.ppTrips.create({ name: v('pp-nt-name'), where: v('pp-nt-where'), start: v('pp-nt-start'), end: v('pp-nt-end') }).then(function (t) {
         go.textContent = '✨ Ready! Opening it…'; window.ppTrips.open(t.id, t.name);
       }, function (e) {
