@@ -1,6 +1,8 @@
 /* penpen Simple screens (on by default; switch off in My profile → "Simple screens")
-   Today: one Next card, three big tiles (who owes · plan · diary) and one Talk button.
+   Today: the story (story.js), the crew scene and two tiles (who owes · diary).
    Money: one big total, who owes, what's left to pay. Everything else sits under "More". */
+// the story, the 🔔 bell and My trips live in story.js
+(function () { var s = document.createElement('script'); s.src = 'story.js'; document.head.appendChild(s); })();
 (function () {
   var KEY = 'pp_simple';
   function on() { return localStorage.getItem(KEY) !== '0'; }
@@ -44,8 +46,9 @@
     var t = document.getElementById('today'); if (!t) return;
     var kids = [].slice.call(t.children), owe = '', oweWho = '';
     kids.forEach(function (k) {
-      if (k.id === 'pp-tiles' || k.id === 'pp-talkbig') return;
-      var keep = k.id === 'pp-scene' || /\bnext\b/.test(k.className) || /\bacts\b/.test(k.className);
+      if (k.id === 'pp-tiles' || k.id === 'pp-talkbig' || /^pp-story/.test(k.id)) return;
+      // the story (story.js) replaces the Next card and Directions; flights become 🔔 reminders
+      var keep = k.id === 'pp-scene';
       if (/\bacts\b/.test(k.className)) [].slice.call(k.children).forEach(function (b) { if (/ask penpen/i.test(txt(b))) b.classList.add('pp-ask'); });
       k.classList.toggle('pp-hide', !keep);
       if (/WHO OWES WHO/i.test(txt(k))) {
@@ -57,8 +60,8 @@
     var tiles = document.getElementById('pp-tiles');
     if (!tiles) {
       tiles = document.createElement('div'); tiles.id = 'pp-tiles';
-      var acts = t.querySelector('.acts') || t.querySelector('.next');
-      if (acts && acts.nextSibling) t.insertBefore(tiles, acts.nextSibling); else t.appendChild(tiles);
+      var sc = document.getElementById('pp-scene');
+      if (sc && sc.nextSibling) t.insertBefore(tiles, sc.nextSibling); else t.appendChild(tiles);
     }
     var html = '<button type="button" data-a="money"><span class="ic">💸</span>' + (owe ? owe.replace(/\.\d\d$/, '') : 'Money') + '<small>' + (oweWho || 'all settled') + '</small></button>' +
       '<button type="button" data-a="diary"><span class="ic">📔</span>Diary<small>add a memory</small></button>';
