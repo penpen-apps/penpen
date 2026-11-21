@@ -121,9 +121,12 @@
     if (!prof) {
       // the profile lives on the Crew tab: open it behind the scenes, then come back
       if (!tries) { var cur = document.querySelector('button[aria-current="page"]'); openMe.back = cur && cur.textContent.trim(); var c = navBtn('Crew'); if (c) c.click(); }
+      var mine = [].slice.call(document.querySelectorAll('#crew .pp-list button')).filter(function (b) { return /· you/.test(b.textContent); })[0];
+      if (mine && !openMe.tapped) { openMe.tapped = true; mine.click(); }
       if ((tries || 0) < 25) setTimeout(function () { openMe((tries || 0) + 1); }, 200);
       return;
     }
+    openMe.tapped = false;
     var home = prof.parentNode, next = prof.nextSibling;
     var w = document.createElement('div'); w.id = 'pp-me'; w.setAttribute('role', 'dialog'); w.setAttribute('aria-label', 'My profile');
     w.innerHTML = '<div class="top"><button class="back" aria-label="Back">‹</button><h2>My profile</h2></div><div class="wrapme"><div class="slot"></div>' +
