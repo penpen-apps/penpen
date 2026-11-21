@@ -40,7 +40,15 @@
     return c.outerHTML;
   }
 
-  var LANGS = ['Bisaya (Cebuano)', 'Tagalog', 'Ilocano', 'Spanish', 'Japanese', 'Korean', 'Mandarin', 'French'];
+  var LANGS = ['Bisaya (Cebuano)', 'Tagalog', 'Thai', 'Vietnamese', 'Mandarin', 'Cantonese', 'Japanese', 'Korean', 'Bahasa Indonesia', 'Malay', 'Hindi', 'Arabic', 'Spanish', 'French', 'Italian', 'German', 'Portuguese', 'Turkish'];
+  // the phone's time zone follows you abroad, so it tells us the local language without asking for location
+  var TZ_LANG = { 'Asia/Manila': ['Bisaya (Cebuano)', 'Tagalog'], 'Asia/Bangkok': ['Thai'], 'Asia/Ho_Chi_Minh': ['Vietnamese'], 'Asia/Saigon': ['Vietnamese'],
+    'Asia/Shanghai': ['Mandarin'], 'Asia/Taipei': ['Mandarin'], 'Asia/Hong_Kong': ['Cantonese'], 'Asia/Macau': ['Cantonese'], 'Asia/Tokyo': ['Japanese'],
+    'Asia/Seoul': ['Korean'], 'Asia/Jakarta': ['Bahasa Indonesia'], 'Asia/Makassar': ['Bahasa Indonesia'], 'Asia/Kuala_Lumpur': ['Malay'], 'Asia/Singapore': ['Mandarin', 'Malay'],
+    'Asia/Kolkata': ['Hindi'], 'Asia/Dubai': ['Arabic'], 'Asia/Phnom_Penh': ['Khmer'], 'Asia/Vientiane': ['Lao'], 'Asia/Yangon': ['Burmese'], 'Asia/Kathmandu': ['Nepali'],
+    'Europe/Madrid': ['Spanish'], 'Europe/Paris': ['French'], 'Europe/Rome': ['Italian'], 'Europe/Berlin': ['German'], 'Europe/Lisbon': ['Portuguese'], 'Europe/Istanbul': ['Turkish'],
+    'Europe/Athens': ['Greek'], 'America/Mexico_City': ['Spanish'], 'America/Sao_Paulo': ['Portuguese'], 'America/Bogota': ['Spanish'], 'America/Lima': ['Spanish'], 'America/Argentina/Buenos_Aires': ['Spanish'] };
+  function suggested() { try { return TZ_LANG[Intl.DateTimeFormat().resolvedOptions().timeZone] || []; } catch (e) { return []; } }
   function open(opts) {
     opts = opts || {};
     if (S) return;
@@ -63,14 +71,24 @@
   }
   function pickLang() {
     status('Translate English ⇄ …');
-    var last = localStorage.getItem('pp_tr_lang') || '';
+    var last = localStorage.getItem('pp_tr_lang') || '', here = suggested();
+    var order = here.concat(last && here.indexOf(last) < 0 ? [last] : []);
+    LANGS.forEach(function (l) { if (order.indexOf(l) < 0) order.push(l); });
     var cap = document.getElementById('pp-t-cap');
-    cap.innerHTML = '<div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center">' + LANGS.map(function (l) {
-      return '<button type="button" data-l="' + l + '" style="font:inherit;font-size:16px;border-radius:14px;padding:10px 14px;border:1.5px solid #237566;background:' + (l === last ? '#237566;color:#fff' : 'rgba(255,255,255,.7);color:#13324A') + '">' + l + '</button>';
-    }).join('') + '</div>';
+    var chip = function (l, top) { return '<button type="button" data-l="' + l + '" style="font:inherit;font-size:16px;border-radius:14px;padding:10px 14px;border:1.5px solid #237566;background:' + (top ? '#237566;color:#fff' : 'rgba(255,255,255,.7);color:#13324A') + '">' + (here.indexOf(l) >= 0 ? '📍 ' : '') + l + '</button>'; };
+    cap.innerHTML = '<div style="max-height:46vh;overflow:auto;display:flex;flex-wrap:wrap;gap:8px;justify-content:center">' +
+      order.map(function (l, i) { return chip(l, i < Math.max(1, here.length)); }).join('') +
+      '<button type="button" data-other="1" style="font:inherit;font-size:16px;border-radius:14px;padding:10px 14px;border:1.5px dashed #237566;background:none;color:#237566">Other…</button></div>';
     cap.onclick = function (e) {
-      var b = e.target.closest('button[data-l]'); if (!b || !S) return;
-      S.lang = b.dataset.l; localStorage.setItem('pp_tr_lang', S.lang); cap.onclick = null; cap.textContent = ''; begin();
+      if (!S) return;
+      if (e.target.closest('button[data-other]')) {
+        cap.innerHTML = '<div style="display:flex;gap:8px;justify-content:center"><input id="pp-t-ol" placeholder="Type a language" style="font:inherit;font-size:17px;padding:10px 12px;border-radius:14px;border:1.5px solid #237566;min-width:0;flex:1;max-width:240px"><button type="button" data-go="1" style="font:inherit;border:0;border-radius:14px;padding:10px 16px;background:#237566;color:#fff">Start</button></div>';
+        var inp = document.getElementById('pp-t-ol'); inp.focus(); return;
+      }
+      var go = e.target.closest('button[data-go]'), b = e.target.closest('button[data-l]');
+      var l = go ? (document.getElementById('pp-t-ol').value || '').trim() : b && b.dataset.l;
+      if (!l) return;
+      S.lang = l; localStorage.setItem('pp_tr_lang', S.lang); cap.onclick = null; cap.textContent = ''; begin();
     };
   }
   function begin() {
@@ -238,5 +256,40 @@
     c.onclick = function (e) { e.preventDefault(); e.stopPropagation(); window.ppTranslate(); };
     any.parentNode.insertBefore(c, any.parentNode.firstChild);
   }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', hook); else hook();
+  /* ---------- 📷 send a booking screenshot: penpen reads it and asks to save ---------- */
+  function addCam() {
+    var form = document.getElementById('sayf'), say = document.getElementById('say');
+    if (!form || !say) return setTimeout(addCam, 500);
+    if (document.getElementById('pp-cam')) return;
+    var lab = document.createElement('label'); lab.id = 'pp-cam'; lab.setAttribute('aria-label', 'Send a photo of a booking or receipt');
+    lab.style.cssText = 'flex:0 0 auto;width:44px;height:44px;border-radius:14px;display:grid;place-items:center;font-size:22px;cursor:pointer;background:rgba(255,255,255,.75);margin-right:6px';
+    lab.innerHTML = '📷<input type="file" accept="image/*" style="display:none">';
+    form.insertBefore(lab, form.firstChild);
+    lab.querySelector('input').onchange = function () {
+      var f = this.files && this.files[0]; this.value = ''; if (!f) return;
+      var log = document.getElementById('log');
+      var note = function (t) { var d = document.createElement('div'); d.className = 'msg pp'; d.textContent = t; if (log) { log.appendChild(d); log.scrollTop = log.scrollHeight; } return d; };
+      var n = note('📷 Reading your screenshot…');
+      shrink(f).then(function (url) { return window.ppCall('penpenReadBooking', [url]); }).then(function (r) {
+        if (!r || !r.text) { n.textContent = "I couldn't read that one. Try a clearer screenshot of the booking, or just type the details."; return; }
+        n.remove();
+        say.value = r.text;                       // goes through the normal chat, so penpen asks Yes / No before saving
+        var btn = form.querySelector('.send'); if (btn) btn.click(); else form.requestSubmit ? form.requestSubmit() : form.submit();
+      }, function (e) { n.textContent = /offline/i.test(e.message) ? "You're offline — send the photo when you're back online." : "Couldn't read the photo right now — try again in a moment."; });
+    };
+  }
+  function shrink(file) {
+    return new Promise(function (ok, bad) {
+      var img = new Image(), u = URL.createObjectURL(file);
+      img.onload = function () {
+        var k = Math.min(1, 1600 / Math.max(img.width, img.height)), c = document.createElement('canvas');
+        c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(u);
+        ok(c.toDataURL('image/jpeg', 0.85));
+      };
+      img.onerror = function () { bad(new Error('badimage')); };
+      img.src = u;
+    });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { hook(); addCam(); }); else { hook(); addCam(); }
 })();
