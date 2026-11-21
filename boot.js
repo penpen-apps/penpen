@@ -144,6 +144,29 @@
     location.reload();
   };
 
+
+  /* ---------- keep SVG gradients drawable when the screen that defined them is hidden ---------- */
+  // Penguins share gradient ids (e.g. the body colour). Chrome won't paint a gradient whose first
+  // definition sits inside a hidden screen, so copy every definition into one always-visible <defs>.
+  onBody(function () {
+    var NS = 'http://www.w3.org/2000/svg', seen = {};
+    var holder = document.createElementNS(NS, 'svg');
+    holder.setAttribute('width', '0'); holder.setAttribute('height', '0'); holder.setAttribute('aria-hidden', 'true');
+    holder.style.cssText = 'position:absolute;width:0;height:0;overflow:hidden';
+    var defs = document.createElementNS(NS, 'defs'); holder.appendChild(defs);
+    document.body.insertBefore(holder, document.body.firstChild);
+    function lift(root) {
+      if (!root.querySelectorAll) return;
+      root.querySelectorAll('linearGradient[id],radialGradient[id],clipPath[id],pattern[id],filter[id]').forEach(function (g) {
+        if (seen[g.id] || holder.contains(g)) return;
+        seen[g.id] = 1; defs.appendChild(g.cloneNode(true));
+      });
+    }
+    lift(document.body);
+    new MutationObserver(function (ms) { ms.forEach(function (m) { m.addedNodes.forEach(function (n) { if (n.nodeType === 1) lift(n); }); }); })
+      .observe(document.body, { childList: true, subtree: true });
+  });
+
   /* ---------- start ---------- */
   if (!navigator.onLine && ROLE) { /* offline: use saved answers */ }
   else if (valid() && ROLE && !joinCode) { enter(); /* refresh role quietly */ }
