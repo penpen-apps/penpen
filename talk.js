@@ -230,9 +230,9 @@
   }
   // a 🌐 Translate chip at the front of the quick-ask chips
   function addChip() {
+    if (!addChip.t) addChip.t = setInterval(addChip, 1500);   // the app redraws its chips, so keep ours in place
     var any = [].slice.call(document.querySelectorAll('button')).filter(function (b) { return b.textContent.trim() === 'Who owes who?'; })[0];
-    if (!any) return setTimeout(addChip, 500);
-    if (document.getElementById('pp-tr-chip')) return;
+    if (!any || document.getElementById('pp-tr-chip')) return;
     var c = document.createElement('button'); c.type = 'button'; c.id = 'pp-tr-chip'; c.className = any.className; c.textContent = '🌐 Translate';
     c.style.fontWeight = '800';
     c.onclick = function (e) { e.preventDefault(); e.stopPropagation(); window.ppTranslate(); };
