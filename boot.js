@@ -207,7 +207,8 @@
     current: function () { return TRIP; },
     list: function () { return post('trips', {}).then(function (r) { return (r && r.trips) || []; }); },
     open: function (id, name) { setTrip(id, name); location.reload(); },
-    create: function (o) { return post('newTrip', o).then(function (r) { return r.trip; }); }
+    create: function (o) { return post('newTrip', o).then(function (r) { return r.trip; }); },
+    remove: function (id) { return post('removeTrip', { id: id }).then(function (r) { return (r && r.trips) || []; }); }
   };
 
   window.ppSignOut = function () {
