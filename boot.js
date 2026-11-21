@@ -70,7 +70,7 @@
           var c = get('pp_c_' + k + ':' + JSON.stringify(args).slice(0, 200), undefined);
           if (c !== undefined) {
             try { o.ok(c, o.u); } catch (e) {}
-            call(String(k), args).then(function (r) { if (JSON.stringify(r) !== JSON.stringify(c)) o.ok(r, o.u); }, function () {});
+            call(String(k), args).then(function (r) { o.ok(r, o.u); }, function () {});   // always redraw with fresh data (the scene etc. need it)
             return;
           }
         }
