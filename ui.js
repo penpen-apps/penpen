@@ -65,17 +65,7 @@
     '#pp-mebtn{width:44px;height:44px;border-radius:50%;border:0;background:#fff;display:grid;place-items:center;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.08);padding:0;margin-left:6px}' +
     '#pp-mebtn svg{width:40px;height:40px}' +
     '#crew > .pp-prof{display:none}' +
-    '#pp-me{position:fixed;inset:0;z-index:99960;background:#F6EEDF;overflow:auto;padding:calc(14px + env(safe-area-inset-top)) 16px calc(30px + env(safe-area-inset-bottom));font:16px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#2B2A28}' +
-    'body.pp-dark #pp-me{background:#1E2422;color:#F1ECE2}' +
-    '#pp-me .top{display:flex;align-items:center;gap:10px;max-width:560px;margin:0 auto 6px}#pp-me .top h2{flex:1;margin:0;font-size:24px}' +
-    '#pp-me .back{border:0;background:#fff;border-radius:50%;width:40px;height:40px;font-size:20px}' +
-    '#pp-me .wrapme{max-width:560px;margin:0 auto}' +
-    '#pp-me .pp-prof{display:block!important}' +
-    '#pp-me .rows{background:#FFFDF8;border-radius:18px;margin-top:12px;overflow:hidden}' +
-    'body.pp-dark #pp-me .rows{background:#29312E}' +
-    '#pp-me .rows button{display:flex;width:100%;align-items:center;gap:12px;border:0;background:none;font:inherit;color:inherit;padding:15px 16px;border-top:1px solid #E8DDC8;text-align:left}' +
-    '#pp-me .rows button:first-child{border-top:0}#pp-me .rows i{font-style:normal;font-size:20px;width:26px;text-align:center}#pp-me .rows .chev{margin-left:auto;color:#A9A396}' +
-    '#pp-me .who{color:#7A7468;font-size:14px;text-align:center;margin:16px 0 4px}';
+    '';
 
   /* "No number yet…" → 🔎 Find number + ＋ Add */
   function fixMissing(root) {
@@ -112,7 +102,7 @@
   function meButton() {
     var v = document.getElementById('voice'); if (!v) return;
     var b = document.getElementById('pp-mebtn');
-    if (!b) { b = document.createElement('button'); b.id = 'pp-mebtn'; b.setAttribute('aria-label', 'My profile'); b.onclick = function () { openMe(0); }; v.parentNode.appendChild(b); }
+    if (!b) { b = document.createElement('button'); b.id = 'pp-mebtn'; b.setAttribute('aria-label', 'My profile'); b.onclick = function () { (window.ppOpenMe || function () { openMe(0); })(); }; v.parentNode.appendChild(b); }
     var a = myAvatar(); if (b.dataset.a !== a) { b.innerHTML = a; b.dataset.a = a; }
   }
   function navBtn(label) { return [].slice.call(document.querySelectorAll('button[aria-current="page"], nav button, .tabs button, button')).filter(function (b) { return b.textContent.trim() === label && b.className !== 'back'; })[0]; }
