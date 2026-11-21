@@ -51,6 +51,102 @@
     var a = c.querySelector('.add'); if (a) a.onclick = function () { if (window.ppInstall) window.ppInstall(); c.remove(); };
   }
 
-  function start() { addCss(); setTimeout(installCard, 12000); }
+
+  /* ---------- clearer action buttons (Directions, Call…) ---------- */
+  var css2 =
+    '.acts .act,.ctb .act{background:#237566!important;color:#fff!important;border:0!important;font-weight:600!important;box-shadow:0 2px 8px rgba(35,117,102,.25)!important;display:inline-flex!important;align-items:center;gap:6px}' +
+    '.acts .act:active,.ctb .act:active{transform:scale(.97)}' +
+    '.pp-num{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}' +
+    '.pp-num button,.pp-num a{font:inherit;font-size:14px;border-radius:12px;padding:8px 12px;border:1.5px solid #237566;background:none;color:#237566;text-decoration:none;font-weight:600}' +
+    '.pp-num input{flex:1;min-width:150px;font:inherit;font-size:15px;padding:8px 10px;border-radius:12px;border:1.5px solid #E8DDC8;background:#fff}' +
+    '.pp-num .ok{background:#237566;color:#fff}' +
+    '.pp-num .saved{color:#237566;font-weight:600;padding:8px 0}' +
+    /* my profile */
+    '#pp-mebtn{width:44px;height:44px;border-radius:50%;border:0;background:#fff;display:grid;place-items:center;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.08);padding:0;margin-left:6px}' +
+    '#pp-mebtn svg{width:40px;height:40px}' +
+    '#crew > .pp-prof{display:none}' +
+    '#pp-me{position:fixed;inset:0;z-index:99960;background:#F6EEDF;overflow:auto;padding:calc(14px + env(safe-area-inset-top)) 16px calc(30px + env(safe-area-inset-bottom));font:16px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#2B2A28}' +
+    'body.pp-dark #pp-me{background:#1E2422;color:#F1ECE2}' +
+    '#pp-me .top{display:flex;align-items:center;gap:10px;max-width:560px;margin:0 auto 6px}#pp-me .top h2{flex:1;margin:0;font-size:24px}' +
+    '#pp-me .back{border:0;background:#fff;border-radius:50%;width:40px;height:40px;font-size:20px}' +
+    '#pp-me .wrapme{max-width:560px;margin:0 auto}' +
+    '#pp-me .pp-prof{display:block!important}' +
+    '#pp-me .rows{background:#FFFDF8;border-radius:18px;margin-top:12px;overflow:hidden}' +
+    'body.pp-dark #pp-me .rows{background:#29312E}' +
+    '#pp-me .rows button{display:flex;width:100%;align-items:center;gap:12px;border:0;background:none;font:inherit;color:inherit;padding:15px 16px;border-top:1px solid #E8DDC8;text-align:left}' +
+    '#pp-me .rows button:first-child{border-top:0}#pp-me .rows i{font-style:normal;font-size:20px;width:26px;text-align:center}#pp-me .rows .chev{margin-left:auto;color:#A9A396}' +
+    '#pp-me .who{color:#7A7468;font-size:14px;text-align:center;margin:16px 0 4px}';
+
+  /* "No number yet…" → 🔎 Find number + ＋ Add */
+  function fixMissing(root) {
+    (root.querySelectorAll ? root.querySelectorAll('.ct .missing') : []).forEach(function (m) {
+      if (m.dataset.pp) return; m.dataset.pp = '1';
+      var ct = m.closest('.ct'), name = (ct.querySelector('.n') || {}).textContent || '';
+      name = name.trim();
+      if (!name || /emergency|’s |'s /i.test(name)) { m.textContent = 'No number yet'; return; }   // people: no web search
+      var q = 'https://www.google.com/search?q=' + encodeURIComponent(name + ' phone number');
+      var box = document.createElement('div'); box.className = 'pp-num';
+      box.innerHTML = '<a href="' + q + '" target="_blank" rel="noopener">🔎 Find number</a><button type="button" class="add">＋ Add</button>';
+      m.replaceWith(box);
+      box.querySelector('.add').onclick = function () {
+        box.innerHTML = '<input type="tel" inputmode="tel" placeholder="Paste or type the number" aria-label="Phone number for ' + name.replace(/"/g, '') + '"><button type="button" class="ok">Save</button>';
+        var inp = box.querySelector('input'); inp.focus();
+        box.querySelector('.ok').onclick = function () {
+          var num = inp.value.trim(); if (num.replace(/\D/g, '').length < 7) { inp.focus(); return; }
+          box.innerHTML = '<span class="saved">Saving…</span>';
+          window.ppCall('penpenLiveAction', [name + "'s number is " + num]).then(function () {
+            box.innerHTML = '<span class="saved">✓ Saved</span><a href="tel:' + num.replace(/[^\d+]/g, '') + '">📞 Call</a>';
+          }, function (e) { box.innerHTML = '<span class="saved">Couldn\'t save: ' + e.message + '</span>'; });
+        };
+      };
+    });
+  }
+
+  /* ---------- My profile ---------- */
+  function myAvatar() {
+    var row = [].slice.call(document.querySelectorAll('#crew .pp-list button')).filter(function (b) { return /· you/.test(b.textContent); })[0];
+    var svg = row && row.querySelector('svg');
+    return svg ? svg.outerHTML : '<span style="font-size:22px">🙂</span>';
+  }
+  function meButton() {
+    var v = document.getElementById('voice'); if (!v) return;
+    var b = document.getElementById('pp-mebtn');
+    if (!b) { b = document.createElement('button'); b.id = 'pp-mebtn'; b.setAttribute('aria-label', 'My profile'); b.onclick = openMe; v.parentNode.appendChild(b); }
+    var a = myAvatar(); if (b.dataset.a !== a) { b.innerHTML = a; b.dataset.a = a; }
+  }
+  function openMe() {
+    var prof = document.querySelector('.pp-prof'); if (!prof) return;
+    var home = prof.parentNode, next = prof.nextSibling;
+    var w = document.createElement('div'); w.id = 'pp-me'; w.setAttribute('role', 'dialog'); w.setAttribute('aria-label', 'My profile');
+    w.innerHTML = '<div class="top"><button class="back" aria-label="Back">‹</button><h2>My profile</h2></div><div class="wrapme"><div class="slot"></div>' +
+      '<div class="rows">' +
+      '<button data-a="voice"><i>🔊</i>penpen\'s voice<span class="chev">›</span></button>' +
+      '<button data-a="install"><i>📲</i>Add penpen to my phone<span class="chev">›</span></button>' +
+      '<button data-a="out"><i>↩︎</i>Sign out</button>' +
+      '</div><div class="who">' + ((JSON.parse(localStorage.getItem('pp_tok') || '{}') || {}).email || '') + '</div></div>';
+    document.body.appendChild(w);
+    w.querySelector('.slot').appendChild(prof);
+    function close() { if (next && next.parentNode === home) home.insertBefore(prof, next); else home.appendChild(prof); w.remove(); }
+    w.querySelector('.back').onclick = close;
+    w.querySelector('.rows').onclick = function (e) {
+      var b = e.target.closest('button'); if (!b) return;
+      if (b.dataset.a === 'voice' && window.ppVoicePicker) window.ppVoicePicker();
+      if (b.dataset.a === 'install' && window.ppInstall) window.ppInstall();
+      if (b.dataset.a === 'out' && window.ppSignOut) window.ppSignOut();
+    };
+  }
+  window.ppOpenMe = openMe;
+
+  function watch() {
+    var st = document.createElement('style'); st.textContent = css2; document.head.appendChild(st);
+    fixMissing(document); meButton();
+    new MutationObserver(function (ms) {
+      var crewChanged = false;
+      ms.forEach(function (m) { m.addedNodes.forEach(function (n) { if (n.nodeType === 1) { fixMissing(n); if (n.closest && n.closest('#crew')) crewChanged = true; } }); });
+      if (crewChanged) meButton();
+    }).observe(document.body, { childList: true, subtree: true });
+  }
+
+  function start() { addCss(); watch(); setTimeout(installCard, 12000); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
 })();

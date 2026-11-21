@@ -76,6 +76,8 @@
   /* ---------- trip theme: the creator picks it for everyone; anyone can override on their own phone ---------- */
   (function () {
     function prefs() { try { return JSON.parse(localStorage.getItem('pp_prefs') || '{}'); } catch (e) { return {}; } }
+    // penpen is the guide by default (your own penguin is for your profile and the crew)
+    if (localStorage.getItem('pp_guide_v2') !== '1') { var pg = prefs(); if (!pg.guide) { pg.guide = 'penpen'; localStorage.setItem('pp_prefs', JSON.stringify(pg)); } localStorage.setItem('pp_guide_v2', '1'); }
     var own = localStorage.getItem('pp_scene_own') === '1', trip = localStorage.getItem('pp_trip_theme') || '';
     // before the app reads its settings, apply the trip's theme (unless this person chose their own)
     if (!own && trip) { var p0 = prefs(); if (p0.scene !== trip) { p0.scene = trip; localStorage.setItem('pp_prefs', JSON.stringify(p0)); } }
