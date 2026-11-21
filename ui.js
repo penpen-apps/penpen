@@ -106,16 +106,24 @@
   function myAvatar() {
     var row = [].slice.call(document.querySelectorAll('#crew .pp-list button')).filter(function (b) { return /· you/.test(b.textContent); })[0];
     var svg = row && row.querySelector('svg');
-    return svg ? svg.outerHTML : '<span style="font-size:22px">🙂</span>';
+    if (svg) { try { localStorage.setItem('pp_me_av', svg.outerHTML); } catch (e) {} return svg.outerHTML; }
+    return localStorage.getItem('pp_me_av') || '<span style="font-size:22px">🙂</span>';
   }
   function meButton() {
     var v = document.getElementById('voice'); if (!v) return;
     var b = document.getElementById('pp-mebtn');
-    if (!b) { b = document.createElement('button'); b.id = 'pp-mebtn'; b.setAttribute('aria-label', 'My profile'); b.onclick = openMe; v.parentNode.appendChild(b); }
+    if (!b) { b = document.createElement('button'); b.id = 'pp-mebtn'; b.setAttribute('aria-label', 'My profile'); b.onclick = function () { openMe(0); }; v.parentNode.appendChild(b); }
     var a = myAvatar(); if (b.dataset.a !== a) { b.innerHTML = a; b.dataset.a = a; }
   }
-  function openMe() {
-    var prof = document.querySelector('.pp-prof'); if (!prof) return;
+  function navBtn(label) { return [].slice.call(document.querySelectorAll('button[aria-current="page"], nav button, .tabs button, button')).filter(function (b) { return b.textContent.trim() === label && b.className !== 'back'; })[0]; }
+  function openMe(tries) {
+    var prof = document.querySelector('.pp-prof');
+    if (!prof) {
+      // the profile lives on the Crew tab: open it behind the scenes, then come back
+      if (!tries) { var cur = document.querySelector('button[aria-current="page"]'); openMe.back = cur && cur.textContent.trim(); var c = navBtn('Crew'); if (c) c.click(); }
+      if ((tries || 0) < 25) setTimeout(function () { openMe((tries || 0) + 1); }, 200);
+      return;
+    }
     var home = prof.parentNode, next = prof.nextSibling;
     var w = document.createElement('div'); w.id = 'pp-me'; w.setAttribute('role', 'dialog'); w.setAttribute('aria-label', 'My profile');
     w.innerHTML = '<div class="top"><button class="back" aria-label="Back">‹</button><h2>My profile</h2></div><div class="wrapme"><div class="slot"></div>' +
@@ -126,7 +134,10 @@
       '</div><div class="who">' + ((JSON.parse(localStorage.getItem('pp_tok') || '{}') || {}).email || '') + '</div></div>';
     document.body.appendChild(w);
     w.querySelector('.slot').appendChild(prof);
-    function close() { if (next && next.parentNode === home) home.insertBefore(prof, next); else home.appendChild(prof); w.remove(); }
+    function close() {
+      if (next && next.parentNode === home) home.insertBefore(prof, next); else home.appendChild(prof); w.remove();
+      if (openMe.back && openMe.back !== 'Crew') { var b = navBtn(openMe.back); if (b) b.click(); } openMe.back = null;
+    }
     w.querySelector('.back').onclick = close;
     w.querySelector('.rows').onclick = function (e) {
       var b = e.target.closest('button'); if (!b) return;
@@ -135,7 +146,7 @@
       if (b.dataset.a === 'out' && window.ppSignOut) window.ppSignOut();
     };
   }
-  window.ppOpenMe = openMe;
+  window.ppOpenMe = function () { openMe(0); };
 
   function watch() {
     var st = document.createElement('style'); st.textContent = css2; document.head.appendChild(st);
