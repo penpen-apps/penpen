@@ -8,6 +8,7 @@
     /* Today */
     'body.pp-simple #line{display:none!important}' +
     'body.pp-simple #today > .pp-hide{display:none!important}' +
+    'body.pp-simple #today .acts .pp-ask{display:none!important}body.pp-simple #today .acts{display:flex}body.pp-simple #today .acts > *{flex:1}' +
     '#pp-tiles{display:flex;gap:12px;margin:14px 0 0}' +
     '#pp-tiles button{flex:1;min-height:104px;border:0;border-radius:20px;background:#FFFDF8;box-shadow:0 1px 0 #E8DCC6,0 8px 20px rgba(19,50,74,.07);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font:800 15px Nunito,-apple-system,sans-serif;color:#13324A;cursor:pointer;padding:8px 4px}' +
     '#pp-tiles .ic{font-size:30px;line-height:1}#pp-tiles small{font-weight:700;font-size:12.5px;color:#4F6475}' +
@@ -22,7 +23,18 @@
     'body.pp-simple:not(.pp-more-on) .pp-more{display:none!important}' +
     /* readable header + name tags when the phone is in dark mode */
     '@media (prefers-color-scheme: dark){header.hero{background:#16303F!important}#pp-scene span{color:#13324A!important}#pp-tiles button{background:#1C3444;color:#EAF4F7;box-shadow:none}#pp-tiles small{color:#A9BFC9}}' +
-    '#pp-morebtn{display:block;width:100%;min-height:54px;margin:12px 0;border:0;border-radius:18px;background:#EDE2CC;color:#13324A;font:800 16px Nunito,-apple-system,sans-serif;cursor:pointer}';
+    '#pp-morebtn{display:block;width:100%;min-height:58px;margin:12px 0;border:0;border-radius:18px;background:#EDE2CC;color:#13324A;font:800 16px Nunito,-apple-system,sans-serif;cursor:pointer}' +
+    '#pp-morebtn small{display:block;font-weight:700;font-size:12px;opacity:.7}' +
+    '.pp-badge{display:inline-block;background:#C8553D;color:#fff;border-radius:99px;padding:2px 9px;font-size:13px;margin-left:6px;vertical-align:1px}' +
+    '.pp-cats{padding:14px 16px!important}.pp-cat-t{font-weight:800;font-size:13px;letter-spacing:.04em;text-transform:uppercase;opacity:.75;margin-bottom:8px}' +
+    '.pp-cat-bar{display:flex;height:14px;border-radius:8px;overflow:hidden;background:#EDE2CC}.pp-cat-bar i{display:block;height:100%}' +
+    '.pp-cat-leg{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:9px;font-size:13px;font-weight:700}.pp-cat-leg b{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:5px}.pp-cat-leg em{font-style:normal;opacity:.7;font-weight:600}' +
+    /* dark mode: fix washed-out text */
+    '@media (prefers-color-scheme: dark){#to-diary,#voice{color:#13324A!important}' +
+    '.pp-prof input,.pp-prof .nm,.pp-prof h2,.pp-prof h3,.pp-prof [class*=name]{color:#EAF4F7!important}' +
+    '.pp-prof button:not([class*=on]):not(.btn){color:#EAF4F7!important}' +
+    '#money .pp-big,#money .stats .card{color:#EAF4F7!important}.pp-cat-bar{background:#2A4352}' +
+    '#pp-morebtn{background:#22404F;color:#EAF4F7}}';
 
   function txt(el) { return (el && el.textContent || '').replace(/\s+/g, ' ').trim(); }
   function click(sel) { var b = typeof sel === 'string' ? document.querySelector(sel) : sel; if (b) b.click(); }
@@ -34,6 +46,7 @@
     kids.forEach(function (k) {
       if (k.id === 'pp-tiles' || k.id === 'pp-talkbig') return;
       var keep = k.id === 'pp-scene' || /\bnext\b/.test(k.className) || /\bacts\b/.test(k.className);
+      if (/\bacts\b/.test(k.className)) [].slice.call(k.children).forEach(function (b) { if (/ask penpen/i.test(txt(b))) b.classList.add('pp-ask'); });
       k.classList.toggle('pp-hide', !keep);
       if (/WHO OWES WHO/i.test(txt(k))) {
         var m = txt(k).match(/WHO OWES WHO\s*(₱[\d,.]+)\s*(.+?)(?=POCKET|$)/i);
@@ -46,12 +59,8 @@
       tiles = document.createElement('div'); tiles.id = 'pp-tiles';
       var acts = t.querySelector('.acts') || t.querySelector('.next');
       if (acts && acts.nextSibling) t.insertBefore(tiles, acts.nextSibling); else t.appendChild(tiles);
-      var talk = document.createElement('button'); talk.type = 'button'; talk.id = 'pp-talkbig'; talk.innerHTML = '🎙️ Talk to penpen';
-      talk.onclick = function () { if (window.ppTalk) window.ppTalk(); };
-      t.insertBefore(talk, tiles.nextSibling);
     }
     var html = '<button type="button" data-a="money"><span class="ic">💸</span>' + (owe ? owe.replace(/\.\d\d$/, '') : 'Money') + '<small>' + (oweWho || 'all settled') + '</small></button>' +
-      '<button type="button" data-a="plan"><span class="ic">🗓️</span>Plan<small>day by day</small></button>' +
       '<button type="button" data-a="diary"><span class="ic">📔</span>Diary<small>add a memory</small></button>';
     if (tiles.dataset.h !== html) { tiles.innerHTML = html; tiles.dataset.h = html; }
     tiles.onclick = function (e) {
@@ -71,15 +80,43 @@
       var peso = [].slice.call(total.querySelectorAll('*')).filter(function (e) { return !e.children.length && /^₱/.test(txt(e)); })[0];
       if (peso) peso.classList.add('pp-big');
     }
-    [].slice.call(m.children).forEach(function (c) { if (/Who paid what/i.test(txt(c))) c.classList.add('pp-more'); });
+    var needs = 0;
+    [].slice.call(m.children).forEach(function (c) {
+      var t = txt(c);
+      if (/Who paid what/i.test(t)) c.classList.add('pp-more');
+      var nl = t.match(/^Needs a look \((\d+)\)/i); if (nl) { c.classList.add('pp-more'); needs = +nl[1]; }
+      if (/where the (group )?money went/i.test(t)) compactCats(c);
+    });
+    // "group money" reads oddly on a solo trip
+    [].slice.call(m.querySelectorAll('*')).forEach(function (e) { if (!e.children.length && /group money/i.test(e.textContent)) e.textContent = e.textContent.replace(/group money/i, 'money'); });
+    m.dataset.needs = needs;
     var top = document.querySelector('#p-money .moneybtns'); if (top) top.classList.add('pp-more');
     if (!document.getElementById('pp-morebtn')) {
       var b = document.createElement('button'); b.type = 'button'; b.id = 'pp-morebtn';
-      b.onclick = function () { document.body.classList.toggle('pp-more-on'); b.textContent = document.body.classList.contains('pp-more-on') ? 'Less ‹' : 'More › (who paid what, audit, receipt)'; };
-      b.textContent = 'More › (who paid what, audit, receipt)';
+      b.onclick = function () { document.body.classList.toggle('pp-more-on'); paintMore(); };
       m.parentNode.insertBefore(b, m.nextSibling);
     }
+    paintMore();
     document.getElementById('pp-morebtn').style.display = on() ? '' : 'none';
+  }
+
+  function paintMore() {
+    var b = document.getElementById('pp-morebtn'), m = document.getElementById('money'); if (!b || !m) return;
+    var n = +(m.dataset.needs || 0), open = document.body.classList.contains('pp-more-on');
+    var h = open ? 'Less ‹' : 'More ›' + (n ? ' <span class="pp-badge">' + n + ' to check</span>' : '') + ' <small>who paid what · audit · receipt</small>';
+    if (b.dataset.h !== h) { b.innerHTML = h; b.dataset.h = h; }
+  }
+  var PAL = ['#237566', '#F4A62A', '#4A90C2', '#C8553D', '#8E7CC3', '#6BAF5C', '#E39BB6', '#7A8B99'];
+  function compactCats(card) {
+    if (card.dataset.pp === txt(card)) return;
+    var rows = [], re = /([A-Za-z&'\/ ]+?)\s*₱([\d,]+)\s*·\s*(\d+)%/g, t = txt(card).replace(/where the (group )?money went/i, ''), r;
+    while ((r = re.exec(t))) rows.push({ n: r[1].trim(), v: r[2], p: +r[3] });
+    if (!rows.length) return;
+    var bar = rows.map(function (x, i) { return '<i style="width:' + Math.max(x.p, 2) + '%;background:' + PAL[i % PAL.length] + '"></i>'; }).join('');
+    var leg = rows.map(function (x, i) { return '<span><b style="background:' + PAL[i % PAL.length] + '"></b>' + x.n + ' <em>₱' + x.v + '</em></span>'; }).join('');
+    card.classList.add('pp-cats');
+    card.innerHTML = '<div class="pp-cat-t">Where the money went</div><div class="pp-cat-bar">' + bar + '</div><div class="pp-cat-leg">' + leg + '</div>';
+    card.dataset.pp = txt(card);
   }
 
   function apply() { document.body.classList.toggle('pp-simple', on()); today(); money(); }

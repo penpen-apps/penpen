@@ -10,6 +10,7 @@
   var READS = ['penpenToday', 'penpenDayExtras', 'penpenSafety', 'penpenProfiles', 'penpenDiaryInfo', 'penpenDiaryVideos',
     'penpenFormData', 'penpenMoneyCats', 'settleWeb', 'penpenPlan'];
 
+  var FAST = ['penpenToday', 'penpenMoneyCats', 'settleWeb', 'penpenProfiles', 'penpenSafety', 'penpenPlan', 'penpenDayExtras'];
   function get(k, d) { try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } }
   function set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
 
@@ -64,6 +65,15 @@
       if (k === 'withUserObject') return function (u) { return runner(Object.assign({}, o, { u: u })); };
       return function () {
         var args = Array.prototype.slice.call(arguments);
+        // instant screens: show the last saved answer right away, then refresh quietly
+        if (FAST.indexOf(String(k)) >= 0 && navigator.onLine && o.ok) {
+          var c = get('pp_c_' + k + ':' + JSON.stringify(args).slice(0, 200), undefined);
+          if (c !== undefined) {
+            try { o.ok(c, o.u); } catch (e) {}
+            call(String(k), args).then(function (r) { if (JSON.stringify(r) !== JSON.stringify(c)) o.ok(r, o.u); }, function () {});
+            return;
+          }
+        }
         call(String(k), args).then(function (r) { if (o.ok) o.ok(r, o.u); },
           function (e) { if (o.fail) o.fail(e, o.u); else console.warn(e); });
       };
