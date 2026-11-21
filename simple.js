@@ -2,20 +2,19 @@
    Today: the story (story.js), the crew scene and two tiles (who owes · diary).
    Money: one big total, who owes, what's left to pay. Everything else sits under "More". */
 // the story, the 🔔 bell and My trips live in story.js
-(function () { var s = document.createElement('script'); s.src = 'story.js'; document.head.appendChild(s); })();
+['me.js', 'story.js'].forEach(function (f) { var s = document.createElement('script'); s.src = f; document.head.appendChild(s); });
 (function () {
   var KEY = 'pp_simple';
-  function on() { return localStorage.getItem(KEY) !== '0'; }
+  function on() { return true; }   // always simple
   var css =
     /* Today */
     'body.pp-simple #line{display:none!important}' +
     'body.pp-simple #today > .pp-hide{display:none!important}' +
     'body.pp-simple #today .acts .pp-ask{display:none!important}body.pp-simple #today .acts{display:flex}body.pp-simple #today .acts > *{flex:1}' +
     '#pp-tiles{display:flex;gap:12px;margin:14px 0 0}' +
-    '#pp-tiles button{flex:1;min-height:104px;border:0;border-radius:20px;background:#FFFDF8;box-shadow:0 1px 0 #E8DCC6,0 8px 20px rgba(19,50,74,.07);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font:800 15px Nunito,-apple-system,sans-serif;color:#13324A;cursor:pointer;padding:8px 4px}' +
-    '#pp-tiles .ic{font-size:30px;line-height:1}#pp-tiles small{font-weight:700;font-size:12.5px;color:#4F6475}' +
+    '#pp-tiles button{flex:1;min-height:104px;border:0;border-radius:20px;background:var(--card);box-shadow:0 1px 0 var(--line),0 8px 20px rgba(19,50,74,.07);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font:800 15px Nunito,-apple-system,sans-serif;color:var(--ink);cursor:pointer;padding:8px 4px}' +
+    '#pp-tiles .ic{font-size:30px;line-height:1}#pp-tiles small{font-weight:700;font-size:12.5px;color:var(--muted)}' +
     '#pp-talkbig{display:flex;width:100%;align-items:center;justify-content:center;gap:10px;min-height:62px;margin:14px 0 8px;border:0;border-radius:20px;background:#237566;color:#fff;font:800 18px Nunito,-apple-system,sans-serif;cursor:pointer}' +
-    'body.pp-dark #pp-tiles button{background:#29312E;color:#F1ECE2}' +
     /* Money */
     'body.pp-simple #money .stats{display:block!important}' +
     'body.pp-simple #money .stats > .card:not(:first-child){display:none!important}' +
@@ -23,20 +22,14 @@
     'body.pp-simple #money .stats > .card:first-child *{font-size:inherit}' +
     'body.pp-simple #money .pp-big{font-size:44px!important;font-weight:700;line-height:1.1;display:block}' +
     'body.pp-simple:not(.pp-more-on) .pp-more{display:none!important}' +
-    /* readable header + name tags when the phone is in dark mode */
-    '@media (prefers-color-scheme: dark){header.hero{background:#16303F!important}#pp-scene span{color:#13324A!important}#pp-tiles button{background:#1C3444;color:#EAF4F7;box-shadow:none}#pp-tiles small{color:#A9BFC9}}' +
-    '#pp-morebtn{display:block;width:100%;min-height:58px;margin:12px 0;border:0;border-radius:18px;background:#EDE2CC;color:#13324A;font:800 16px Nunito,-apple-system,sans-serif;cursor:pointer}' +
+    '#pp-scene span{color:#13324A!important}' +
+    '#pp-morebtn{display:block;width:100%;min-height:58px;margin:12px 0;border:0;border-radius:18px;background:var(--chip);color:var(--ink);font:800 16px Nunito,-apple-system,sans-serif;cursor:pointer}' +
     '#pp-morebtn small{display:block;font-weight:700;font-size:12px;opacity:.7}' +
     '.pp-badge{display:inline-block;background:#C8553D;color:#fff;border-radius:99px;padding:2px 9px;font-size:13px;margin-left:6px;vertical-align:1px}' +
     '.pp-cats{padding:14px 16px!important}.pp-cat-t{font-weight:800;font-size:13px;letter-spacing:.04em;text-transform:uppercase;opacity:.75;margin-bottom:8px}' +
-    '.pp-cat-bar{display:flex;height:14px;border-radius:8px;overflow:hidden;background:#EDE2CC}.pp-cat-bar i{display:block;height:100%}' +
+    '.pp-cat-bar{display:flex;height:14px;border-radius:8px;overflow:hidden;background:var(--chip)}.pp-cat-bar i{display:block;height:100%}' +
     '.pp-cat-leg{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:9px;font-size:13px;font-weight:700}.pp-cat-leg b{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:5px}.pp-cat-leg em{font-style:normal;opacity:.7;font-weight:600}' +
-    /* dark mode: fix washed-out text */
-    '@media (prefers-color-scheme: dark){#to-diary,#voice{color:#13324A!important}' +
-    '.pp-prof input,.pp-prof .nm,.pp-prof h2,.pp-prof h3,.pp-prof [class*=name]{color:#EAF4F7!important}' +
-    '.pp-prof button:not([class*=on]):not(.btn){color:#EAF4F7!important}' +
-    '#money .pp-big,#money .stats .card{color:#EAF4F7!important}.pp-cat-bar{background:#2A4352}' +
-    '#pp-morebtn{background:#22404F;color:#EAF4F7}}';
+    '#money .pp-big{color:var(--ink)!important}';
 
   function txt(el) { return (el && el.textContent || '').replace(/\s+/g, ' ').trim(); }
   function click(sel) { var b = typeof sel === 'string' ? document.querySelector(sel) : sel; if (b) b.click(); }
@@ -125,22 +118,13 @@
   function apply() { document.body.classList.toggle('pp-simple', on()); today(); money(); }
   window.ppSimple = function (v) { localStorage.setItem(KEY, v ? '1' : '0'); apply(); };
 
-  // a switch in My profile
-  function profileSwitch() {
-    var rows = document.querySelector('#pp-me .rows'); if (!rows || rows.querySelector('[data-a="simple"]')) return;
-    var b = document.createElement('button'); b.dataset.a = 'simple';
-    var paint = function () { b.innerHTML = '<i>✨</i>Simple screens<span class="chev">' + (on() ? 'On' : 'Off') + '</span>'; };
-    paint(); b.onclick = function (e) { e.stopPropagation(); window.ppSimple(!on()); paint(); };
-    rows.insertBefore(b, rows.firstChild);
-  }
-
   function start() {
     var st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
     apply();
     var busy = false;
     new MutationObserver(function () {
       if (busy) return; busy = true;
-      requestAnimationFrame(function () { apply(); profileSwitch(); busy = false; });
+      requestAnimationFrame(function () { apply(); busy = false; });
     }).observe(document.body, { childList: true, subtree: true });
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
