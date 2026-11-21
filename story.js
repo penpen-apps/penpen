@@ -27,7 +27,7 @@
     '#pp-story-hero .sun{position:absolute;right:-16px;top:-16px;font-size:86px;opacity:.9;animation:ppWig 3s ease-in-out infinite}' +
     '@keyframes ppWig{0%,100%{transform:rotate(-6deg)}50%{transform:rotate(6deg)}}' +
     '#pp-story-say{position:relative;margin:14px 0 6px;background:#FFFDF8;border-radius:18px;padding:12px 14px;font:700 15.5px/1.35 Nunito,-apple-system,sans-serif;color:#13324A;box-shadow:0 1px 0 #E8DCC6}' +
-    '#pp-story-say:after{content:"";position:absolute;right:16%;bottom:-9px;border:10px solid transparent;border-bottom:0;border-top-color:#FFFDF8}' +
+    '#pp-story-say:after{content:"";position:absolute;right:29%;bottom:-9px;border:10px solid transparent;border-bottom:0;border-top-color:#FFFDF8}' +
     '#pp-story-say b{color:#237566}' +
     '#pp-story-crew{font:800 13px Nunito,-apple-system,sans-serif;letter-spacing:.04em;text-transform:uppercase;color:#4F6475;margin:14px 2px 6px}' +
     '#pp-story{margin:18px 0 6px}#pp-story h3{font:900 20px Nunito,-apple-system,sans-serif;margin:0 2px 10px;color:#13324A}' +
@@ -43,7 +43,7 @@
     '#pp-bell em{position:absolute;top:-3px;right:-3px;min-width:19px;height:19px;border-radius:10px;background:#C8553D;color:#fff;font:800 11.5px/19px -apple-system,sans-serif;font-style:normal;padding:0 5px}' +
     '.pp-sheet{position:fixed;inset:0;z-index:99970;background:rgba(19,50,74,.35);display:flex;align-items:flex-end;justify-content:center}' +
     '.pp-sheet .in{width:100%;max-width:560px;max-height:86vh;overflow:auto;background:#F6EEDF;border-radius:24px 24px 0 0;padding:18px 16px calc(22px + env(safe-area-inset-bottom));font:16px/1.4 Nunito,-apple-system,sans-serif;color:#13324A}' +
-    '.pp-sheet h2{margin:0 0 12px;font:900 22px Nunito,-apple-system,sans-serif;display:flex;align-items:center}.pp-sheet h2 button{margin-left:auto;border:0;background:#fff;border-radius:50%;width:36px;height:36px;font-size:18px;cursor:pointer}' +
+    '.pp-sheet h2{margin:0 0 12px;font:900 22px Nunito,-apple-system,sans-serif;display:flex;align-items:center}.pp-sheet h2 button{margin-left:auto;border:0;background:#fff;border-radius:50%;width:36px;height:36px;font-size:18px;cursor:pointer;color:#13324A}' +
     '.pp-sheet .it{display:flex;gap:12px;align-items:flex-start;width:100%;text-align:left;border:0;background:#FFFDF8;border-radius:16px;padding:13px 14px;margin:0 0 8px;font:inherit;color:inherit;cursor:pointer}' +
     '.pp-sheet .it .ic{font-size:22px;line-height:1.1}.pp-sheet .it b{display:block;font-weight:800}.pp-sheet .it small{display:block;color:#5C6E7C;font-size:13.5px}' +
     '.pp-sheet .it.new{box-shadow:inset 4px 0 0 #C8553D}.pp-sheet .it.on{box-shadow:inset 0 0 0 2px #237566}.pp-sheet .it .ok{margin-left:auto;color:#237566;font-weight:900}' +
@@ -99,7 +99,7 @@
     for (var i = 0; i < PRI.length; i++) for (var j = 0; j < stops.length; j++) if (PRI[i].test(String(stops[j].what).toLowerCase())) return stops[j];
     return stops[0] || { what: 'Free time' };
   }
-  function clean(t) { return String(t || '').replace(/^Tour Day \d+:?\s*/i, '').replace(/\s*\(PR \d+\)/, ''); }
+  function clean(t) { t = String(t || '').replace(/^Tour Day \d+:?\s*/i, '').replace(/\s*\(PR \d+\)/, ''); return t.charAt(0).toUpperCase() + t.slice(1); }
 
   /* ---------- penpen's excited line ---------- */
   function cheer(I) {
@@ -156,7 +156,7 @@
         var hl = highlight(d.stops), rest = d.stops.filter(function (s) { return s !== hl; }).slice(0, 2).map(function (s) { return clean(s.what); }).join(' · ');
         chapters += ch(cls, cls === 'done' ? '✓' : icon(hl.what), 'Chapter ' + (i + 1) + ' · ' + d.label + (cls === 'now' ? ' · today' : ''), clean(hl.what), rest);
       });
-      html = '<h3>' + (I.phase === 'after' ? 'The story 📖' : 'Your story so far 📖') + '</h3>' + chapters + '<button type="button" class="all">See every chapter ›</button>';
+      html = '<h3>' + (I.phase === 'after' ? 'The story 📖' : I.phase === 'during' ? 'Your story so far 📖' : 'The story ahead 📖') + '</h3>' + chapters + '<button type="button" class="all">See every chapter ›</button>';
     }
     var st = put(t, 'pp-story', 'div', html, null);
     st.onclick = function (e) { if (e.target.closest('button')) nav('Plan'); };
