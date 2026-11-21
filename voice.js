@@ -4,6 +4,7 @@
    - Hold the 🔊 button (or turn voice on the first time) to pick penpen's voice */
 (function () {
   var VOICES = [
+    { id: 'classic', label: 'Classic penpen', note: 'the original penpen · cheerful' },
     { id: 'bubbly', label: 'Bubbly', note: 'upbeat and playful' },
     { id: 'sweet', label: 'Sweet', note: 'young and gentle' },
     { id: 'hyper', label: 'Hyper', note: 'lots of energy!' },
@@ -17,7 +18,8 @@
     { id: 'phone', label: 'Phone voice', note: 'works offline, more robotic' }
   ];
   var LINES = {
-    bubbly: "Hi! I'm penpen, your trip buddy. Ready to waddle?",
+    classic: "Hi! I'm penpen, your trip buddy. Ready to waddle?",
+    bubbly: "Hi hi! I'm penpen. Let's make this trip fun!",
     sweet: "Hi there! I'm penpen. I'll take good care of your trip.",
     hyper: "Hi hi hi! I'm penpen and this trip is gonna be AMAZING!",
     buddy: "Hey! penpen here. I've got your back this trip.",
@@ -39,7 +41,7 @@
   window.ppChatHook = function (fn, args) {
     if (fn !== 'penpenAsk') return null;
     var hist = get('pp_hist', []);
-    return { fn: 'penpenChat', args: [args[0], hist, pick || 'bubbly'], after: function (r) {
+    return { fn: 'penpenChat', args: [args[0], hist, pick || 'classic'], after: function (r) {
       var said = r && r.replies ? r.replies.map(function (x) { return typeof x === 'string' ? x : (x.text || x.t || ''); }).join(' ') : '';
       hist.push({ who: 'me', t: String(args[0]).slice(0, 600) });
       if (said) hist.push({ who: 'pp', t: said.slice(0, 600) });
@@ -75,7 +77,7 @@
     var nativeSpeak = synth.speak.bind(synth), nativeCancel = synth.cancel.bind(synth);
     synth.cancel = function () { stop(); nativeCancel(); };
     synth.speak = function (u) {
-      var v = pick || 'bubbly';
+      var v = pick || 'classic';
       if (v === 'phone' || !navigator.onLine || !window.ppCall) { u.pitch = 1.35; u.rate = 1.05; return nativeSpeak(u); }
       var text = u.text, my = ++sayId;
       window.ppCall('penpenVoice', [text, v]).then(function (a) { if (my === sayId) return playPcm(a.audio, a.mime); })
@@ -98,10 +100,10 @@
     var w = document.createElement('div'); w.id = 'pp-vp';
     w.innerHTML = '<div class="p"><h3>penpen\'s voice</h3><div class="s">Tap one to hear it. That\'s the one penpen will use.</div>' +
       VOICES.map(function (v) {
-        return '<button class="r" data-v="' + v.id + '"><div class="g"><b>' + v.label + '</b><span>' + v.note + '</span></div><i class="ck">' + ((pick || 'bubbly') === v.id ? '✓' : '') + '</i></button>';
+        return '<button class="r" data-v="' + v.id + '"><div class="g"><b>' + v.label + '</b><span>' + v.note + '</span></div><i class="ck">' + ((pick || 'classic') === v.id ? '✓' : '') + '</i></button>';
       }).join('') + '<button class="done">Done</button></div>';
     document.body.appendChild(w);
-    function mark() { w.querySelectorAll('.r').forEach(function (r) { var on = r.dataset.v === (pick || 'bubbly'); r.classList.toggle('on', on); r.querySelector('.ck').textContent = on ? (r.classList.contains('busy') ? '…' : '✓') : ''; }); }
+    function mark() { w.querySelectorAll('.r').forEach(function (r) { var on = r.dataset.v === (pick || 'classic'); r.classList.toggle('on', on); r.querySelector('.ck').textContent = on ? (r.classList.contains('busy') ? '…' : '✓') : ''; }); }
     mark();
     w.addEventListener('click', function (e) {
       var t = e.target;
@@ -111,11 +113,11 @@
       w.querySelectorAll('.r').forEach(function (x) { x.classList.remove('busy'); });
       r.classList.add('busy'); mark();
       stop(); try { SpeechSynthesis.prototype.cancel.call(window.speechSynthesis); } catch (x) {}
-      sayNow(LINES[pick] || LINES.bubbly, function () { r.classList.remove('busy'); mark(); });
+      sayNow(LINES[pick] || LINES.classic, function () { r.classList.remove('busy'); mark(); });
     });
   }
   function sayNow(text, done) {
-    var v = pick || 'bubbly', my = ++sayId;
+    var v = pick || 'classic', my = ++sayId;
     if (v === 'phone' || !navigator.onLine) {
       var u = new SpeechSynthesisUtterance(text); u.pitch = 1.35; u.rate = 1.05; nativeSpeakSafe(u); if (done) done(); return;
     }

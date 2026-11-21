@@ -29,6 +29,8 @@
     '#pp-talk .bar button{width:68px;height:68px;border-radius:50%;border:0;display:grid;place-items:center;font-size:26px;box-shadow:0 4px 14px rgba(0,0,0,.12)}' +
     '#pp-talk .mute{background:#fff;color:#2B2A28}#pp-talk .mute.on{background:#2B2A28;color:#fff}' +
     '#pp-talk .end{background:#C8553D;color:#fff}' +
+    '#pp-talk .ptt{display:flex;gap:12px;width:100%;max-width:440px}#pp-talk .ptt button{flex:1;min-height:96px;border-radius:24px;border:0;font:800 17px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#13324A;box-shadow:0 4px 14px rgba(0,0,0,.1);touch-action:none;user-select:none;-webkit-user-select:none}' +
+    '#pp-talk .ptt button.on{background:#237566;color:#fff;transform:scale(.98)}#pp-talk .ptt small{display:block;font-weight:700;font-size:13px;opacity:.75;margin-top:4px}' +
     '@media (max-height:720px){#pp-talk{padding-top:calc(16px + env(safe-area-inset-top));padding-bottom:calc(18px + env(safe-area-inset-bottom))}#pp-talk .orb{width:170px;height:170px}#pp-talk .pen{width:118px;height:118px}#pp-talk .cap{font-size:17px}}';
   var PEN = '<svg class="pen" viewBox="0 0 120 120" aria-hidden="true"><ellipse cx="60" cy="112" rx="30" ry="5" fill="#000" opacity=".08"/><path d="M60 14c-26 0-40 22-40 50 0 26 16 44 40 44s40-18 40-44c0-28-14-50-40-50z" fill="#2E3A4A"/><ellipse cx="60" cy="76" rx="25" ry="28" fill="#FFF8EE"/><circle cx="48.5" cy="50" r="13" fill="#FFF8EE"/><circle cx="71.5" cy="50" r="13" fill="#FFF8EE"/><circle cx="48.5" cy="51" r="5.2" fill="#1E1E1E"/><circle cx="71.5" cy="51" r="5.2" fill="#1E1E1E"/><circle cx="50.3" cy="49" r="1.8" fill="#fff"/><circle cx="73.3" cy="49" r="1.8" fill="#fff"/><path d="M54 60q6 7 12 0q-6 4-12 0z" fill="#F4A62A"/><ellipse cx="40" cy="62" rx="5" ry="3" fill="#F7A9A0" opacity=".6"/><ellipse cx="80" cy="62" rx="5" ry="3" fill="#F7A9A0" opacity=".6"/><ellipse cx="48" cy="106" rx="9" ry="4" fill="#F4A62A"/><ellipse cx="72" cy="106" rx="9" ry="4" fill="#F4A62A"/></svg>';
 
@@ -100,6 +102,27 @@
   function status(t) { var s = document.getElementById('pp-t-st'); if (s) s.textContent = t; }
   function caption(t) { var c = document.getElementById('pp-t-cap'); if (c) c.textContent = t; }
 
+
+  /* ---------- Translate: hold-to-talk so two people never get mixed up ---------- */
+  function showPtt() {
+    var them = S.lang.replace(/ \(.*\)/, '');
+    var bar = S.el.querySelector('.bar');
+    var box = document.createElement('div'); box.className = 'ptt';
+    box.innerHTML = '<button type="button" data-who="me">🙋 Me<small>hold · English</small></button><button type="button" data-who="them">🧑 Them<small>hold · ' + them + '</small></button>';
+    bar.parentNode.insertBefore(box, bar);
+    document.getElementById('pp-t-mute').style.display = 'none';
+    box.querySelectorAll('button').forEach(function (b) {
+      var down = function (e) { e.preventDefault(); if (!S) return; stopAudio(); S.ptt = b.dataset.who; b.classList.add('on'); status(b.dataset.who === 'me' ? '🙋 Listening to you…' : '🧑 Listening to them…'); };
+      var up = function (e) {
+        if (!S || S.ptt !== b.dataset.who) return; e.preventDefault();
+        S.ptt = null; b.classList.remove('on'); status('🌐 Translating…');
+        try { S.ws.send(JSON.stringify({ realtimeInput: { audioStreamEnd: true } })); } catch (x) {}
+      };
+      b.addEventListener('pointerdown', down); b.addEventListener('pointerup', up); b.addEventListener('pointercancel', up); b.addEventListener('pointerleave', up);
+      b.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+    });
+  }
+
   /* ---------- connection ---------- */
   function connect() {
     if (!S) return;
@@ -135,7 +158,7 @@
     if (!S) return;
     if (j.setupComplete) {
       S.ready = true;
-      if (S.mode === 'translate') { status('🌐 Speak English or ' + S.lang.replace(/ \(.*\)/, '') + ' — penpen translates'); return; }
+      if (S.mode === 'translate') { status('🌐 Hold a button and speak'); showPtt(); return; }
       status('Listening…');
       // let penpen open with a short hello
       S.ws.send(JSON.stringify({ clientContent: { turns: [{ role: 'user', parts: [{ text: '(The user just opened voice chat. Greet them in a few words.)' }] }], turnComplete: true } }));
@@ -151,7 +174,7 @@
       if (S.inT.trim() && S.inT.indexOf('(The user just opened') < 0) S.turns.push({ who: 'me', t: S.inT.trim() });
       if (S.outT.trim()) S.turns.push({ who: 'pp', t: S.outT.trim() });
       S.inT = ''; S.outT = '';
-      setTimeout(function () { if (S && !S.sources.length) { S.el.classList.remove('speaking'); status(S.muted ? 'Muted' : 'Listening…'); } }, 300);
+      setTimeout(function () { if (S && !S.sources.length) { S.el.classList.remove('speaking'); status(S.mode === 'translate' ? '🌐 Hold a button and speak' : S.muted ? 'Muted' : 'Listening…'); } }, 300);
     }
   }
 
@@ -180,6 +203,7 @@
         var lvl = Math.sqrt(sum / n);
         if (ring && !S.el.classList.contains('speaking')) ring.style.setProperty('--lvl', String(1 + Math.min(lvl * 6, 0.35)));
         if (S.muted || !S.ready || !S.ws || S.ws.readyState !== 1) return;
+        if (S.mode === 'translate' && !S.ptt) return;   // hold-to-talk: only listen while someone holds a button
         var bytes = new Uint8Array(out.buffer), bin = '';
         for (var k = 0; k < bytes.length; k += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(k, k + 0x8000));
         S.ws.send(JSON.stringify({ realtimeInput: { audio: { data: btoa(bin), mimeType: 'audio/pcm;rate=16000' } } }));
@@ -202,7 +226,7 @@
     src.onended = function () {
       if (!S) return;
       S.sources = S.sources.filter(function (x) { return x !== src; });
-      if (!S.sources.length) { S.el.classList.remove('speaking'); status(S.muted ? 'Muted' : 'Listening…'); }
+      if (!S.sources.length) { S.el.classList.remove('speaking'); status(S.mode === 'translate' ? '🌐 Hold a button and speak' : S.muted ? 'Muted' : 'Listening…'); }
     };
   }
   function stopAudio() {
