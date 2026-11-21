@@ -20,6 +20,8 @@
     'body.pp-simple #money .stats > .card:first-child *{font-size:inherit}' +
     'body.pp-simple #money .pp-big{font-size:44px!important;font-weight:700;line-height:1.1;display:block}' +
     'body.pp-simple:not(.pp-more-on) .pp-more{display:none!important}' +
+    /* readable header + name tags when the phone is in dark mode */
+    '@media (prefers-color-scheme: dark){header.hero{background:#16303F!important}#pp-scene span{color:#13324A!important}#pp-tiles button{background:#1C3444;color:#EAF4F7;box-shadow:none}#pp-tiles small{color:#A9BFC9}}' +
     '#pp-morebtn{display:block;width:100%;min-height:54px;margin:12px 0;border:0;border-radius:18px;background:#EDE2CC;color:#13324A;font:800 16px Nunito,-apple-system,sans-serif;cursor:pointer}';
 
   function txt(el) { return (el && el.textContent || '').replace(/\s+/g, ' ').trim(); }
