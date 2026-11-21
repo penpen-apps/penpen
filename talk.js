@@ -40,7 +40,9 @@
     return c.outerHTML;
   }
 
-  function open() {
+  var LANGS = ['Bisaya (Cebuano)', 'Tagalog', 'Ilocano', 'Spanish', 'Japanese', 'Korean', 'Mandarin', 'French'];
+  function open(opts) {
+    opts = opts || {};
     if (S) return;
     if (!document.getElementById('pp-talk-css')) { var st = document.createElement('style'); st.id = 'pp-talk-css'; st.textContent = css; document.head.appendChild(st); }
     var w = document.createElement('div'); w.id = 'pp-talk'; w.setAttribute('role', 'dialog'); w.setAttribute('aria-label', 'Talking with penpen');
@@ -49,13 +51,30 @@
       '<div class="cap" id="pp-t-cap"></div>' +
       '<div class="bar"><button class="mute" id="pp-t-mute" aria-label="Mute microphone">🎙️</button><button class="end" id="pp-t-end" aria-label="End">✕</button></div>';
     document.body.appendChild(w);
-    S = { el: w, turns: [], inT: '', outT: '', muted: false, model: 0, nextAt: 0, sources: [] };
+    S = { el: w, turns: [], inT: '', outT: '', muted: false, model: 0, nextAt: 0, sources: [], mode: opts.mode || 'talk', lang: opts.lang || '' };
     document.getElementById('pp-t-end').onclick = close;
     document.getElementById('pp-t-mute').onclick = function () {
       S.muted = !S.muted; this.classList.toggle('on', S.muted); this.textContent = S.muted ? '🔇' : '🎙️';
       status(S.muted ? 'Muted' : 'Listening…');
     };
     try { S.ctx = new (window.AudioContext || window.webkitAudioContext)(); S.ctx.resume(); } catch (e) {}
+    if (S.mode === 'translate' && !S.lang) return pickLang();
+    begin();
+  }
+  function pickLang() {
+    status('Translate English ⇄ …');
+    var last = localStorage.getItem('pp_tr_lang') || '';
+    var cap = document.getElementById('pp-t-cap');
+    cap.innerHTML = '<div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center">' + LANGS.map(function (l) {
+      return '<button type="button" data-l="' + l + '" style="font:inherit;font-size:16px;border-radius:14px;padding:10px 14px;border:1.5px solid #237566;background:' + (l === last ? '#237566;color:#fff' : 'rgba(255,255,255,.7);color:#13324A') + '">' + l + '</button>';
+    }).join('') + '</div>';
+    cap.onclick = function (e) {
+      var b = e.target.closest('button[data-l]'); if (!b || !S) return;
+      S.lang = b.dataset.l; localStorage.setItem('pp_tr_lang', S.lang); cap.onclick = null; cap.textContent = ''; begin();
+    };
+  }
+  function begin() {
+    if (S.mode === 'translate') status('🌐 English ⇄ ' + S.lang + ' · connecting…');
     startMic().then(connect).catch(function (e) {
       status(e && e.name === 'NotAllowedError' ? 'Allow the microphone for penpen, then try again.' : "Couldn't start — try again.");
     });
@@ -67,7 +86,7 @@
   function connect() {
     if (!S) return;
     status('Connecting…');
-    window.ppCall('penpenLiveStart', [persona()]).then(function (L) {
+    window.ppCall('penpenLiveStart', [persona(), S.mode, S.lang]).then(function (L) {
       if (!S) return;
       S.L = L;
       var ws = new WebSocket(WS + encodeURIComponent(L.token)); S.ws = ws;
@@ -77,7 +96,7 @@
           generationConfig: { responseModalities: ['AUDIO'], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: L.voice } } } },
           systemInstruction: { parts: [{ text: L.system }] },
           inputAudioTranscription: {}, outputAudioTranscription: {},
-          tools: [{ functionDeclarations: [{ name: 'penpen_action',
+          tools: S.mode === 'translate' ? [] : [{ functionDeclarations: [{ name: 'penpen_action',
             description: 'Record or change something on the trip, or calculate money: log an expense or payment, split, settle up, undo, who owes who, totals.',
             parameters: { type: 'OBJECT', properties: { request: { type: 'STRING', description: 'The request in plain words, e.g. "Lunch 450 pesos, Kate paid, split with Brad"' } }, required: ['request'] } }] }]
         } }));
@@ -97,7 +116,9 @@
   function onMsg(j) {
     if (!S) return;
     if (j.setupComplete) {
-      S.ready = true; status('Listening…');
+      S.ready = true;
+      if (S.mode === 'translate') { status('🌐 Speak English or ' + S.lang.replace(/ \(.*\)/, '') + ' — penpen translates'); return; }
+      status('Listening…');
       // let penpen open with a short hello
       S.ws.send(JSON.stringify({ clientContent: { turns: [{ role: 'user', parts: [{ text: '(The user just opened voice chat. Greet them in a few words.)' }] }], turnComplete: true } }));
       return;
@@ -185,15 +206,17 @@
     s.el.remove(); S = null;
     var log = document.getElementById('log');
     if (log && s.turns.length) {
+      if (s.mode === 'translate') { var hd = document.createElement('div'); hd.className = 'msg pp'; hd.textContent = '🌐 Translation (English ⇄ ' + s.lang + ')'; log.appendChild(hd); }
       s.turns.forEach(function (t) { var d = document.createElement('div'); d.className = 'msg ' + t.who; d.textContent = t.t; log.appendChild(d); });
       log.scrollTop = log.scrollHeight;
     }
-    try {
+    if (s.mode !== 'translate') try {
       var h = JSON.parse(localStorage.getItem('pp_hist') || '[]').concat(s.turns.map(function (t) { return { who: t.who, t: t.t.slice(0, 600) }; }));
       localStorage.setItem('pp_hist', JSON.stringify(h.slice(-16)));
     } catch (e) {}
   }
   window.ppTalk = open;
+  window.ppTranslate = function () { open({ mode: 'translate' }); };
 
   /* ---------- the mic button in the penpen chat opens Talk ---------- */
   function hook() {
@@ -203,6 +226,17 @@
       if (!navigator.onLine || !window.WebSocket || !navigator.mediaDevices) return; // offline: fall back to the old mic
       e.stopImmediatePropagation(); e.preventDefault(); open();
     }, true);
+    addChip();
+  }
+  // a 🌐 Translate chip at the front of the quick-ask chips
+  function addChip() {
+    var any = [].slice.call(document.querySelectorAll('button')).filter(function (b) { return b.textContent.trim() === 'Who owes who?'; })[0];
+    if (!any) return setTimeout(addChip, 500);
+    if (document.getElementById('pp-tr-chip')) return;
+    var c = document.createElement('button'); c.type = 'button'; c.id = 'pp-tr-chip'; c.className = any.className; c.textContent = '🌐 Translate';
+    c.style.fontWeight = '800';
+    c.onclick = function (e) { e.preventDefault(); e.stopPropagation(); window.ppTranslate(); };
+    any.parentNode.insertBefore(c, any.parentNode.firstChild);
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', hook); else hook();
 })();

@@ -32,6 +32,7 @@
   function get(k, d) { try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } }
   function set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
   var OLD = { lola: 'grandma', Puck: 'bubbly', Leda: 'sweet', Fenrir: 'hyper', Achird: 'buddy', Zephyr: 'sunny' };
+  var sayId = 0;
   var pick = get('pp_voice_pick', null); if (OLD[pick]) pick = OLD[pick];
 
   /* ---------- chat memory: penpenAsk → penpenChat(text, history) ---------- */
@@ -76,9 +77,9 @@
     synth.speak = function (u) {
       var v = pick || 'bubbly';
       if (v === 'phone' || !navigator.onLine || !window.ppCall) { u.pitch = 1.35; u.rate = 1.05; return nativeSpeak(u); }
-      var text = u.text;
-      window.ppCall('penpenVoice', [text, v]).then(function (a) { return playPcm(a.audio, a.mime); })
-        .catch(function () { nativeSpeak(u); });
+      var text = u.text, my = ++sayId;
+      window.ppCall('penpenVoice', [text, v]).then(function (a) { if (my === sayId) return playPcm(a.audio, a.mime); })
+        .catch(function () { if (my === sayId) nativeSpeak(u); });
     };
   }
 
@@ -114,12 +115,12 @@
     });
   }
   function sayNow(text, done) {
-    var v = pick || 'bubbly';
+    var v = pick || 'bubbly', my = ++sayId;
     if (v === 'phone' || !navigator.onLine) {
       var u = new SpeechSynthesisUtterance(text); u.pitch = 1.35; u.rate = 1.05; nativeSpeakSafe(u); if (done) done(); return;
     }
-    window.ppCall('penpenVoice', [text, v]).then(function (a) { return playPcm(a.audio, a.mime); })
-      .catch(function () { var u = new SpeechSynthesisUtterance(text); nativeSpeakSafe(u); })
+    window.ppCall('penpenVoice', [text, v]).then(function (a) { if (my === sayId) return playPcm(a.audio, a.mime); })   // only the latest tap plays
+      .catch(function () { if (my !== sayId) return; var u = new SpeechSynthesisUtterance(text); nativeSpeakSafe(u); })
       .then(function () { if (done) done(); });
   }
   function nativeSpeakSafe(u) { try { window.speechSynthesis.cancel(); } catch (e) {} try { SpeechSynthesis.prototype.speak.call(window.speechSynthesis, u); } catch (e) {} }
