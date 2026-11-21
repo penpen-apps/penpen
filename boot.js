@@ -72,6 +72,36 @@
   window.google = window.google || {};
   window.google.script = { run: runner({}) };
 
+
+  /* ---------- trip theme: the creator picks it for everyone; anyone can override on their own phone ---------- */
+  (function () {
+    function prefs() { try { return JSON.parse(localStorage.getItem('pp_prefs') || '{}'); } catch (e) { return {}; } }
+    var own = localStorage.getItem('pp_scene_own') === '1', trip = localStorage.getItem('pp_trip_theme') || '';
+    // before the app reads its settings, apply the trip's theme (unless this person chose their own)
+    if (!own && trip) { var p0 = prefs(); if (p0.scene !== trip) { p0.scene = trip; localStorage.setItem('pp_prefs', JSON.stringify(p0)); } }
+    var origSet = Storage.prototype.setItem;
+    Storage.prototype.setItem = function (k, v) {
+      if (this === localStorage && k === 'pp_prefs') {
+        var before = prefs().scene, after; try { after = JSON.parse(v).scene; } catch (e) {}
+        if (after && after !== before) {
+          if (ROLE === 'creator') { origSet.call(localStorage, 'pp_trip_theme', after); post('setTheme', { theme: after }).catch(function () {}); }
+          else origSet.call(localStorage, 'pp_scene_own', '1');
+        }
+      }
+      return origSet.call(this, k, v);
+    };
+    window.ppUseTripTheme = function () { localStorage.removeItem('pp_scene_own'); location.reload(); };
+    window.ppRefreshTheme = function () {
+      post('theme', {}).then(function (r) {
+        var t = r && r.theme; if (!t || t === localStorage.getItem('pp_trip_theme')) return;
+        origSet.call(localStorage, 'pp_trip_theme', t);
+        if (ROLE !== 'creator' && localStorage.getItem('pp_scene_own') !== '1' && prefs().scene !== t) {
+          var p1 = prefs(); p1.scene = t; origSet.call(localStorage, 'pp_prefs', JSON.stringify(p1)); location.reload();
+        }
+      }).catch(function () {});
+    };
+  })();
+
   /* ---------- sign in ---------- */
   var css = '#pp-gate{position:fixed;inset:0;z-index:99999;background:#F6EEDF;display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;font:16px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#2B2A28}' +
     '#pp-gate h1{font-size:28px;margin:10px 0 4px}#pp-gate p{color:#7A7468;max-width:320px;margin:6px auto}#pp-gate .b{margin:20px 0}' +
@@ -130,6 +160,7 @@
       ROLE = w.member.role; set('pp_role', ROLE);
       var g = document.getElementById('pp-gate'); if (g) g.style.display = 'none';
       var q = waiting; waiting = []; q.forEach(function (f) { f(); });
+      if (window.ppRefreshTheme) setTimeout(window.ppRefreshTheme, 1500);
     }).catch(function (e) {
       if (e.message === 'badinvite') return showSignin('That invite link has expired — ask for a new one.');
       if (e.message === 'signin') return showSignin('Please sign in again.');

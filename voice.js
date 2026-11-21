@@ -4,22 +4,41 @@
    - Hold the 🔊 button (or turn voice on the first time) to pick penpen's voice */
 (function () {
   var VOICES = [
-    { id: 'Puck', label: 'Bubbly', note: 'upbeat and playful' },
-    { id: 'Leda', label: 'Sweet', note: 'young and gentle' },
-    { id: 'Fenrir', label: 'Hyper', note: 'excited, lots of energy' },
-    { id: 'Achird', label: 'Buddy', note: 'friendly and relaxed' },
-    { id: 'Zephyr', label: 'Sunny', note: 'bright and clear' },
+    { id: 'bubbly', label: 'Bubbly', note: 'upbeat and playful' },
+    { id: 'sweet', label: 'Sweet', note: 'young and gentle' },
+    { id: 'hyper', label: 'Hyper', note: 'lots of energy!' },
+    { id: 'buddy', label: 'Buddy', note: 'friendly and relaxed' },
+    { id: 'sunny', label: 'Sunny', note: 'bright and clear' },
+    { id: 'coolcat', label: 'Cool Cat', note: 'deep, smooth, unbothered swagger' },
+    { id: 'goofydad', label: 'Goofy Dad', note: 'dad jokes, laughs at himself' },
+    { id: 'trailer', label: 'Movie Trailer', note: '"In a world…" epic narrator' },
+    { id: 'surfer', label: 'Surfer Bro', note: 'totally chill, dude' },
+    { id: 'lola', label: 'Lola', note: 'sweet grandma: "Kumain ka na, anak?"' },
     { id: 'phone', label: 'Phone voice', note: 'works offline, more robotic' }
   ];
+  var LINES = {
+    bubbly: "Hi! I'm penpen, your trip buddy. Ready to waddle?",
+    sweet: "Hi there! I'm penpen. I'll take good care of your trip.",
+    hyper: "Hi hi hi! I'm penpen and this trip is gonna be AMAZING!",
+    buddy: "Hey! penpen here. I've got your back this trip.",
+    sunny: "Good day! I'm penpen, ready when you are.",
+    coolcat: "penpen. Your trip. Handled. Relax, my friend.",
+    goofydad: "Hi, I'm penpen! Why don't penguins get lost? They always ice-plore! Heh heh.",
+    trailer: "In a world... where one penguin keeps track of every peso... this is penpen.",
+    surfer: "Duuude, penpen here. This trip is gonna be so gnarly.",
+    lola: "Ay, anak! It's penpen. Have you eaten? Don't forget your jacket.",
+    phone: "Hi! I'm penpen, your trip buddy."
+  };
   function get(k, d) { try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } }
   function set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
-  var pick = get('pp_voice_pick', null);
+  var OLD = { Puck: 'bubbly', Leda: 'sweet', Fenrir: 'hyper', Achird: 'buddy', Zephyr: 'sunny' };
+  var pick = get('pp_voice_pick', null); if (OLD[pick]) pick = OLD[pick];
 
   /* ---------- chat memory: penpenAsk → penpenChat(text, history) ---------- */
   window.ppChatHook = function (fn, args) {
     if (fn !== 'penpenAsk') return null;
     var hist = get('pp_hist', []);
-    return { fn: 'penpenChat', args: [args[0], hist], after: function (r) {
+    return { fn: 'penpenChat', args: [args[0], hist, pick || 'bubbly'], after: function (r) {
       var said = r && r.replies ? r.replies.map(function (x) { return typeof x === 'string' ? x : (x.text || x.t || ''); }).join(' ') : '';
       hist.push({ who: 'me', t: String(args[0]).slice(0, 600) });
       if (said) hist.push({ who: 'pp', t: said.slice(0, 600) });
@@ -55,7 +74,7 @@
     var nativeSpeak = synth.speak.bind(synth), nativeCancel = synth.cancel.bind(synth);
     synth.cancel = function () { stop(); nativeCancel(); };
     synth.speak = function (u) {
-      var v = pick || 'Puck';
+      var v = pick || 'bubbly';
       if (v === 'phone' || !navigator.onLine || !window.ppCall) { u.pitch = 1.35; u.rate = 1.05; return nativeSpeak(u); }
       var text = u.text;
       window.ppCall('penpenVoice', [text, v]).then(function (a) { return playPcm(a.audio, a.mime); })
@@ -65,7 +84,7 @@
 
   /* ---------- voice picker ---------- */
   var css = '#pp-vp{position:fixed;inset:0;z-index:99990;background:rgba(0,0,0,.35);display:flex;align-items:flex-end;justify-content:center}' +
-    '#pp-vp .p{background:#FFFDF8;color:#2B2A28;width:100%;max-width:520px;border-radius:22px 22px 0 0;padding:18px 16px 22px;font:16px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}' +
+    '#pp-vp .p{background:#FFFDF8;color:#2B2A28;width:100%;max-width:520px;max-height:86vh;overflow:auto;border-radius:22px 22px 0 0;padding:18px 16px 22px;font:16px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}' +
     'body.pp-dark #pp-vp .p{background:#29312E;color:#F1ECE2}' +
     '#pp-vp h3{margin:0 0 4px;font-size:19px}#pp-vp .s{color:#7A7468;font-size:14px;margin-bottom:10px}' +
     '#pp-vp .r{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid #E8DDC8}#pp-vp .r:first-of-type{border-top:0}' +
@@ -74,7 +93,7 @@
     '#pp-vp button.on{background:#237566;color:#fff}#pp-vp .done{width:100%;margin-top:12px;background:#237566;color:#fff;border:0;padding:12px}';
   function picker() {
     if (!document.getElementById('pp-vp-css')) { var st = document.createElement('style'); st.id = 'pp-vp-css'; st.textContent = css; document.head.appendChild(st); }
-    var cur = pick || 'Puck';
+    var cur = pick || 'bubbly';
     var w = document.createElement('div'); w.id = 'pp-vp';
     w.innerHTML = '<div class="p"><h3>penpen\'s voice</h3><div class="s">Tap ▶ to hear each one, then choose.</div>' +
       VOICES.map(function (v) {
@@ -87,7 +106,7 @@
       if (t === w || t.classList.contains('done')) return w.remove();
       if (t.dataset.try) {
         var old = pick; pick = t.dataset.try; t.textContent = '…';
-        sayNow("Hi! I'm penpen, your trip buddy. Ready to waddle?", function () { t.textContent = '▶'; });
+        sayNow(LINES[t.dataset.try] || LINES.bubbly, function () { t.textContent = '▶'; });
         pick = old;
       }
       if (t.dataset.pick) {
@@ -97,7 +116,7 @@
     });
   }
   function sayNow(text, done) {
-    var v = pick || 'Puck';
+    var v = pick || 'bubbly';
     if (v === 'phone' || !navigator.onLine) {
       var u = new SpeechSynthesisUtterance(text); u.pitch = 1.35; u.rate = 1.05; nativeSpeakSafe(u); if (done) done(); return;
     }
