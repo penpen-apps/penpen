@@ -22,7 +22,7 @@
     'body.pp-simple #money .stats > .card:first-child *{font-size:inherit}' +
     'body.pp-simple #money .pp-big{font-size:44px!important;font-weight:700;line-height:1.1;display:block}' +
     'body.pp-simple:not(.pp-more-on) .pp-more{display:none!important}' +
-    '#pp-scene span{color:#13324A!important}' +
+    'header #to-diary{display:none!important}' +   /* the Diary tile on Today does this */
     '#pp-morebtn{display:block;width:100%;min-height:58px;margin:12px 0;border:0;border-radius:18px;background:var(--chip);color:var(--ink);font:800 16px Nunito,-apple-system,sans-serif;cursor:pointer}' +
     '#pp-morebtn small{display:block;font-weight:700;font-size:12px;opacity:.7}' +
     '.pp-badge{display:inline-block;background:#C8553D;color:#fff;border-radius:99px;padding:2px 9px;font-size:13px;margin-left:6px;vertical-align:1px}' +
