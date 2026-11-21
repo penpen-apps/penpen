@@ -13,7 +13,7 @@
     { id: 'goofydad', label: 'Goofy Dad', note: 'dad jokes, laughs at himself' },
     { id: 'trailer', label: 'Movie Trailer', note: '"In a world…" epic narrator' },
     { id: 'surfer', label: 'Surfer Bro', note: 'totally chill, dude' },
-    { id: 'lola', label: 'Lola', note: 'sweet grandma: "Kumain ka na, anak?"' },
+    { id: 'grandma', label: 'Grandma', note: 'sweet and caring, "have you eaten, dear?"' },
     { id: 'phone', label: 'Phone voice', note: 'works offline, more robotic' }
   ];
   var LINES = {
@@ -26,12 +26,12 @@
     goofydad: "Hi, I'm penpen! Why don't penguins get lost? They always ice-plore! Heh heh.",
     trailer: "In a world... where one penguin keeps track of every peso... this is penpen.",
     surfer: "Duuude, penpen here. This trip is gonna be so gnarly.",
-    lola: "Ay, anak! It's penpen. Have you eaten? Don't forget your jacket.",
+    grandma: "Hello, dear! It's penpen. Have you eaten? Don't forget your jacket.",
     phone: "Hi! I'm penpen, your trip buddy."
   };
   function get(k, d) { try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } }
   function set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
-  var OLD = { Puck: 'bubbly', Leda: 'sweet', Fenrir: 'hyper', Achird: 'buddy', Zephyr: 'sunny' };
+  var OLD = { lola: 'grandma', Puck: 'bubbly', Leda: 'sweet', Fenrir: 'hyper', Achird: 'buddy', Zephyr: 'sunny' };
   var pick = get('pp_voice_pick', null); if (OLD[pick]) pick = OLD[pick];
 
   /* ---------- chat memory: penpenAsk → penpenChat(text, history) ---------- */
@@ -87,32 +87,30 @@
     '#pp-vp .p{background:#FFFDF8;color:#2B2A28;width:100%;max-width:520px;max-height:86vh;overflow:auto;border-radius:22px 22px 0 0;padding:18px 16px 22px;font:16px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}' +
     'body.pp-dark #pp-vp .p{background:#29312E;color:#F1ECE2}' +
     '#pp-vp h3{margin:0 0 4px;font-size:19px}#pp-vp .s{color:#7A7468;font-size:14px;margin-bottom:10px}' +
-    '#pp-vp .r{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid #E8DDC8}#pp-vp .r:first-of-type{border-top:0}' +
+    '#pp-vp .r{display:flex!important;width:100%;text-align:left;align-items:center;gap:10px;padding:11px 12px!important;margin:4px 0;border:1.5px solid #E8DDC8!important;border-radius:14px!important;background:none!important;color:inherit!important}' +
+    '#pp-vp .r.on{border-color:#237566!important;background:rgba(35,117,102,.08)!important}#pp-vp .ck{font-style:normal;color:#237566;font-weight:700;width:18px;text-align:center}' +
     '#pp-vp .r b{display:block}#pp-vp .r span{color:#7A7468;font-size:13px}#pp-vp .g{flex:1}' +
     '#pp-vp button{font:inherit;border-radius:12px;padding:7px 12px;border:1.5px solid #237566;background:none;color:#237566}' +
     '#pp-vp button.on{background:#237566;color:#fff}#pp-vp .done{width:100%;margin-top:12px;background:#237566;color:#fff;border:0;padding:12px}';
   function picker() {
     if (!document.getElementById('pp-vp-css')) { var st = document.createElement('style'); st.id = 'pp-vp-css'; st.textContent = css; document.head.appendChild(st); }
-    var cur = pick || 'bubbly';
     var w = document.createElement('div'); w.id = 'pp-vp';
-    w.innerHTML = '<div class="p"><h3>penpen\'s voice</h3><div class="s">Tap ▶ to hear each one, then choose.</div>' +
+    w.innerHTML = '<div class="p"><h3>penpen\'s voice</h3><div class="s">Tap one to hear it. That\'s the one penpen will use.</div>' +
       VOICES.map(function (v) {
-        return '<div class="r"><div class="g"><b>' + v.label + '</b><span>' + v.note + '</span></div>' +
-          '<button data-try="' + v.id + '">▶</button><button data-pick="' + v.id + '" class="' + (v.id === cur ? 'on' : '') + '">' + (v.id === cur ? 'Chosen' : 'Choose') + '</button></div>';
+        return '<button class="r" data-v="' + v.id + '"><div class="g"><b>' + v.label + '</b><span>' + v.note + '</span></div><i class="ck">' + ((pick || 'bubbly') === v.id ? '✓' : '') + '</i></button>';
       }).join('') + '<button class="done">Done</button></div>';
     document.body.appendChild(w);
+    function mark() { w.querySelectorAll('.r').forEach(function (r) { var on = r.dataset.v === (pick || 'bubbly'); r.classList.toggle('on', on); r.querySelector('.ck').textContent = on ? (r.classList.contains('busy') ? '…' : '✓') : ''; }); }
+    mark();
     w.addEventListener('click', function (e) {
       var t = e.target;
-      if (t === w || t.classList.contains('done')) return w.remove();
-      if (t.dataset.try) {
-        var old = pick; pick = t.dataset.try; t.textContent = '…';
-        sayNow(LINES[t.dataset.try] || LINES.bubbly, function () { t.textContent = '▶'; });
-        pick = old;
-      }
-      if (t.dataset.pick) {
-        pick = t.dataset.pick; set('pp_voice_pick', pick);
-        w.querySelectorAll('[data-pick]').forEach(function (b) { var on = b.dataset.pick === pick; b.className = on ? 'on' : ''; b.textContent = on ? 'Chosen' : 'Choose'; });
-      }
+      if (t === w || (t.classList && t.classList.contains('done'))) return w.remove();
+      var r = t.closest && t.closest('.r'); if (!r) return;
+      pick = r.dataset.v; set('pp_voice_pick', pick);
+      w.querySelectorAll('.r').forEach(function (x) { x.classList.remove('busy'); });
+      r.classList.add('busy'); mark();
+      stop(); try { SpeechSynthesis.prototype.cancel.call(window.speechSynthesis); } catch (x) {}
+      sayNow(LINES[pick] || LINES.bubbly, function () { r.classList.remove('busy'); mark(); });
     });
   }
   function sayNow(text, done) {
