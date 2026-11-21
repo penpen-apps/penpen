@@ -16,12 +16,13 @@
 
   var TOKEN = get('pp_tok', null), ROLE = get('pp_role', ''), waiting = [], joinCode = new URLSearchParams(location.search).get('join');
   var SESS = localStorage.getItem('pp_sess') || '';   // 30-day penpen session after one Google sign-in
+  var TRIP = localStorage.getItem('pp_trip') || '';   // which trip this phone is looking at ('' = the first trip)
   function valid() { return !!SESS || !!(TOKEN && TOKEN.exp * 1000 > Date.now() + 60000); }
 
   /* ---------- talking to the server ---------- */
   function post(action, args) {
     return fetch(SERVER, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify(SESS ? { session: SESS, action: action, args: args || {} } : { token: TOKEN && TOKEN.cred, action: action, args: args || {} }) })
+      body: JSON.stringify(SESS ? { session: SESS, action: action, args: args || {}, trip: TRIP } : { token: TOKEN && TOKEN.cred, action: action, args: args || {}, trip: TRIP }) })
       .then(function (r) { return r.json(); })
       .then(function (j) { if (!j.ok) throw new Error(j.error); return j.data; });
   }
@@ -169,9 +170,20 @@
     enter();
   }
   function enter() {
-    var step = joinCode ? post('join', { code: joinCode }).then(function () { joinCode = null; history.replaceState(null, '', location.pathname); }) : Promise.resolve();
+    var step = joinCode ? post('join', { code: joinCode }).then(function (j) {
+      joinCode = null; history.replaceState(null, '', location.pathname);
+      if (j && j.trip !== undefined && j.trip !== TRIP) { setTrip(j.trip); }
+    }) : Promise.resolve();
     step.then(function () { return post('whoami', {}); }).then(function (w) {
-      if (!w.member) { ROLE = ''; set('pp_role', ''); return showNotMember(); }
+      if (!w.member) {
+        ROLE = ''; set('pp_role', '');
+        // not on this trip: jump to one of your own trips if you have any
+        return post('trips', {}).then(function (t) {
+          var l = (t && t.trips) || [];
+          if (l.length && l[0].id !== TRIP) { setTrip(l[0].id, l[0].name); return enter(); }
+          showNotMember();
+        }, showNotMember);
+      }
       ROLE = w.member.role; set('pp_role', ROLE);
       if (w.session && w.session !== SESS) { SESS = w.session; localStorage.setItem('pp_sess', SESS); }
       var g = document.getElementById('pp-gate'); if (g) g.style.display = 'none';
@@ -184,8 +196,22 @@
       showSignin("Couldn't reach penpen — check your connection and try again.");
     });
   }
+  /* ---------- many trips ---------- */
+  function clearCache() { Object.keys(localStorage).forEach(function (k) { if (k.indexOf('pp_c_') === 0) localStorage.removeItem(k); }); }
+  function setTrip(id, name) {
+    TRIP = id || ''; localStorage.setItem('pp_trip', TRIP);
+    if (name) localStorage.setItem('pp_trip_name', name);
+    clearCache(); localStorage.removeItem('pp_trip_theme'); localStorage.removeItem('pp_scene_own');
+  }
+  window.ppTrips = {
+    current: function () { return TRIP; },
+    list: function () { return post('trips', {}).then(function (r) { return (r && r.trips) || []; }); },
+    open: function (id, name) { setTrip(id, name); location.reload(); },
+    create: function (o) { return post('newTrip', o).then(function (r) { return r.trip; }); }
+  };
+
   window.ppSignOut = function () {
-    ['pp_tok', 'pp_role', 'pp_sess'].forEach(function (k) { localStorage.removeItem(k); });
+    ['pp_tok', 'pp_role', 'pp_sess', 'pp_trip', 'pp_trip_name'].forEach(function (k) { localStorage.removeItem(k); });
     Object.keys(localStorage).forEach(function (k) { if (k.indexOf('pp_c_') === 0) localStorage.removeItem(k); });
     try { google.accounts.id.disableAutoSelect(); } catch (e) {}
     location.reload();
