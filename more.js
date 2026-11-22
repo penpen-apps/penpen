@@ -201,6 +201,82 @@
     });
   };
 
+  /* ---------- the middle penpen has a life of his own ---------- */
+  var SAY = ['Use me to translate! 🌐', 'Drop your expenses here 💸', '"Lunch 450, I paid" — just tell me!', 'Where to next? 🗺️', 'I\'m not lost, I\'m exploring 🐧',
+    'Ask me where to eat 🍜', 'Got sunscreen? ☀️', 'Tap me, I\'m bored 🥱', 'Need a route? I\'ve got 5 🗺️', 'I know a guy… for lechon 🐷', 'Fish tacos? No? OK 🐟',
+    'Hydrate, hooman 💧', 'I can call Brad for you 📞', 'Psst… tap me 👀', '✨', '🐟', '🥥', '🧊', '💭', '🎶'];
+  var navBusy = false;
+  function navPen() { var b = document.getElementById('navpen'); return b && b.querySelector('svg'); }
+  function bodyColor(svg) {
+    var o = svg.getAttribute('data-orig'), d = document.createElement('div');
+    if (o) { d.innerHTML = '<svg>' + o + '</svg>'; var e = d.querySelector('ellipse[rx="36"]'); if (e) return e.getAttribute('fill'); }
+    var e2 = svg.querySelector('ellipse[rx="36"]'); return e2 ? e2.getAttribute('fill') : null;
+  }
+  function pop(text) {
+    var b = document.getElementById('navpen'); if (!b) return;
+    var old = document.getElementById('pp-navsay'); if (old) old.remove();
+    var t = document.createElement('div'); t.id = 'pp-navsay'; t.textContent = text; document.body.appendChild(t);
+    var r = b.getBoundingClientRect();
+    t.style.left = Math.max(8, Math.min(innerWidth - t.offsetWidth - 8, r.left + r.width / 2 - t.offsetWidth / 2)) + 'px';
+    t.style.top = (r.top - t.offsetHeight - 10) + 'px';
+    setTimeout(function () { t.classList.add('out'); setTimeout(function () { t.remove(); }, 400); }, 2600);
+  }
+  function pick(a) { return a[Math.floor(Math.random() * a.length)]; }
+  function play() {
+    var svg = navPen();
+    if (!svg || navBusy || document.hidden || document.getElementById('pp-talk') || document.getElementById('pp-me') || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    navBusy = true;
+    var end = function () { navBusy = false; };
+    var k = pick(['walk', 'walk', 'peek', 'peek', 'jump', 'think', 'say']);
+    svg.style.transformOrigin = '50% 90%';
+    if (k === 'walk' && window.ppLook) {
+      // turns sideways, waddles out of the circle, then comes back in from the other side
+      var front = svg.innerHTML, sideV = window.ppLook.side(window.ppGuideNow ? window.ppGuideNow() : 'bubbly', bodyColor(svg));
+      svg.innerHTML = sideV;
+      var wob = [];
+      for (var i = 0; i <= 8; i++) wob.push({ transform: 'translateX(' + (i * 15) + '%) rotate(' + (i % 2 ? 7 : -7) + 'deg)' });
+      var out = svg.animate(wob, { duration: 1500, easing: 'linear', fill: 'forwards' });
+      out.onfinish = function () {
+        if (Math.random() < .5) pop(pick(['💭 …', '🤔', 'brb, thinking 💭', 'Hmm… 🤔']));
+        setTimeout(function () {
+          var back = [];
+          for (var j = 0; j <= 8; j++) back.push({ transform: 'translateX(' + (-120 + j * 15) + '%) rotate(' + (j % 2 ? 7 : -7) + 'deg)' });
+          out.cancel();
+          svg.animate(back, { duration: 1500, easing: 'linear' }).onfinish = function () {
+            if (svg.innerHTML === sideV) svg.innerHTML = front;
+            svg.animate([{ transform: 'scale(1,1)' }, { transform: 'scale(1.1,.9)' }, { transform: 'scale(1,1)' }], { duration: 300 });
+            end();
+          };
+        }, 1300);
+      };
+      return;
+    }
+    if (k === 'peek') {
+      var down = svg.animate([{ transform: 'translateY(0)' }, { transform: 'translateY(110%)' }], { duration: 400, easing: 'ease-in', fill: 'forwards' });
+      down.onfinish = function () {
+        setTimeout(function () {
+          down.cancel();
+          svg.animate([{ transform: 'translateY(110%)' }, { transform: 'translateY(-12%)', offset: .7 }, { transform: 'translateY(0)' }], { duration: 450, easing: 'ease-out' }).onfinish = end;
+          pop(pick(['Peekaboo! 👀', 'Boo! 🐧', 'Found you! 👀']));
+        }, 1100);
+      };
+      return;
+    }
+    if (k === 'jump') {
+      svg.animate([{ transform: 'translateY(0) scale(1,1)' }, { transform: 'scale(1.15,.85)', offset: .2 }, { transform: 'translateY(-30%) scale(.95,1.08)', offset: .5 }, { transform: 'scale(1.1,.9)', offset: .85 }, { transform: 'translateY(0) scale(1,1)' }], { duration: 700 }).onfinish = end;
+      pop(pick(['Wheee! ✨', '🎉', 'Boing! 🐧', pick(SAY)]));
+      return;
+    }
+    if (k === 'think') {
+      svg.animate([{ transform: 'rotate(0)' }, { transform: 'rotate(-10deg)' }, { transform: 'rotate(-10deg)', offset: .8 }, { transform: 'rotate(0)' }], { duration: 1600 }).onfinish = end;
+      pop(pick(['💭 …', '🤔 Hmm…', '💭 thinking about lechon']));
+      return;
+    }
+    svg.animate([{ transform: 'rotate(0)' }, { transform: 'rotate(8deg)' }, { transform: 'rotate(-8deg)' }, { transform: 'rotate(0)' }], { duration: 600 }).onfinish = end;
+    pop(pick(SAY));
+  }
+  (function loop() { setTimeout(function () { try { play(); } catch (e) { navBusy = false; } loop(); }, 9000 + Math.random() * 9000); })();
+
   /* ---------- styles ---------- */
   var css = sceneCss() +
     '#pp-moremenu{position:fixed;z-index:60;min-width:250px;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:18px;box-shadow:0 12px 36px rgba(0,0,0,.18);padding:6px;font-family:' + F + ';animation:ppmm .14s ease-out}' +
@@ -220,6 +296,9 @@
     '#pp-dash .t{font-style:normal;font-size:11px;font-weight:800;background:var(--accentSoft);color:var(--accentText);border-radius:99px;padding:1px 7px;margin-left:4px}#pp-dash .t.later{background:var(--warnSoft);color:var(--warn)}' +
     '#pp-rolechips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:6px}#pp-rolechips button{border:1.5px solid var(--line);background:var(--card);color:var(--ink);border-radius:99px;padding:8px 13px;font:800 14px ' + F + ';cursor:pointer}' +
     '#pp-rolechips button.on{background:var(--accent);border-color:var(--accent);color:#fff}' +
+    '#navpen{overflow:hidden!important;border-radius:50%}' +
+    '#pp-navsay{position:fixed;z-index:55;max-width:220px;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:16px;padding:7px 12px;font:800 13.5px ' + F + ';box-shadow:0 6px 18px rgba(0,0,0,.14);pointer-events:none;animation:ppns .25s cubic-bezier(.2,1.4,.4,1)}' +
+    '#pp-navsay.out{opacity:0;transform:translateY(4px);transition:.35s}@keyframes ppns{from{opacity:0;transform:translateY(8px) scale(.8)}}' +
     '#pp-me .chips button.gd{display:inline-flex;align-items:center;gap:4px;padding:4px 12px 4px 6px}#pp-me .chips button.gd svg{flex:none}';
 
   function tick() { try { scene(); nav(); dash(); editor(); } catch (e) {} }
