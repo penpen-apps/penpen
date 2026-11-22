@@ -56,7 +56,10 @@
       var sc = document.getElementById('pp-scene');
       if (sc && sc.nextSibling) t.insertBefore(tiles, sc.nextSibling); else t.appendChild(tiles);
     }
-    var html = '<button type="button" data-a="money"><span class="ic">💸</span>' + (owe ? owe.replace(/\.\d\d$/, '') : 'Money') + '<small>' + (oweWho || 'all settled') + '</small></button>' +
+    // total spent so far; tap for who owes who and the details
+    var T = null; try { T = JSON.parse(localStorage.getItem('pp_c_penpenToday:[]') || 'null'); } catch (e) {}
+    var g = T && T.budget && T.budget.group, spent = g ? Math.round(g.spent || 0) : null;
+    var html = '<button type="button" data-a="money"><span class="ic">💸</span>' + (spent !== null ? '₱' + spent.toLocaleString('en-US') : 'Money') + '<small>' + (spent !== null ? 'spent so far · details ›' : 'tap to see') + '</small></button>' +
       '<button type="button" data-a="diary"><span class="ic">📔</span>Diary<small>add a memory</small></button>';
     if (tiles.dataset.h !== html) { tiles.innerHTML = html; tiles.dataset.h = html; }
     tiles.onclick = function (e) {
