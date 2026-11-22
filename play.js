@@ -52,7 +52,7 @@
       // life goes on while you're away
       p.food = clamp(p.food - hrs * (p.asleep ? 1.5 : 3));
       p.joy = clamp(p.joy - hrs * (p.asleep ? 0.5 : 2));
-      p.energy = clamp(p.energy + hrs * (p.asleep ? 20 : -2.5));
+      p.energy = clamp(p.energy + hrs * (p.asleep ? 60 : -2.5));
       if (p.asleep && p.energy >= 100) p.asleep = false;
       var bad = (p.food < 20 ? 1 : 0) + (p.energy < 10 ? 1 : 0) + (p.joy < 10 ? 0.5 : 0);
       p.hp = clamp(p.hp + hrs * (bad ? -6 * bad : (p.food > 50 && p.energy > 30 ? 3 : 0)));
@@ -128,24 +128,24 @@
     return pick(['Happy penpen! 🐧', 'Rub my belly! 💕', 'Let’s slide! 🛷', 'I love this trip ✨']);
   }
   function tabs() {
-    return '<div class="tabs">' + [['pet', '🐧', 'penpen'], ['slide', '🛷', 'Slide'], ['gym', '🤸', 'Exercise'], ['quiz', '❓', 'Quiz'], ['shop', '🛍️', 'Shop']].map(function (t) {
+    return '<div class="tabs">' + [['pet', '🐧', 'penpen'], ['games', '🎮', 'Games'], ['quiz', '🎓', 'Quiz'], ['sing', '🎤', 'Sing'], ['shop', '🛍️', 'Shop']].map(function (t) {
       return '<button data-tab="' + t[0] + '" class="' + (tab === t[0] ? 'on' : '') + '"><span>' + t[1] + '</span>' + t[2] + '</button>';
     }).join('') + '</div>';
   }
   function paint(msg) {
     var p = load(), wear = WEAR[p.wear] || WEAR.none;
-    var h = '<div class="top"><button class="back" aria-label="Back">‹</button><h2>' + (tab === 'pet' ? 'Play' : { slide: 'Belly Slide', gym: 'Exercise', quiz: 'Trivia quiz', shop: 'Shop' }[tab]) + '</h2><span class="coins">' + COIN + ' <b id="pp-coins">' + p.coins + '</b></span></div><div class="wrap">' + tabs();
+    var h = '<div class="top"><button class="back" aria-label="Back">‹</button><h2>' + (tab === 'pet' ? 'Play' : { games: 'Games', slide: 'Belly Slide', quiz: 'Professor Pen’s quiz', sing: 'Sing with penpen', shop: 'Shop' }[tab]) + '</h2><span class="coins">' + COIN + ' <b id="pp-coins">' + p.coins + '</b></span></div><div class="wrap">' + tabs();
     if (tab === 'pet') {
       h += '<div class="petrow"><div class="stage' + (p.asleep ? ' night' : '') + '"><div class="pen' + (p.ghost ? ' ghost' : sick(p) ? ' sick' : p.asleep ? ' zz' : '') + '" id="pp-petpen">' +
-        (p.ghost ? ghostSvg() : '<svg viewBox="-7 -14 134 134" width="160" height="160" aria-hidden="true">' + inner() + '</svg>' + (wear.e ? '<span class="wear">' + wear.e + '</span>' : '') + (sick(p) ? '<span class="fx">🤒</span>' : p.asleep ? '<span class="fx">💤</span>' : '')) +
+        (p.ghost ? ghostSvg() : '<svg viewBox="-7 -14 134 134" width="160" height="160" aria-hidden="true">' + inner() + (p.asleep ? '<path class="shut" d="M45 49 Q51 54 57 49 M63 49 Q69 54 75 49" fill="none" stroke="#1F2A36" stroke-width="3" stroke-linecap="round"/>' : '') + '</svg>' + (wear.e ? '<span class="wear">' + wear.e + '</span>' : '') + (sick(p) ? '<span class="fx">🤒</span>' : p.asleep ? '<span class="fx">💤</span>' : '')) +
         '</div><div class="say" id="pp-say">' + (msg || mood(p)) + '</div></div>' +
         '<div class="bats">' + battery(p.food, '🍽️', 'Full') + battery(p.joy, '💛', 'Happy') + battery(p.energy, '⚡', 'Energy') + battery(p.hp, '❤️', 'Health') + '</div></div>' +
-        '<div class="lv">Level ' + level(p) + ' · Speed ' + speedSkill(p) + ' · Best slide ' + p.best + '</div>';
+        '<div class="lv">Level ' + level(p) + '</div>';
       if (p.ghost) {
         h += '<div class="row2"><button data-act="reset">✨ Start over with a new penpen</button></div><p class="tip">Ghosts don’t eat. Start over to hatch a new penpen (your coins stay).</p>';
       } else {
         h += '<h3>Drag food to penpen <small>(or tap it)</small></h3><div class="foods">' + Object.keys(FOODS).map(function (k) { var n = p.bag[k] || 0; return '<button data-feed="' + k + '"' + (n ? '' : ' disabled') + '><span>' + FOODS[k].e + '</span>' + FOODS[k].n + '<small>×' + n + '</small></button>'; }).join('') + '</div>' +
-          '<div class="row2">' + (p.asleep ? '<button data-act="wake">☀️ Wake up</button>' : '<button data-act="sleep">💤 Sleep</button>') + '<button data-tab="slide">🛷 Slide</button><button data-tab="gym">🤸 Exercise</button></div>' +
+          '<div class="row2">' + (p.asleep ? '<button data-act="wake">☀️ Wake up</button>' : '<button data-act="sleep">💤 Sleep</button>') + '</div>' +
           '<p class="tip">Rub or tap his belly for love 💕 · Log an expense → get a 🐟 · He gets tired if he never sleeps, and sick if he’s starving.</p>';
       }
     } else if (tab === 'slide') {
@@ -156,17 +156,22 @@
         '<div class="beat"><i id="pp-beat"></i></div><div class="ghud" id="pp-gcount">Jumping jacks: 0 / 20</div>' +
         '<div class="pad"><button class="go" data-act="gym">▶ Start workout</button><button class="ctl big" id="pp-jj">Jump!</button></div>' +
         '<p class="tip">Workouts make penpen fitter (faster in Slide) but use energy. Too much and he’s exhausted.</p></div>';
-    } else if (tab === 'quiz') {
-      h += '<div class="quiz" id="pp-quiz"></div>';
+    } else if (tab === 'quiz' || tab === 'games' || tab === 'sing') {
+      h += '<div id="pp-ghost-host"></div>';
     } else {
       h += '<h3>Food & care</h3><div class="shop">' + Object.keys(FOODS).filter(function (k) { return FOODS[k].price; }).map(function (k) { return '<button data-buy="f:' + k + '"><span>' + FOODS[k].e + '</span>' + FOODS[k].n + '<small>' + COIN + ' ' + FOODS[k].price + '</small></button>'; }).join('') + '</div>' +
         '<h3>Outfits</h3><div class="shop">' + Object.keys(WEAR).map(function (k) { var own = p.own[k], on = p.wear === k; return '<button data-buy="w:' + k + '" class="' + (on ? 'on' : '') + '"><span>' + (WEAR[k].e || '🚫') + '</span>' + WEAR[k].n + '<small>' + (on ? 'wearing' : own ? 'wear' : WEAR[k].price ? COIN + ' ' + WEAR[k].price : 'free') + '</small></button>'; }).join('') + '</div>' +
-        '<p class="tip">Earn coins in Slide and Quiz. More games, outfits and coin packs coming soon.</p>';
+        '<p class="tip">Earn coins in Games and Quiz. More games, outfits and coin packs coming soon.</p>';
     }
     w.innerHTML = h + '</div>';
     if (tab === 'pet' && !p.ghost) petHooks();
     if (tab === 'slide') { drawIdle(); slideHooks(); }
-    if (tab === 'quiz') quiz();
+    var gh = document.getElementById('pp-ghost-host');
+    if (gh && window.ppGames) {
+      if (tab === 'games') gh.innerHTML = window.ppGames.cards(p.bests);
+      if (tab === 'quiz') window.ppGames.quiz(gh, function (c) { var q = load(); q.coins += c; q.xp += c; save(q); setCoins(q); });
+      if (tab === 'sing') window.ppGames.sing(gh);
+    }
   }
   function say(t) { var s = document.getElementById('pp-say'); if (s) s.textContent = t; }
   function setCoins(p) { var c = document.getElementById('pp-coins'); if (c) c.textContent = p.coins; }
@@ -221,6 +226,16 @@
     var p = load();
     if (b.classList.contains('back')) return back();
     if (b.dataset.tab) { stopAll(); tab = b.dataset.tab; return paint(); }
+    if (b.dataset.game && window.ppGames) {
+      if (!canPlay(p, 10)) return;
+      p.energy = clamp(p.energy - 10); save(p);
+      var host = document.getElementById('pp-ghost-host'), id = b.dataset.game;
+      return window.ppGames.open(id, host, function (score, coins, ended) {
+        if (score === null) return paint();
+        if (!ended) return;
+        var q = load(); q.coins += coins; q.xp += Math.ceil(coins / 2); q.joy = clamp(q.joy + 8); q.bests = q.bests || {}; if (score > (q.bests[id] || 0)) q.bests[id] = score; if (id === 'slide' && score > q.best) q.best = score; save(q); setCoins(q);
+      });
+    }
     if (b.dataset.act === 'sleep') { p.asleep = true; save(p); return paint('Night night 💤'); }
     if (b.dataset.act === 'wake') { p.asleep = false; save(p); return paint(p.energy > 70 ? 'Good morning! ☀️ Fully charged' : 'Yawn… still a bit sleepy 😪'); }
     if (b.dataset.act === 'reset') { var c = p.coins, np = fresh(); np.coins = c; np.exp = p.exp; save(np); return paint('Hello again! 🐣 A brand-new penpen'); }
@@ -230,9 +245,9 @@
     if (b.dataset.act === 'quiz') return quiz(true);
     if (b.dataset.buy) {
       var kind = b.dataset.buy.split(':')[0], id = b.dataset.buy.split(':')[1];
-      if (kind === 'f') { var pr = FOODS[id].price; if (p.coins < pr) return toast('Not enough coins — slide or quiz for more!'); p.coins -= pr; p.bag[id] = (p.bag[id] || 0) + 1; save(p); toast('Bought ' + FOODS[id].e + ' ' + FOODS[id].n); return paint(); }
+      if (kind === 'f') { var pr = FOODS[id].price; if (p.coins < pr) return toast('Not enough coins — play games or the quiz for more!'); p.coins -= pr; p.bag[id] = (p.bag[id] || 0) + 1; save(p); toast('Bought ' + FOODS[id].e + ' ' + FOODS[id].n); return paint(); }
       if (p.own[id]) { p.wear = id; save(p); return paint(); }
-      var wp = WEAR[id].price; if (p.coins < wp) return toast('Not enough coins — slide or quiz for more!');
+      var wp = WEAR[id].price; if (p.coins < wp) return toast('Not enough coins — play games or the quiz for more!');
       p.coins -= wp; p.own[id] = 1; p.wear = id; save(p); toast('New outfit: ' + WEAR[id].e + ' ' + WEAR[id].n); return paint();
     }
   }
@@ -376,6 +391,7 @@
   }
 
   function stopAll() {
+    if (window.ppGames) window.ppGames.stop();
     if (G) { cancelAnimationFrame(G.raf); document.removeEventListener('keydown', G.key); document.removeEventListener('keyup', G.key); G = null; }
     if (X) { cancelAnimationFrame(X.raf); var b = document.getElementById('pp-jj'); if (b) b.removeEventListener('pointerdown', X.tap); X = null; }
   }
@@ -408,7 +424,7 @@
     '#pp-play .ghud{text-align:center;font-weight:900;margin:10px 0}' +
     '#pp-play .pad{display:flex;gap:10px;align-items:stretch}#pp-play .pad .go{flex:1.2}#pp-play .go{border:0;background:var(--accent);color:#fff;border-radius:16px;padding:14px;font:900 16px ' + F + ';cursor:pointer}' +
     '#pp-play .ctl{flex:1;border:0;background:var(--card);color:var(--ink);border-radius:18px;padding:16px 6px;font:900 18px ' + F + ';box-shadow:0 4px 0 var(--line);touch-action:none;cursor:pointer}#pp-play .ctl:active{transform:translateY(3px);box-shadow:0 1px 0 var(--line)}#pp-play .ctl.big{flex:2;font-size:22px}' +
-    '#pp-play .gym .stage{min-height:200px}#pp-play .beat{height:70px;display:grid;place-items:center}#pp-play .beat i{display:block;width:60px;height:60px;border-radius:50%;background:#9AA7B4;opacity:.85}' +
+    '#pp-play .zz .pp-eyes{display:none}#pp-play .gym .stage{min-height:200px}#pp-play .beat{height:70px;display:grid;place-items:center}#pp-play .beat i{display:block;width:60px;height:60px;border-radius:50%;background:#9AA7B4;opacity:.85}' +
     '#pp-play .qcard{background:var(--card);border-radius:22px;padding:18px;text-align:center}#pp-play .qq{font:900 19px/1.3 ' + F + ';margin:6px 0 14px}' +
     '#pp-play .qa{display:block;width:100%;margin:8px 0;border:1.5px solid var(--line);background:var(--bg);color:var(--ink);border-radius:14px;padding:13px;font:800 15px ' + F + ';cursor:pointer}#pp-play .qa.ok{background:#DFF3E6;border-color:#3FAF6B}#pp-play .qa.no{background:#FBE1DE;border-color:#D9534F}' +
     '.pp-heart{position:fixed;z-index:99990;font-size:24px;pointer-events:none;animation:pphrt 1.2s ease-out forwards}@keyframes pphrt{to{transform:translateY(-70px) scale(1.4);opacity:0}}' +
