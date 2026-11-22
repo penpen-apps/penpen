@@ -297,8 +297,6 @@
 
   /* ---------- a little penpen on each page ---------- */
   var BUD = {
-    'p-money': ['🧮', ['Crunching the numbers… beep boop 🧮', 'Tell me any expense — I\'ll split it fairly.', 'Tap More for who paid what.']],
-    'p-safety': ['🩹', ['Stay together and stay safe! 💛', 'Tap Call 911 if you ever need help.', 'Add your emergency contact below.']],
     'p-diary': ['✏️', ['One tiny memory a day — future you will love it.', 'Photos and voice notes work too! 📸', 'What made you laugh today? 😄']]
   };
   function buddies() {
@@ -337,15 +335,15 @@
     var my = ++mapTok;
     var icon = Lf.divIcon({ className: 'pp-mapen', html: '<div class="mp">' + penSvg() + '</div>', iconSize: [40, 40], iconAnchor: [20, 36] });
     var mk = Lf.marker(st[0].ll, { icon: icon, zIndexOffset: 1000, keyboard: false }).addTo(map);
-    var next = st[0].what;
-    mk.on('click', function () { var el = mk.getElement(); if (el) bubble(el, Date.now() < st[0].t ? 'Practising the route! First stop: ' + st[0].what + ' 🗺️' : 'On my way to: ' + next + ' 🐧'); });
+    var next = st[0].what, live = false;
+    mk.on('click', function () { var el = mk.getElement(); if (el) bubble(el, Date.now() < st[0].t ? 'Waiting here for you! We start with: ' + st[0].what + ' 🗺️' : 'On my way to: ' + next + ' 🐧'); });
     setTimeout(dress, 50);
     var lerp = function (a, b, f) { return [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f]; };
     var now = Date.now(), last = st[st.length - 1];
     if (now >= st[0].t) {
       // during the trip: where penpen should be right now, between the last stop and the next one
       var place = function () {
-        if (my !== mapTok) return;
+        if (my !== mapTok || live) return;
         var t = Date.now(), i = 0;
         while (i < st.length - 1 && st[i + 1].t <= t) i++;
         if (t >= last.t || i >= st.length - 1) { mk.setLatLng(last.ll); next = last.what; return; }
@@ -353,18 +351,15 @@
         next = b.what; mk.setLatLng(lerp(a.ll, b.ll, f));
         setTimeout(place, 30000);
       };
+      // if the phone shares its location, penpen follows you for real
+      if (navigator.geolocation) navigator.geolocation.watchPosition(function (p) {
+        if (my !== mapTok) return; live = true; mk.setLatLng([p.coords.latitude, p.coords.longitude]);
+      }, function () {}, { enableHighAccuracy: true, maximumAge: 30000 });
       return place();
     }
-    // before the trip: penpen practises the whole route, stop by stop
-    var seg = 0, t0 = performance.now(), SEG = 2600, PAUSE = 700;
-    (function step(ts) {
-      if (my !== mapTok || !map._loaded) return;
-      var a = st[seg], b = st[(seg + 1) % st.length], el = ts - t0;
-      if (el < PAUSE) mk.setLatLng(a.ll);
-      else { var f = Math.min(1, (el - PAUSE) / SEG); f = f < .5 ? 2 * f * f : 1 - Math.pow(-2 * f + 2, 2) / 2; mk.setLatLng(lerp(a.ll, b.ll, f)); }
-      if (el >= PAUSE + SEG) { seg = (seg + 1) % st.length; t0 = ts; next = st[(seg + 1) % st.length].what; }
-      requestAnimationFrame(step);
-    })(performance.now());
+    // before the trip: penpen waits at the first stop; he only moves when you do
+    mk.setLatLng(st[0].ll);
+    (function wait() { if (my !== mapTok) return; if (Date.now() >= st[0].t) { map.removeLayer(mk); return mapPen(map); } setTimeout(wait, 60000); })();
   }
 
   function start() {
