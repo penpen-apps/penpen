@@ -84,6 +84,8 @@
       ['safety', '🛟', 'Safety', 'SOS · nearby help · emergency contacts'],
       ['book', '🏨', 'Bookings', 'hotels · tours · transport'],
       ['diary', '📔', 'Diary', 'memories, photos & notes'],
+      ['play', '🎮', 'Play', 'feed penpen · Belly Slide · works offline'],
+      ['help', '💡', 'How to use penpen', 'tips & examples'],
       ['set', '⚙️', 'Settings', 'guide · voice · scene · trip sheet']
     ].map(function (x) { return '<button type="button" role="menuitem" data-m="' + x[0] + '"><i>' + x[1] + '</i><span><b>' + x[2] + '</b><small>' + x[3] + '</small></span></button>'; }).join('');
     document.body.appendChild(m);
@@ -97,6 +99,8 @@
       if (VIEWS[k]) { view(k); window.ppNavGo('p-safety'); var sc = $('#p-safety .scroll'); if (sc) sc.scrollTop = 0; }
       else if (k === 'diary') { var d = document.getElementById('to-diary'); if (d) d.click(); }
       else if (k === 'set' && window.ppOpenSettings) window.ppOpenSettings();
+      else if (k === 'play' && window.ppOpenPlay) window.ppOpenPlay();
+      else if (k === 'help') help();
     };
   }
   document.addEventListener('click', function (e) {
@@ -105,6 +109,44 @@
     if (b && pass && !document.body.getAttribute('data-ppv')) view('crew');
     if (!e.target.closest || !e.target.closest('#pp-moremenu')) closeMenu();
   }, true);
+
+  /* ---------- How to use penpen (ready for the final version) ---------- */
+  var HELP = [
+    ['🐧', 'Talk to penpen', 'Tap the middle penpen and just talk or type, like texting a friend. He knows your whole trip.', ['“What’s the plan today?”', '“Where can we eat lechon near our hotel?”', '“Give me the top 5 stops for Dec 7 along the way”', '“Call Brad”']],
+    ['💸', 'Log expenses', 'Say what you paid — penpen writes it down and splits it.', ['“Lunch 450, I paid”', '“Brad paid 1,200 for the van, shared”', '“Dinner 3,200, my treat”', '“Who owes who?”', '“Undo”']],
+    ['🌐', 'Translate', 'On penpen’s chat, tap the big Translate bar. Hold your button to speak English, hold theirs for Bisaya or Tagalog.', []],
+    ['🗺️', 'Itinerary', 'Every day of the trip with times, places and directions. Tell penpen to change it.', ['“Move canyoneering to 9 am”', '“Add dinner at Larsian on Dec 5 at 7 pm”']],
+    ['👥', 'Crew, Safety & Bookings', 'In More: who’s on the trip and the invite QR, SOS and nearby help, and your hotels, tours and transport.', []],
+    ['📔', 'Diary', 'Write, talk or add photos. Group diary is shared with everyone; Just me is only for you.', ['“Dear diary, today we swam with whale sharks…”']],
+    ['🎮', 'Play', 'Look after penpen and play Belly Slide — even with no signal. Every expense you log earns a 🐟.', []],
+    ['⚙️', 'Settings', 'Pick your guide, voice, scene and light/dark, and open the trip’s Google Sheet.', []]
+  ];
+  function help() {
+    if (document.getElementById('pp-help')) return;
+    var w = document.createElement('div'); w.id = 'pp-help'; w.setAttribute('role', 'dialog'); w.setAttribute('aria-label', 'How to use penpen');
+    w.innerHTML = '<div class="top"><button class="back" aria-label="Back">‹</button><h2>How to use penpen</h2></div><div class="wrap">' +
+      HELP.map(function (h) { return '<div class="hc"><div class="hh"><i>' + h[0] + '</i><b>' + h[1] + '</b></div><p>' + h[2] + '</p>' + (h[3].length ? '<div class="ex">' + h[3].map(function (x) { return '<span>' + esc(x) + '</span>'; }).join('') + '</div>' : '') + '</div>'; }).join('') +
+      '<p class="ft">More guides and videos coming soon.</p></div>';
+    document.body.appendChild(w);
+    w.onclick = function (e) { if (e.target.closest('.back')) w.remove(); };
+  }
+
+  /* ---------- Diary: say where each entry is saved, with a link to open it ---------- */
+  function diaryNote() {
+    var seg = $('#p-diary .seg'); if (!seg) return;
+    var tip = $('#p-diary .card.tip'); if (tip) tip.style.display = 'none';
+    var me = document.getElementById('d-me'), gp = document.getElementById('d-group');
+    var mine = me && (me.classList.contains('on') || me.getAttribute('aria-pressed') === 'true' || me.getAttribute('aria-selected') === 'true');
+    if (gp && (gp.classList.contains('on') || gp.getAttribute('aria-pressed') === 'true')) mine = false;
+    var I = get('pp_c_penpenDiaryInfo:[]') || {}, url = mine ? I.me : I.group;
+    var h = mine
+      ? '<b>🔒 Just me</b>Only you can read this. It’s saved to your own private Google Doc — nobody else on the trip gets the link.'
+      : '<b>👥 Group diary</b>Everyone on this trip can read it. It’s saved to one shared Google Doc for the whole crew.';
+    h += url ? '<a href="' + url + '" target="_blank" rel="noopener">Open the doc ↗</a>' : '<em>The doc is made with your first entry — the link shows up here after that.</em>';
+    var n = document.getElementById('pp-dnote');
+    if (!n) { n = document.createElement('div'); n.id = 'pp-dnote'; seg.parentNode.insertBefore(n, seg.nextSibling); }
+    if (n.dataset.h !== h) { n.innerHTML = h; n.dataset.h = h; }
+  }
 
   /* ---------- Expenses: tap "Where the money went" for every category ---------- */
   var ICON = { accommodation: '🏨', activities: '🎟️', tours: '🎟️', food: '🍜', transport: '🚐', transportation: '🚐', shopping: '🛍️', fees: '🧾', other: '📦' };
@@ -235,7 +277,7 @@
     if (navBusy) return;
     if (!svg || document.hidden || document.getElementById('pp-talk') || document.getElementById('pp-me') || matchMedia('(prefers-reduced-motion: reduce)').matches) return next(1500);
     navBusy = true;
-    var talk = Math.random() < .45, k = pick(['bob', 'bob', 'bob', 'walk', 'walk', 'peek', 'peek', 'jump', 'think', 'spin', 'dance', 'wave', 'sleep', 'shiver', 'munch', 'sneeze', 'love', 'cool', 'sing']);
+    var talk = Math.random() < .45, k = pick(['bob', 'bob', 'bob', 'walk', 'walk', 'peek', 'peek', 'jump', 'think', 'spin', 'dance', 'wave', 'sleep', 'shiver', 'munch', 'sneeze', 'love', 'cool', 'sing', 'swim', 'swim', 'spin']);
     svg.style.transformOrigin = '50% 90%';
     var guideId = window.ppGuideNow ? window.ppGuideNow() : 'bubbly';
     if (k === 'walk' && window.ppLook) {
@@ -256,6 +298,15 @@
     if (k === 'peek') {
       var down = svg.animate([{ transform: 'translateY(0)' }, { transform: 'translateY(110%)' }], { duration: 350, easing: 'ease-in', fill: 'forwards' });
       down.onfinish = function () { setTimeout(function () { down.cancel(); pop(pick(['Peekaboo! 👀', 'Boo! 🐧', 'Found you! 👀'])); anim(svg, [{ transform: 'translateY(110%)' }, { transform: 'translateY(-12%)', offset: .7 }, { transform: 'translateY(0)' }], 420, function () { next(); }, 'ease-out'); }, 700); };
+      return;
+    }
+    if (k === 'swim') {
+      // the water rises and penpen paddles about
+      var NS = 'http://www.w3.org/2000/svg', g = document.createElementNS(NS, 'g');
+      g.innerHTML = '<path d="M-20 82 Q0 74 20 82 T60 82 T100 82 T140 82 L140 140 L-20 140 Z" fill="#7CC7DB" opacity=".9"><animate attributeName="d" dur="1.2s" repeatCount="indefinite" values="M-20 82 Q0 74 20 82 T60 82 T100 82 T140 82 L140 140 L-20 140 Z;M-20 82 Q0 90 20 82 T60 82 T100 82 T140 82 L140 140 L-20 140 Z;M-20 82 Q0 74 20 82 T60 82 T100 82 T140 82 L140 140 L-20 140 Z"/></path><circle cx="20" cy="70" r="3" fill="#fff" opacity=".8"/><circle cx="98" cy="66" r="2.5" fill="#fff" opacity=".8"/>';
+      svg.appendChild(g);
+      if (talk) pop(pick(['Splash! 💦', 'Swimming to Bohol 🏊', 'Water’s nice! 🌊']));
+      anim(svg, [{ transform: 'translate(0,10%) rotate(0)' }, { transform: 'translate(-8%,12%) rotate(-6deg)' }, { transform: 'translate(8%,8%) rotate(6deg)' }, { transform: 'translate(-6%,12%) rotate(-4deg)' }, { transform: 'translate(0,10%) rotate(0)' }], 2600, function () { g.remove(); next(); });
       return;
     }
     if (k === 'spin' && window.ppLook) {
@@ -309,20 +360,25 @@
     'body[data-ppv=safety] #p-safety #crew,body[data-ppv=safety] #p-safety #trip-ct{display:none!important}' +
     'body[data-ppv=book] #p-safety .scroll > :not(.fred):not(#trip-ct){display:none!important}' +
     'html[data-sc] header.hero{background-color:var(--accentSoft)!important}' +
+    '#pp-help{position:fixed;inset:0;z-index:99960;background:var(--bg);color:var(--ink);overflow:auto;padding:calc(14px + env(safe-area-inset-top)) 16px calc(30px + env(safe-area-inset-bottom));font:16px/1.45 ' + F + '}' +
+    '#pp-help .top{display:flex;align-items:center;gap:10px;max-width:560px;margin:0 auto 10px}#pp-help h2{margin:0;font:900 24px ' + F + '}#pp-help .back{border:0;background:var(--card);color:var(--ink);border-radius:50%;width:40px;height:40px;font-size:24px;cursor:pointer}' +
+    '#pp-help .wrap{max-width:560px;margin:0 auto}#pp-help .hc{background:var(--card);border-radius:20px;padding:14px 16px;margin-bottom:10px}#pp-help .hh{display:flex;align-items:center;gap:10px;font-size:17px}#pp-help .hh i{font-style:normal;font-size:24px}#pp-help p{margin:6px 0 0;color:var(--muted)}' +
+    '#pp-help .ex{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}#pp-help .ex span{background:var(--chip);border-radius:99px;padding:6px 11px;font-weight:700;font-size:13.5px}#pp-help .ft{text-align:center;color:var(--muted);font-size:13px}' +
+    '#pp-dnote{background:var(--card);border-radius:16px;padding:12px 14px;margin:10px 0;color:var(--muted);font-size:14.5px}#pp-dnote b{display:block;color:var(--ink);font-size:15px;margin-bottom:2px}#pp-dnote a{display:inline-block;margin-top:8px;font-weight:800;color:var(--accentText)}#pp-dnote em{display:block;margin-top:6px;font-size:13px}' +
     '#pp-tr-chip{display:none!important}#pp-trbig{display:flex;align-items:center;gap:12px;width:calc(100% - 20px);margin:10px 10px 6px;border:0;border-radius:20px;padding:14px 16px;background:linear-gradient(135deg,var(--accent),var(--accentText));color:#fff;text-align:left;font:800 18px ' + F + ';box-shadow:0 8px 20px rgba(0,0,0,.15);cursor:pointer}' +
     '#pp-trbig span{font-size:30px}#pp-trbig b{flex:1}#pp-trbig small{display:block;font-weight:700;font-size:13px;opacity:.9}#pp-trbig i{font-style:normal;font-size:24px}' +
     '#pp-navsay{position:fixed;z-index:55;max-width:220px;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:16px;padding:7px 12px;font:800 13.5px ' + F + ';box-shadow:0 6px 18px rgba(0,0,0,.14);pointer-events:none;animation:ppns .25s cubic-bezier(.2,1.4,.4,1)}' +
     '#pp-navsay.out{opacity:0;transform:translateY(4px);transition:.35s}@keyframes ppns{from{opacity:0;transform:translateY(8px) scale(.8)}}' +
     '#pp-me .chips button.gd{display:inline-flex;align-items:center;gap:4px;padding:4px 12px 4px 6px}#pp-me .chips button.gd svg{flex:none}';
 
-  function tick() { try { scene(); nav(); dash(); editor(); } catch (e) {} }
+  function tick() { try { scene(); nav(); dash(); editor(); diaryNote(); } catch (e) {} }
   function start() {
     var st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
     tick();
     var busy = false;
     new MutationObserver(function () { if (busy) return; busy = true; requestAnimationFrame(function () { tick(); busy = false; }); })
       .observe(document.body, { childList: true, subtree: true });
-    setInterval(function () { try { scene(); nav(); } catch (e) {} }, 700);
+    setInterval(function () { try { scene(); nav(); diaryNote(); } catch (e) {} }, 700);
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
 })();
