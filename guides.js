@@ -9,7 +9,7 @@
     hyper:    { name: 'Double Shot', tag: 'way too much coffee', body: '#E46F5A', eyes: 'shine', hair: 'spiky', hairC: INK, cup: 1 },
     buddy:    { name: 'Captain Buddy', tag: 'knows every route', body: '#2C6E8F', eyes: 'dots', bag: 1, map: 1, cap: '#F4F1EA' },
     sunny:    { name: 'Sunny Side', tag: 'bright & cheerful', body: '#F4A62A', eyes: 'dots', blush: 'freckles', flower: 1, lei: 1 },
-    coolcat:  { name: 'Cool Cat', tag: 'smooth, unbothered', body: '#17181C', shades: 1, bowtie: '#E46F5A' },
+    coolcat:  { name: 'Mr. Frosty', tag: 'smooth, unbothered', body: '#17181C', shades: 1, bowtie: '#E46F5A' },
     goofydad: { name: 'Goofy Dad', tag: 'dad jokes on tap', body: '#3D7A4B', eyes: 'happy', mustache: '#5A3B2E', phones: 1 },
     trailer:  { name: 'Narrator Noir', tag: '"In a world…"', body: '#3A2F45', eyes: 'dots', detective: 1, coat: '#8B6B4A' },
     surfer:   { name: 'Surfer Bro', tag: 'totally chill', body: '#1F8FA6', eyes: 'wink', hair: 'wavy', hairC: '#E3B23C', lei: 1 },
