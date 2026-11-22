@@ -2,7 +2,7 @@
    Today: the story (story.js), the crew scene and two tiles (who owes · diary).
    Money: one big total, who owes, what's left to pay. Everything else sits under "More". */
 // the story, the 🔔 bell and My trips live in story.js
-['guides.js', 'me.js', 'story.js', 'more.js', 'play.js'].forEach(function (f) { var s = document.createElement('script'); s.src = f; document.head.appendChild(s); });
+['guides.js', 'me.js', 'story.js', 'more.js', 'games.js', 'play.js', 'polish.js'].forEach(function (f) { var s = document.createElement('script'); s.src = f; document.head.appendChild(s); });
 (function () {
   var KEY = 'pp_simple';
   function on() { return true; }   // always simple
