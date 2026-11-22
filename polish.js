@@ -16,7 +16,7 @@
   }
 
   /* ---------- 1. the middle penpen fills his circle ---------- */
-  function fillNav() { var s = $('#navpen svg'); if (s && s.getAttribute('viewBox') !== '6 0 108 108') s.setAttribute('viewBox', '6 0 108 108'); }
+  function fillNav() { var s = $('#navpen svg'); if (s && s.getAttribute('viewBox') !== '-1 -6 122 122') s.setAttribute('viewBox', '-1 -6 122 122'); }
 
   /* ---------- 2. Today: greeting + countdown in one header, a bigger scene ---------- */
   function hero() {
@@ -104,15 +104,16 @@
   }
 
   /* ---------- 5. full-screen pages (Privacy, Tour) share one look ---------- */
-  function page(id, title, body) {
+  function page(id, title, body, crumb) {
     var old = document.getElementById(id); if (old) old.remove();
     var w = document.createElement('div'); w.id = id; w.className = 'pp-page'; w.setAttribute('role', 'dialog'); w.setAttribute('aria-label', title);
-    w.innerHTML = '<div class="top"><button class="back" aria-label="Back">‹</button><h2>' + esc(title) + '</h2></div><div class="wrap">' + body + '</div>';
+    w.innerHTML = '<div class="top"><button class="back" aria-label="Back">‹</button><div class="tt">' + (crumb ? '<small>' + esc(crumb) + ' ›</small>' : '') + '<h2>' + esc(title) + '</h2></div></div><div class="wrap">' + body + '</div>';
     document.body.appendChild(w);
     $('.back', w).onclick = function () { w.remove(); };
     return w;
   }
-  window.ppOpenPrivacy = function () {
+  window.ppOpenPrivacy = function (from) {
+    from = from || 'More';
     var on = locOn(), ex = (localStorage.getItem('pp_sess') || '').length > 0;
     var lo = locOn(), blocked = perm === 'denied';
     var w = page('pp-priv', 'Privacy and account',
@@ -126,19 +127,19 @@
       '<li><b>Chat, voice and translation</b> are sent to Google’s Gemini service to make penpen’s replies. penpen doesn’t keep recordings of your voice.</li>' +
       '<li><b>On this phone</b> penpen keeps a copy of your trip so it works offline, plus your Play pet and settings.</li>' +
       '<li><b>We never sell</b> your data or use it for ads.</li></ul></div>' +
-      '<div class="pc"><div class="ph"><i>🧹</i><div><b>Clear this phone</b><small>Removes penpen’s saved data from this phone. Your trip stays safe in the sheet. You’ll need to sign in again.</small></div></div>' +
+      '<div class="pc"><div class="ph"><i>🧹</i><div><b>Clear this phone</b><small>Removes everything penpen saved on this phone: the offline copy of every trip, your Play pet and coins, and your settings. Your trips themselves stay safe in their Google Sheets. You’ll need to sign in again.</small></div></div>' +
       '<button type="button" class="pbtn off" data-a="clear">Clear</button></div>' +
-      '<p class="pnote">To delete your details from a trip, ask the trip’s creator to remove you from the crew.</p>');
+      '<p class="pnote">To delete your details from a trip, ask the trip’s creator to remove you from the crew.</p>', from);
     w.addEventListener('click', function (e) {
       var b = e.target.closest('[data-a]'); if (!b) return;
       if (b.dataset.a === 'loc') {
-        if (locOn()) { localStorage.setItem('pp_loc', 'off'); localStorage.removeItem('pp_here'); here = null; paintWx(); window.ppOpenPrivacy(); }
-        else { localStorage.removeItem('pp_loc'); b.textContent = 'Asking your phone…'; fetchHere(true); setTimeout(function () { checkPerm(function () { if (document.getElementById('pp-priv')) window.ppOpenPrivacy(); }); }, 2500); }
+        if (locOn()) { localStorage.setItem('pp_loc', 'off'); localStorage.removeItem('pp_here'); here = null; paintWx(); window.ppOpenPrivacy(from); }
+        else { localStorage.removeItem('pp_loc'); b.textContent = 'Asking your phone…'; fetchHere(true); setTimeout(function () { checkPerm(function () { if (document.getElementById('pp-priv')) window.ppOpenPrivacy(from); }); }, 2500); }
       }
       if (b.dataset.a === 'clear' && confirmIn(b)) { localStorage.clear(); location.reload(); }
     });
   };
-  function confirmIn(b) { if (b.dataset.sure) return true; b.dataset.sure = '1'; b.textContent = 'Tap again to clear'; return false; }
+  function confirmIn(b) { var n = +(b.dataset.sure || 0) + 1; b.dataset.sure = n; if (n >= 3) return true; b.textContent = n === 1 ? 'Are you sure?' : 'Yes, clear it all'; b.classList.add('warn'); return false; }
 
   /* ---------- 6. offline: everyone can see what still works ---------- */
   function offline() {
@@ -223,8 +224,8 @@
   document.addEventListener('click', function (e) {
     var b = e.target.closest && e.target.closest('#pp-me [data-x]'); if (!b) return;
     if (b.dataset.x === 'tour') window.ppTour();
-    if (b.dataset.x === 'priv') window.ppOpenPrivacy();
-    if (b.dataset.x === 'howto') page('pp-howto', 'How to use penpen', window.ppHelpHtml ? window.ppHelpHtml() : '');
+    if (b.dataset.x === 'priv') window.ppOpenPrivacy('Settings');
+    if (b.dataset.x === 'about') page('pp-about', 'About penpen', '<div class="pc col"><div class="ph"><i>🐧</i><div><b>penpen, your travel buddy</b><small>Keeps your group’s plans, money and memories in one place. Just tell penpen.</small></div></div></div><div class="pc col"><div class="ph"><i>✨</i><div><b>Built with Gemini</b><small>penpen’s chat, voice and translation are powered by Google Gemini.</small></div></div></div><div class="pc col"><div class="ph"><i>📴</i><div><b>Works offline</b><small>Your saved trip, Crew, Bookings and Play work with no signal.</small></div></div></div>', 'Settings');
   });
   document.addEventListener('toggle', function (e) {
     var d = e.target; if (!d.classList || !d.classList.contains('grp')) return;
@@ -349,10 +350,13 @@
     '#pp-daily .ch{display:flex;flex-wrap:wrap;gap:8px}#pp-daily .ch button{flex:1 1 auto;min-height:44px;border:1.5px solid var(--line);background:var(--card);color:inherit;border-radius:14px;padding:8px 12px;font:800 14px ' + F + ';cursor:pointer}' +
     '#pp-daily .ch button.yes{background:#2E9E6B;border-color:#2E9E6B;color:#fff}#pp-daily .ch button.no{background:#D9534F;border-color:#D9534F;color:#fff}' +
     '#wx{cursor:default}' +
-    '.pp-page{position:fixed;left:0;right:0;top:0;bottom:calc(70px + env(safe-area-inset-bottom));z-index:55;background:var(--bg,#F6F1E8);color:var(--ink);overflow:auto;font-family:' + F + ';animation:ppin .18s ease-out}' +
+    '.pp-page{position:fixed;left:0;right:0;top:0;bottom:calc(70px + env(safe-area-inset-bottom));z-index:99965;background:var(--bg,#F6F1E8);color:var(--ink);overflow:auto;font-family:' + F + ';animation:ppin .18s ease-out}' +
     '@keyframes ppin{from{transform:translateX(30px);opacity:0}}' +
     '.pp-page .top{position:sticky;top:0;display:flex;align-items:center;gap:10px;padding:calc(12px + env(safe-area-inset-top)) 16px 10px;background:inherit;z-index:1;max-width:560px;margin:0 auto;box-sizing:border-box}.pp-page .top h2{margin:0;font-size:22px;font-weight:900;flex:1;text-align:left}' +
-    '.pp-page .back{border:0;background:var(--card);color:inherit;width:42px;height:42px;border-radius:50%;font-size:26px;line-height:1;cursor:pointer}' +
+    '.pp-page .tt{flex:1;min-width:0}.pp-page .tt small{display:block;color:var(--muted);font:800 13px ' + F + ';margin-bottom:1px}.pp-page .pbtn.warn{background:#D9534F;color:#fff}' +
+    'button.back{display:flex!important;align-items:center;justify-content:center;width:44px!important;height:44px!important;padding:0 0 3px 0!important;border:0;border-radius:50%!important;background:var(--card)!important;color:var(--ink)!important;font:900 32px/1 ' + F + '!important;box-shadow:0 2px 8px rgba(19,50,74,.12);cursor:pointer}' +
+    'button,[role=button],.gctl{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}input[type=date]{min-width:0;max-width:100%;box-sizing:border-box}' +
+    '.card.pp-tour{display:flex!important;flex-direction:column;gap:10px;padding:14px!important}.stbtn{display:block;width:100%;text-align:left;border:0;border-radius:18px;background:var(--chip);color:var(--ink);padding:14px 16px;font:900 16px ' + F + ';cursor:pointer}.stbtn small{display:block;font:700 13px ' + F + ';color:var(--muted);margin-top:2px}.stbtn.pri{background:#237566;color:#fff}.stbtn.pri small{color:rgba(255,255,255,.85)}' +
     '.pp-page .wrap{padding:4px 16px 24px;max-width:560px;margin:0 auto}' +
     '.pp-page .pc{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:14px;margin-bottom:10px;display:flex;align-items:center;gap:10px;justify-content:space-between}' +
     '.pp-page .ph{display:flex;gap:12px;align-items:flex-start}.pp-page .ph i{font-style:normal;font-size:24px}.pp-page .ph b{display:block;font-size:16px;font-weight:900}.pp-page .ph small{display:block;color:var(--muted);font-weight:700;font-size:13px;line-height:1.35;margin-top:2px}' +
@@ -361,7 +365,7 @@
     '#pp-nap{position:fixed;inset:0;z-index:99970;background:rgba(19,50,74,.45);display:flex;align-items:flex-end;justify-content:center}#pp-nap .nb{background:var(--card,#fff);color:var(--ink,#13324A);width:100%;max-width:520px;border-radius:26px 26px 0 0;padding:22px 20px calc(22px + env(safe-area-inset-bottom));text-align:center;font-family:' + F + '}' +
     '#pp-nap .pen{position:relative;display:inline-block;opacity:.85}#pp-nap .pen svg .pp-eyes{display:none}#pp-nap .pen span{position:absolute;right:-8px;top:0;font-size:28px}#pp-nap b{display:block;font-size:19px;font-weight:900;margin:6px 0}#pp-nap p{margin:0 0 14px;font-weight:700;color:var(--muted,#4A6274);line-height:1.4}' +
     '#pp-nap button{width:100%;min-height:50px;border:0;border-radius:99px;background:#237566;color:#fff;font:900 16px ' + F + '}' +
-    '.pp-ptoast{position:fixed;left:16px;right:16px;bottom:calc(90px + env(safe-area-inset-bottom));z-index:99960;background:#13324A;color:#fff;border-radius:16px;padding:12px 14px;font:800 14px ' + F + ';text-align:center;box-shadow:0 8px 24px rgba(0,0,0,.25)}' +
+    '.pp-ptoast{position:fixed;left:16px;right:16px;bottom:calc(90px + env(safe-area-inset-bottom));z-index:99990;background:#13324A;color:#fff;border-radius:16px;padding:12px 14px;font:800 14px ' + F + ';text-align:center;box-shadow:0 8px 24px rgba(0,0,0,.25)}' +
     '#pp-off{position:fixed;left:10px;right:10px;top:calc(8px + env(safe-area-inset-top));z-index:70;background:#13324A;color:#fff;border-radius:16px;padding:10px 14px;font:700 13px/1.35 ' + F + ';box-shadow:0 6px 20px rgba(0,0,0,.25)}#pp-off b{display:block;font-size:14px}' +
     '#pp-tour{position:fixed;inset:0;z-index:99980;background:linear-gradient(#DCEDF5,#F6F1E8);color:#13324A;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;font-family:' + F + ';text-align:center}' +
     '#pp-tour .skip{position:absolute;top:calc(14px + env(safe-area-inset-top));right:16px;border:0;background:rgba(255,255,255,.8);border-radius:99px;padding:8px 16px;font:800 15px ' + F + ';color:#13324A;cursor:pointer}' +
@@ -379,7 +383,20 @@
     '#pp-cal .lg{display:flex;gap:14px;font-size:12px;font-weight:800;color:var(--muted);margin-top:8px}#pp-cal .lg i,#pp-cal li i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:0}#pp-cal i.td{background:#237566}#pp-cal i.hd{background:#D9534F}' +
     '#pp-cal ul{list-style:none;margin:8px 0 0;padding:0;font-size:13px;font-weight:700}#pp-cal li{padding:3px 0}';
 
-  function tick() { try { fillNav(); hero(); daily(); paintWx(); settingsExtras(); calendar(); wrapTalk(); chatHome(); } catch (e) { console.warn('polish', e); } }
+  function startCard() {
+    var c = $('.card.pp-tour'); if (!c || c.getAttribute('data-pp')) return;
+    c.setAttribute('data-pp', '1');
+    var h = c.previousElementSibling; if (h && /quick tour/i.test(h.textContent)) h.textContent = 'You’re all set! 🎉';
+    c.innerHTML = '<button type="button" class="stbtn pri" data-st="invite">📲 Invite your travel buddies<small>Send a link or show a QR code</small></button><button type="button" class="stbtn" data-st="tour">▶ Quick tour<small>penpen shows you around in 30 seconds</small></button><button type="button" class="stbtn" data-st="solo">🧳 I’m travelling solo<small>Skip inviting for now</small></button>';
+    c.onclick = function (e) {
+      var b = e.target.closest('[data-st]'); if (!b) return;
+      if (b.dataset.st === 'tour') return window.ppTour();
+      if (b.dataset.st === 'solo') { var t = document.querySelector('nav button[data-p="p-today"]'); if (t) t.click(); return; }
+      if (window.ppGoTab) window.ppGoTab('Crew');
+      setTimeout(function () { var x = [].slice.call(document.querySelectorAll('#p-safety button')).filter(function (y) { return /invite/i.test(y.textContent) && y.offsetParent; })[0]; if (x) x.click(); }, 500);
+    };
+  }
+  function tick() { try { startCard(); fillNav(); hero(); daily(); paintWx(); settingsExtras(); calendar(); wrapTalk(); chatHome(); } catch (e) { console.warn('polish', e); } }
   function start() {
     var st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
     new MutationObserver(function () { clearTimeout(start.t); start.t = setTimeout(tick, 60); }).observe(document.body, { childList: true, subtree: true, characterData: true });
