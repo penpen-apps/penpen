@@ -46,6 +46,8 @@
     '#pp-me .pol .ph{height:110px;border-radius:3px;background:linear-gradient(160deg,var(--accentSoft),var(--chip));display:grid;place-items:center;overflow:hidden;margin-bottom:8px}' +
     '#pp-me .pol .cr{display:flex;align-items:flex-end;justify-content:center}#pp-me .pol .cr svg{width:54px;height:54px;margin:0 -6px}#pp-me .pol .big{font-size:40px}' +
     '#pp-me .pol b{display:block;font:800 14px ' + F + '}#pp-me .pol small{display:block;color:#4F6475;font-size:12px;margin-top:2px}#pp-me .pol.here .ph{box-shadow:inset 0 0 0 3px var(--accent)}#pp-me .pol.add{background:var(--card);color:var(--ink)}' +
+    '#pp-me .stats.one{grid-template-columns:repeat(3,1fr);gap:0;background:var(--card);border-radius:20px;overflow:hidden}#pp-me .stats.one > div{border-radius:0;border-left:1px solid var(--line);background:none;padding:16px 6px}#pp-me .stats.one > div:first-child{border-left:0}' +
+    '#pp-me .rows details.howto{border-top:1px solid var(--line);padding:0 16px}#pp-me .rows details.howto summary{display:flex;align-items:center;gap:12px;padding:15px 0;cursor:pointer;list-style:none;font:16px ' + F + '}#pp-me .rows details.howto summary::-webkit-details-marker{display:none}#pp-me details.howto[open] .chev{transform:rotate(180deg)}#pp-me .rows details.howto .hw{padding-bottom:12px}#pp-me .rows > button small{display:block;color:var(--muted);font-size:13px}' +
     '#pp-me .who{color:var(--muted);font-size:14px;text-align:center;margin:16px 0 4px}' +
     /* the profile card on Crew: flight, guide, scene and appearance now live elsewhere */
     '.pp-hidex{display:none!important}' +
@@ -194,8 +196,7 @@
     var buddies = whos.map(function (w) { var sv = w.querySelector('svg'), nm = (w.textContent || '').trim(); return sv ? '<div class="bd">' + sv.outerHTML + '<b>' + esc(nm) + '</b><small>1 trip together</small></div>' : ''; }).join('');
     var crew = whos.concat([document.querySelector('#pp-scene .pp-me')]).filter(Boolean).map(function (w) { var sv = w.querySelector('svg'); return sv ? sv.outerHTML : ''; }).join('');
     var stat = function (n, l) { return '<div><b>' + n + '</b><span>' + l + '</span></div>'; };
-    return '<h3>' + yr + ' in travel</h3><div class="stats">' + stat(thisYear.length, thisYear.length === 1 ? 'Trip' : 'Trips') + stat(days, 'Days away') + stat(Object.keys(places).length, 'Places') + '</div>' +
-      '<div class="stats two">' + stat('₱' + mine.toLocaleString('en-US'), 'My share spent') + stat(nExp, 'Expenses logged') + '</div>' +
+    return '<h3>' + yr + ' in travel</h3><div class="stats one">' + stat(thisYear.length, thisYear.length === 1 ? 'Trip' : 'Trips') + stat(days, 'Days away') + stat(nExp, 'Expenses') + '</div>' +
       (buddies ? '<h3>Travel buddies</h3><div class="buds">' + buddies + '</div>' : '') +
       '<h3>My trips</h3><div class="album">' + trips.map(function (t) {
         return '<button type="button" class="pol' + (t.here ? ' here' : '') + '" data-trip="' + esc(t.id) + '" data-name="' + esc(t.name) + '"><div class="ph">' + (t.here && crew ? '<div class="cr">' + crew + '</div>' : '<span class="big">🧳</span>') + '</div>' +
@@ -221,7 +222,9 @@
           '<div><i>🔈</i><span>Read replies out loud</span><div class="chips">' + chips([['on', 'On'], ['off', 'Off']], localStorage.getItem('pp_voice') === 'on' ? 'on' : 'off', 'aloud') + '</div></div>' +
           '<div><i>🏝️</i><span>Scene <small>colours the whole app</small></span><div class="chips">' + chips(SCENES, P.scene || 'auto', 'scene') + '</div></div>' +
           '<div><i>🌗</i><span>Appearance</span><div class="chips">' + chips(MODES, P.mode || 'auto', 'mode') + '</div></div>' +
+          '<button type="button" data-a="newtrip"><i>🧳</i><span>My trips <small>switch trips or start a new one</small></span><span class="chev">›</span></button>' +
           '<a href="' + sheet + '" target="_blank" rel="noopener"><i>📊</i>Open this trip’s Google Sheet<span class="chev">↗</span></a>' +
+          '<details class="howto"><summary><i>💡</i>How to use penpen<span class="chev">▾</span></summary><div class="hw">' + (window.ppHelpHtml ? window.ppHelpHtml() : '') + '</div></details>' +
           '<button type="button" data-a="install"><i>📲</i>Add penpen to my phone<span class="chev">›</span></button>' +
           '<button type="button" data-a="out"><i>↩︎</i>Sign out</button></div>'
         : '<div class="mecard"><div class="av">' + avatar() + '</div><div><div class="nm">' + esc(m.name) + '</div><div class="ph">' + (m.phone ? '📞 ' + esc(m.phone) : 'No phone number yet') + '</div></div>' +
