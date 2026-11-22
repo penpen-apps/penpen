@@ -68,6 +68,17 @@
     return Promise.resolve();
   }
   function stop() { try { if (playing) playing.stop(); } catch (e) {} playing = null; }
+  /* keep recent voice clips so the same line plays instantly next time */
+  var clips = {}, order = [];
+  function clipKey(text, v) { return v + '|' + text; }
+  function getClip(text, v) {
+    var k = clipKey(text, v);
+    if (clips[k]) return clips[k];
+    var p = window.ppCall('penpenVoice', [text, v]).then(function (a) { return a; }, function (e) { delete clips[k]; throw e; });
+    clips[k] = p; order.push(k); if (order.length > 25) delete clips[order.shift()];
+    return p;
+  }
+  window.ppVoicePrefetch = function (text) { var v = pick || 'bubbly'; if (v === 'phone' || !navigator.onLine || !window.ppCall || !text) return; getClip(text, v).catch(function () {}); };
 
   /* ---------- route the app's speech through penpen's AI voice ---------- */
   var synth = window.speechSynthesis;
@@ -78,7 +89,7 @@
       var v = pick || 'bubbly';
       if (v === 'phone' || !navigator.onLine || !window.ppCall) { u.pitch = 1.35; u.rate = 1.05; return nativeSpeak(u); }
       var text = u.text, my = ++sayId;
-      window.ppCall('penpenVoice', [text, v]).then(function (a) { if (my === sayId) return playPcm(a.audio, a.mime); })
+      getClip(text, v).then(function (a) { if (my === sayId) return playPcm(a.audio, a.mime); })
         .catch(function () { if (my === sayId) nativeSpeak(u); });
     };
   }
@@ -119,7 +130,7 @@
     if (v === 'phone' || !navigator.onLine) {
       var u = new SpeechSynthesisUtterance(text); u.pitch = 1.35; u.rate = 1.05; nativeSpeakSafe(u); if (done) done(); return;
     }
-    window.ppCall('penpenVoice', [text, v]).then(function (a) { if (my === sayId) return playPcm(a.audio, a.mime); })   // only the latest tap plays
+    getClip(text, v).then(function (a) { if (my === sayId) return playPcm(a.audio, a.mime); })   // only the latest tap plays
       .catch(function () { if (my !== sayId) return; var u = new SpeechSynthesisUtterance(text); nativeSpeakSafe(u); })
       .then(function () { if (done) done(); });
   }
