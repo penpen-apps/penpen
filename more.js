@@ -82,23 +82,27 @@
   function closeMenu() { var m = document.getElementById('pp-moremenu'); if (m) m.remove(); }
   function openMenu(btn) {
     if (document.getElementById('pp-moremenu')) return closeMenu();
-    var m = document.createElement('div'); m.id = 'pp-moremenu'; m.setAttribute('role', 'menu');
-    m.innerHTML = [
-      ['crew', '👥', 'Crew', 'who’s on the trip · invite'],
-      ['safety', '🛟', 'Safety', 'SOS · nearby help · emergency contacts'],
-      ['book', '🏨', 'Bookings', 'hotels · tours · transport'],
-      ['diary', '📔', 'Diary', 'memories, photos & notes'],
-      ['play', '🎮', 'Play', 'feed penpen · Belly Slide · works offline'],
-      ['set', '⚙️', 'Settings', 'guide · voice · scene · trip sheet']
-    ].map(function (x) { return '<button type="button" role="menuitem" data-m="' + x[0] + '"><i>' + x[1] + '</i><span><b>' + x[2] + '</b><small>' + x[3] + '</small></span></button>'; }).join('');
+    var m = document.createElement('div'); m.id = 'pp-moremenu'; m.className = 'pp-page'; m.setAttribute('role', 'dialog'); m.setAttribute('aria-label', 'More');
+    var OFF = '<em class="off">Works offline</em>';
+    m.innerHTML = '<div class="top"><button class="back" type="button" aria-label="Back">‹</button><h2>More</h2></div><div class="wrap">' +
+      '<button type="button" class="newtrip" data-m="newtrip"><i>＋</i><span><b>Start a new trip</b><small>Plan it with penpen and invite your crew</small></span></button>' +
+      [
+        ['crew', '👥', 'Crew', 'Who’s on the trip · Invite', OFF],
+        ['safety', '🛟', 'Safety', 'SOS · Nearby help · Emergency contacts', ''],
+        ['book', '🏨', 'Bookings', 'Hotels · Tours · Transport', OFF],
+        ['diary', '📔', 'Diary', 'Memories · Photos · Notes', ''],
+        ['play', '🎮', 'Play', 'Feed penpen · Games · Quiz', OFF],
+        ['set', '⚙️', 'Settings', 'Guide · Voice · Scene · Trip sheet', ''],
+        ['priv', '🔒', 'Privacy and account', 'Location · Microphone · Clear this phone', '']
+      ].map(function (x) { return '<button type="button" role="menuitem" data-m="' + x[0] + '"><i>' + x[1] + '</i><span><b>' + x[2] + '</b><small>' + x[3] + '</small>' + x[4] + '</span><u>›</u></button>'; }).join('') + '</div>';
     document.body.appendChild(m);
-    var r = btn.getBoundingClientRect();
-    m.style.right = Math.max(8, innerWidth - r.right) + 'px';
-    m.style.bottom = (innerHeight - r.top + 8) + 'px';
     m.onclick = function (e) {
       var b = e.target.closest('button'); if (!b) return;
       closeMenu();
-      var k = b.dataset.m;
+      var k = b.dataset.m; if (!k) return;
+      if (k === 'newtrip') { if (window.ppOpenTrips) window.ppOpenTrips(); return; }
+      if (k === 'priv') { if (window.ppOpenPrivacy) window.ppOpenPrivacy(); return; }
+      window.ppFromMore = true;
       if (VIEWS[k]) { view(k); window.ppNavGo('p-safety'); var sc = $('#p-safety .scroll'); if (sc) sc.scrollTop = 0; }
       else if (k === 'diary') { var d = document.getElementById('to-diary'); if (d) d.click(); }
       else if (k === 'set' && window.ppOpenSettings) window.ppOpenSettings();
@@ -156,6 +160,7 @@
   document.addEventListener('click', function (e) {
     var b = e.target.closest && e.target.closest('nav button[data-p]');
     if (!b) return;
+    if (!pass) window.ppFromMore = false;
     // tapping the bottom bar always closes whatever is open on top
     ['pp-me', 'pp-help'].forEach(function (id) { var o = document.getElementById(id); if (o) o.remove(); });
     $$('.pp-sheet').forEach(function (x) { x.remove(); });
@@ -168,6 +173,7 @@
     var mm = document.getElementById('pp-moremenu'); if (mm) { mm.remove(); return true; }
     var ov = document.getElementById('pp-help') || document.getElementById('pp-me') || document.getElementById('pp-talk');
     if (ov) { var bk = ov.querySelector('.back, [aria-label="Close"], .x'); if (bk) bk.click(); else ov.remove(); return true; }
+    if (window.ppFromMore && /^p-(safety|diary)$/.test(activePane() || '')) { window.ppFromMore = false; var nb = $('nav button[data-p="p-safety"]'); if (nb) openMenu(nb); return true; }
     var pane = $('.pane.on'), pb = pane && [].slice.call(pane.querySelectorAll('button')).filter(function (x) { return x.offsetParent && /^‹/.test(x.textContent.trim()); })[0];
     if (pb) { pb.click(); return true; }
     var h = hist.pop(); if (h) { if (h.v) view(h.v); window.ppNavGo(h.p); hist.pop(); return true; }
@@ -329,14 +335,18 @@
     if (o) { d.innerHTML = '<svg>' + o + '</svg>'; var e = d.querySelector('ellipse[rx="36"]'); if (e) return e.getAttribute('fill'); }
     var e2 = svg.querySelector('ellipse[rx="36"]'); return e2 ? e2.getAttribute('fill') : null;
   }
+  var popUntil = 0;
   function pop(text) {
     var b = document.getElementById('navpen'); if (!b) return;
+    if (Date.now() < popUntil) return;
+    var hold = Math.max(3800, 1600 + text.length * 75) + (/^Fun fact/.test(text) ? 2500 : 0);
+    popUntil = Date.now() + hold + 3000;
     var old = document.getElementById('pp-navsay'); if (old) old.remove();
     var t = document.createElement('div'); t.id = 'pp-navsay'; t.textContent = text; document.body.appendChild(t);
     var r = b.getBoundingClientRect();
     t.style.left = Math.max(8, Math.min(innerWidth - t.offsetWidth - 8, r.left + r.width / 2 - t.offsetWidth / 2)) + 'px';
     t.style.top = (r.top - t.offsetHeight - 10) + 'px';
-    setTimeout(function () { t.classList.add('out'); setTimeout(function () { t.remove(); }, 400); }, 2600);
+    setTimeout(function () { t.classList.add('out'); setTimeout(function () { t.remove(); }, 400); }, hold);
   }
   function pick(a) { return a[Math.floor(Math.random() * a.length)]; }
   function anim(svg, kf, ms, cb, ease) { var a = svg.animate(kf, { duration: ms, easing: ease || 'ease-in-out' }); a.onfinish = cb; return a; }
@@ -407,11 +417,11 @@
 
   /* ---------- styles ---------- */
   var css = sceneCss() +
-    '#pp-moremenu{position:fixed;z-index:60;min-width:250px;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:18px;box-shadow:0 12px 36px rgba(0,0,0,.18);padding:6px;font-family:' + F + ';animation:ppmm .14s ease-out}' +
-    '@keyframes ppmm{from{opacity:0;transform:translateY(6px)}}' +
-    '#pp-moremenu button{display:flex;align-items:center;gap:12px;width:100%;border:0;background:none;color:inherit;text-align:left;padding:11px 12px;border-radius:12px;font:inherit;cursor:pointer}' +
-    '#pp-moremenu button:hover,#pp-moremenu button:focus-visible{background:var(--chip)}#pp-moremenu i{font-style:normal;font-size:22px}' +
-    '#pp-moremenu b{display:block;font-weight:800;font-size:15px}#pp-moremenu small{display:block;color:var(--muted);font-size:12.5px;font-weight:600}' +
+    '#pp-moremenu .wrap > button{display:flex;align-items:center;gap:14px;width:100%;border:0;background:var(--card);color:inherit;text-align:left;padding:14px 16px;border-radius:20px;margin-bottom:10px;font:inherit;cursor:pointer;min-height:64px}' +
+    '#pp-moremenu .wrap > button:active{transform:scale(.98)}#pp-moremenu i{font-style:normal;font-size:26px;width:34px;text-align:center}#pp-moremenu span{flex:1}#pp-moremenu u{text-decoration:none;font-size:24px;color:var(--muted)}' +
+    '#pp-moremenu b{display:block;font-weight:900;font-size:16px}#pp-moremenu small{display:block;color:var(--muted);font-size:13px;font-weight:700}' +
+    '#pp-moremenu em.off{display:inline-block;font-style:normal;font-size:11px;font-weight:900;color:#237566;background:rgba(35,117,102,.12);border-radius:99px;padding:2px 8px;margin-top:5px}' +
+    '#pp-moremenu .newtrip{background:#237566!important;color:#fff!important}#pp-moremenu .newtrip i{background:rgba(255,255,255,.2);border-radius:50%;height:34px;line-height:34px;font-size:22px}#pp-moremenu .newtrip small{color:rgba(255,255,255,.85)}' +
     '#trip-ct:empty{display:none}#pp-cats{cursor:pointer}#pp-cats .pp-cat-t::after{content:" ▾";opacity:.6}body.pp-dash-on #pp-cats .pp-cat-t::after{content:" ▴"}' +
     '#pp-dash{padding:6px!important;margin-top:8px;font-family:' + F + '}' +
     '#pp-dash .dc{display:flex;align-items:center;gap:10px;width:100%;border:0;background:none;color:var(--ink);font:inherit;text-align:left;padding:10px;border-radius:14px;cursor:pointer}' +
