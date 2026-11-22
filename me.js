@@ -126,22 +126,24 @@
   function guideChips() {
     var g = guide();
     return (window.ppGuides || [{ id: 'bubbly', label: 'penpen' }]).map(function (v) {
-      return '<button type="button" data-k="guide" data-v="' + v.id + '" class="' + (v.id === g ? 'on' : '') + '">' + (ACC[v.id] ? ACC[v.id] + ' ' : '🐧 ') + v.label.replace(/^Movie /, '').replace(/ Bro$/, '') + '</button>';
+      var L = window.ppLook, inner = L && L.svg(v.id), nav = document.querySelector('#navpen svg');
+      if (!inner && nav) inner = nav.getAttribute('data-orig') || nav.innerHTML;
+      return '<button type="button" data-k="guide" data-v="' + v.id + '" class="gd' + (v.id === g ? ' on' : '') + '">' + (inner ? '<svg viewBox="-7 -14 134 134" width="30" height="30" aria-hidden="true">' + inner + '</svg>' : '') + (L ? L.name(v.id) : v.label) + '</button>';
     }).join('');
   }
-  // put the guide's signature thing on every penpen: the scene, the middle button, Talk, the map and the page buddies
+  // every penpen on screen wears the chosen guide's own look (and name tag)
   function dress() {
-    var g = guide(), e = ACC[g] || '';
+    var g = guide(), L = window.ppLook, inner = L && L.svg(g);
     [].slice.call(document.querySelectorAll('#pp-scene .pp-guide, #navpen, #pp-talk .orb, .pp-buddy .bd, .pp-mapen .mp')).forEach(function (host) {
-      var a = host.querySelector(':scope > .pp-acc'), svg = host.querySelector('svg');
-      if (!e || !svg) { if (a) a.remove(); return; }
-      if (!a) { a = document.createElement('span'); a.className = 'pp-acc'; host.appendChild(a); if (getComputedStyle(host).position === 'static') host.style.position = 'relative'; }
-      var hr = host.getBoundingClientRect(), r = svg.getBoundingClientRect();
-      if (!r.width) return;
-      a.textContent = e;
-      a.style.fontSize = Math.round(r.width * (EYES[g] ? 0.42 : 0.34)) + 'px';
-      a.style.left = (r.left - hr.left + r.width / 2) + 'px';
-      a.style.top = (r.top - hr.top + r.height * (EYES[g] ? 0.38 : 0.06)) + 'px';
+      var a = host.querySelector(':scope > .pp-acc'); if (a) a.remove();
+      var svg = host.querySelector('svg'); if (!svg) return;
+      if (inner) { if (svg.getAttribute('data-g') !== g) { if (!svg.getAttribute('data-g')) svg.setAttribute('data-orig', svg.innerHTML); svg.innerHTML = inner; svg.setAttribute('data-g', g); } }
+      else if (svg.getAttribute('data-g')) { svg.innerHTML = svg.getAttribute('data-orig') || svg.innerHTML; svg.removeAttribute('data-g'); }
+    });
+    var tag = document.querySelector('#pp-scene .pp-guide'), nm = L ? L.name(g) : 'penpen';
+    if (tag) [].slice.call(tag.querySelectorAll('*')).forEach(function (e) {
+      if (e.closest('svg') || e.children.length) return;
+      var t = e.textContent.trim(); if (t && t !== nm && L && L.list().some(function (x) { return x.name === t; })) e.textContent = nm;
     });
   }
   window.addEventListener('pp-guide', function () { setTimeout(dress, 30); });
@@ -221,11 +223,13 @@
   function mapLinks() {
     document.querySelectorAll('.msg:not([data-lk])').forEach(function (m) {
       m.setAttribute('data-lk', '1');
-      var t = m.textContent, i = t.indexOf('https://www.google.com/maps/');
-      if (i < 0) return;
-      var url = t.slice(i).split(/\s/)[0], name = t.slice(0, i).trim();
+      var t = m.textContent, i = t.indexOf('https://www.google.com/maps/'), tel = t.indexOf('tel:');
+      if (i < 0 && tel < 0) return;
+      var at = i >= 0 ? i : tel, url = t.slice(at).split(/\s/)[0], name = t.slice(0, at).trim();
       m.textContent = name + ' ';
-      var a = document.createElement('a'); a.href = url; a.target = '_blank'; a.rel = 'noopener'; a.className = 'pp-maplink'; a.textContent = 'Open in Google Maps ›';
+      var a = document.createElement('a'); a.href = url; a.rel = 'noopener'; a.className = 'pp-maplink';
+      if (tel >= 0 && i < 0) a.textContent = 'Call now';
+      else { a.target = '_blank'; a.textContent = /\/maps\/dir\//.test(url) ? 'Open the route in Google Maps ›' : 'Open in Google Maps ›'; }
       m.appendChild(a);
     });
   }
@@ -305,7 +309,8 @@
     e.stopPropagation(); e.preventDefault();
     var svg = p.querySelector('svg') || p, guideTap = p.classList.contains('pp-guide');
     var text = guideTap ? (window.ppCheer ? window.ppCheer() : 'Hi! I\'m penpen 🐧') : pickLine(p.classList.contains('pp-me') ? ME_LINES : THEY_LINES, p.textContent);
-    hop(svg); bubble(svg, text);
+    if (p.classList.contains('pp-me') && window.ppMove) window.ppMove(svg); else hop(svg);
+    bubble(svg, text);
     if (guideTap) say(text);
   }, true);
 
