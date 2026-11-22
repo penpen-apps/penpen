@@ -48,7 +48,7 @@
     h.push('<ellipse cx="60" cy="77" rx="25" ry="29" fill="' + CREAM + '"/><ellipse cx="60" cy="51" rx="21" ry="16" fill="' + CREAM + '"/><ellipse cx="66" cy="94" rx="17" ry="8" fill="#E9DAC0" opacity=".6"/>');
     if (g.coat) h.push('<path d="M35 68 Q33 96 40 105 L80 105 Q87 96 85 68 Q76 75 68 73 L60 96 L52 73 Q44 75 35 68 Z" fill="' + g.coat + '"/><circle cx="55" cy="92" r="1.8" fill="' + INK + '"/><circle cx="55" cy="99" r="1.8" fill="' + INK + '"/>');
     if (g.blush || g.eyes === 'happy') h.push(blush(g.blush));
-    if (!g.shades) h.push(eyes(g.eyes));
+    if (!g.shades) h.push('<g class="pp-eyes">' + eyes(g.eyes) + '</g>');
     else h.push('<path d="M41 44 H79 L77 53 Q72 57 64 53 L62 48 H58 L56 53 Q48 57 43 53 Z" fill="#0E0F12"/><path d="M45 46.5 L50 46.5 M66 46.5 L71 46.5" stroke="#fff" stroke-width="1.5" stroke-linecap="round" opacity=".6"/>');
     if (g.glasses) h.push('<g fill="none" stroke="' + INK + '" stroke-width="2"><circle cx="51" cy="49" r="7"/><circle cx="69" cy="49" r="7"/><path d="M58 48 Q60 46.5 62 48"/></g>');
     h.push('<path d="M56.5 57.5 Q60 62 63.5 57.5 Q60 56 56.5 57.5 Z" fill="' + BEAK + '"/>');
