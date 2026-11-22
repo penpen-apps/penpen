@@ -6,14 +6,14 @@
   var G = {
     bubbly:   { name: 'penpen', tag: 'the original' },
     sweet:    { name: 'Sweet P', tag: 'gentle & caring', body: '#7C6BB8', eyes: 'lashes', blush: 'rosy', hair: 'bow' },
-    hyper:    { name: 'Caffeinated penpen', tag: 'way too much coffee', body: '#E46F5A', eyes: 'shine', hair: 'spiky', hairC: INK, cup: 1 },
+    hyper:    { name: 'Double Shot', tag: 'way too much coffee', body: '#E46F5A', eyes: 'shine', hair: 'spiky', hairC: INK, cup: 1 },
     buddy:    { name: 'Captain Buddy', tag: 'knows every route', body: '#2C6E8F', eyes: 'dots', bag: 1, map: 1, cap: '#F4F1EA' },
     sunny:    { name: 'Sunny Side', tag: 'bright & cheerful', body: '#F4A62A', eyes: 'dots', blush: 'freckles', flower: 1, lei: 1 },
     coolcat:  { name: 'Cool Cat', tag: 'smooth, unbothered', body: '#17181C', shades: 1, bowtie: '#E46F5A' },
     goofydad: { name: 'Goofy Dad', tag: 'dad jokes on tap', body: '#3D7A4B', eyes: 'happy', mustache: '#5A3B2E', phones: 1 },
     trailer:  { name: 'Narrator Noir', tag: '"In a world…"', body: '#3A2F45', eyes: 'dots', detective: 1, coat: '#8B6B4A' },
     surfer:   { name: 'Surfer Bro', tag: 'totally chill', body: '#1F8FA6', eyes: 'wink', hair: 'wavy', hairC: '#E3B23C', lei: 1 },
-    grandma:  { name: 'Lola Pen', tag: '"have you eaten, dear?"', body: '#5B6B7A', eyes: 'happy', glasses: 1, scarf: '#B86B8B', hair: 'bun', hairC: '#D9D4CC' }
+    grandma:  { name: 'Lola Nena', tag: '"have you eaten, dear?"', body: '#5B6B7A', eyes: 'happy', glasses: 1, scarf: '#B86B8B', hair: 'bun', hairC: '#D9D4CC' }
   };
   function arc(x) { return '<path d="M' + (x - 4) + ' 51 Q' + x + ' 45.5 ' + (x + 4) + ' 51" fill="none" stroke="' + INK + '" stroke-width="3" stroke-linecap="round"/>'; }
   function dot(x, r) { return '<circle cx="' + x + '" cy="49" r="' + (r || 3.4) + '" fill="' + INK + '"/><circle cx="' + (x + 1.3) + '" cy="47.7" r="' + (r ? 1.6 : 1.1) + '" fill="#fff"/>'; }
@@ -75,10 +75,37 @@
       '<path d="M52 100 Q60 112 68 100 Z" fill="' + b + '" stroke="#000" stroke-opacity=".15"/>' +
       (hairC ? '<path d="M36 40 Q38 18 60 17 Q82 18 84 40 Q72 46 60 46 Q48 46 36 40 Z" fill="' + hairC + '"/>' : '');
   }
+  // side view, for walking
+  function side(id, fallback) {
+    var g = G[id] || {}, b = g.body || fallback || '#1E2B4A', h = [];
+    h.push('<ellipse cx="60" cy="112" rx="26" ry="4" fill="' + INK + '" opacity=".12"/>');
+    h.push('<g class="ft"><ellipse class="f1" cx="56" cy="107" rx="12" ry="4.5" fill="' + BEAK + '"/><ellipse class="f2" cx="68" cy="107" rx="12" ry="4.5" fill="' + BEAK + '"/></g>');
+    h.push('<path d="M34 98 L22 106 L38 104 Z" fill="' + b + '"/>');
+    h.push('<ellipse cx="58" cy="64" rx="29" ry="44" fill="' + b + '"/>');
+    h.push('<ellipse cx="72" cy="74" rx="14" ry="31" fill="' + CREAM + '"/><ellipse cx="70" cy="48" rx="14" ry="14" fill="' + CREAM + '"/>');
+    if (g.coat) h.push('<path d="M36 70 Q34 98 40 106 L74 106 Q80 96 82 72 Q70 76 60 72 Z" fill="' + g.coat + '"/>');
+    if (g.scarf) h.push('<rect x="34" y="64" width="52" height="9" rx="4.5" fill="' + g.scarf + '"/><rect x="38" y="68" width="9" height="18" rx="3.5" fill="' + g.scarf + '"/>');
+    if (g.lei) h.push('<circle cx="66" cy="80" r="4.5" fill="#E46F5A"/><circle cx="74" cy="84" r="4.5" fill="#F4A62A"/><circle cx="82" cy="80" r="4.5" fill="#fff" stroke="#F0D9B5"/>');
+    h.push('<ellipse class="fl" cx="52" cy="70" rx="8" ry="21" fill="' + b + '" stroke="#000" stroke-opacity=".12" transform="rotate(14 52 70)"/>');
+    if (g.shades) h.push('<path d="M64 42 H86 L84 50 Q78 54 70 50 Z" fill="#0E0F12"/>');
+    else if (g.eyes === 'happy' || g.eyes === 'lashes') h.push('<path d="M70 47 Q74 42 78 47" fill="none" stroke="' + INK + '" stroke-width="3" stroke-linecap="round"/>');
+    else h.push('<circle cx="75" cy="46" r="3.6" fill="' + INK + '"/><circle cx="76.3" cy="44.7" r="1.2" fill="#fff"/>');
+    if (g.glasses) h.push('<circle cx="75" cy="46" r="6.5" fill="none" stroke="' + INK + '" stroke-width="2"/>');
+    h.push('<ellipse cx="72" cy="56" rx="4.5" ry="2.8" fill="#F7A3A0"/>');
+    h.push('<path d="M83 50 Q98 53 83 58 Z" fill="' + BEAK + '"/>');
+    if (g.mustache) h.push('<path d="M80 59 Q74 57 70 60 Q75 63 80 61 Z" fill="' + g.mustache + '"/>');
+    if (g.hair || g.hairC) h.push('<path d="M32 40 Q34 18 58 17 Q80 18 84 38 Q72 30 58 32 Q44 32 32 40 Z" fill="' + (g.hair === 'bow' ? b : (g.hairC || INK)) + '"/>' + (g.hair === 'bow' ? '<path d="M50 22 L60 16 L60 28 Z M50 22 L40 16 L40 28 Z" fill="#F28AA5"/>' : g.hair === 'bun' ? '<circle cx="44" cy="18" r="8" fill="' + g.hairC + '"/>' : ''));
+    if (g.cap) h.push('<path d="M34 36 Q36 18 58 17 Q80 18 82 36 Z" fill="' + g.cap + '"/><path d="M78 34 H96 V38 H78 Z" fill="#1E2B4A"/>');
+    if (g.detective) h.push('<path d="M32 37 Q58 8 84 37 Z" fill="#8B6B4A"/><path d="M30 36 Q58 30 92 36 Q58 42 30 36 Z" fill="#6E5236"/>');
+    if (g.phones) h.push('<path d="M40 30 Q56 10 74 26" fill="none" stroke="' + INK + '" stroke-width="4"/><rect x="50" y="30" width="12" height="17" rx="5" fill="#E46F5A"/>');
+    if (g.flower) h.push('<circle cx="50" cy="26" r="4" fill="#F28AA5"/><circle cx="56" cy="24" r="4" fill="#F28AA5"/><circle cx="53" cy="30" r="4" fill="#F28AA5"/><circle cx="53" cy="27" r="2.4" fill="#F4A62A"/>');
+    if (g.cup) h.push('<rect x="86" y="70" width="13" height="15" rx="3" fill="#fff" stroke="' + INK + '" stroke-width="2"/><rect x="86" y="75" width="13" height="5" fill="#8B5A33"/>');
+    return h.join('');
+  }
   window.ppLook = {
     list: function () { return Object.keys(G).map(function (k) { return { id: k, name: G[k].name, tag: G[k].tag }; }); },
     name: function (id) { return (G[id] || G.bubbly).name; },
     tag: function (id) { return (G[id] || G.bubbly).tag; },
-    svg: svg, back: back
+    svg: svg, back: back, side: side
   };
 })();
