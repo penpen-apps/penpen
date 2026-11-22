@@ -31,6 +31,9 @@
     '#pp-talk .mute{background:#fff;color:#2B2A28}#pp-talk .mute.on{background:#2B2A28;color:#fff}' +
     '#pp-talk .end{background:#C8553D;color:#fff}' +
     '#pp-talk .ptt{display:flex;gap:12px;width:100%;max-width:440px}#pp-talk .ptt button{flex:1;min-height:96px;border-radius:24px;border:0;font:800 17px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#13324A;box-shadow:0 4px 14px rgba(0,0,0,.1);touch-action:none;user-select:none;-webkit-user-select:none}' +
+    '#pp-talk .st:empty{display:none}' +
+    '#pp-talk .langs{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;align-items:center;margin-bottom:12px;max-width:440px}#pp-talk .langs span{font-weight:800;opacity:.7;font-size:15px}' +
+    '#pp-talk .langs button{border:1.5px solid #237566;background:rgba(255,255,255,.7);color:#13324A;border-radius:99px;padding:7px 13px;font:800 14px Nunito,-apple-system,sans-serif}#pp-talk .langs button.on{background:#237566;color:#fff}' +
     '#pp-talk .ptt button.solo{min-height:120px;font-size:21px}#pp-talk .ptt button.on{background:#C8553D;color:#fff;transform:scale(.97)}#pp-talk .ptt small{display:block;font-weight:700;font-size:13px;opacity:.75;margin-top:4px}' +
     '@media (max-height:720px){#pp-talk{padding-top:calc(16px + env(safe-area-inset-top));padding-bottom:calc(18px + env(safe-area-inset-bottom))}#pp-talk .orb{width:170px;height:170px}#pp-talk .pen{width:118px;height:118px}#pp-talk .cap{font-size:17px}}';
   var PEN = '<svg class="pen" viewBox="0 0 120 120" aria-hidden="true"><ellipse cx="60" cy="112" rx="30" ry="5" fill="#000" opacity=".08"/><path d="M60 14c-26 0-40 22-40 50 0 26 16 44 40 44s40-18 40-44c0-28-14-50-40-50z" fill="#2E3A4A"/><ellipse cx="60" cy="76" rx="25" ry="28" fill="#FFF8EE"/><circle cx="48.5" cy="50" r="13" fill="#FFF8EE"/><circle cx="71.5" cy="50" r="13" fill="#FFF8EE"/><circle cx="48.5" cy="51" r="5.2" fill="#1E1E1E"/><circle cx="71.5" cy="51" r="5.2" fill="#1E1E1E"/><circle cx="50.3" cy="49" r="1.8" fill="#fff"/><circle cx="73.3" cy="49" r="1.8" fill="#fff"/><path d="M54 60q6 7 12 0q-6 4-12 0z" fill="#F4A62A"/><ellipse cx="40" cy="62" rx="5" ry="3" fill="#F7A9A0" opacity=".6"/><ellipse cx="80" cy="62" rx="5" ry="3" fill="#F7A9A0" opacity=".6"/><ellipse cx="48" cy="106" rx="9" ry="4" fill="#F4A62A"/><ellipse cx="72" cy="106" rx="9" ry="4" fill="#F4A62A"/></svg>';
@@ -51,7 +54,12 @@
     'Asia/Kolkata': ['Hindi'], 'Asia/Dubai': ['Arabic'], 'Asia/Phnom_Penh': ['Khmer'], 'Asia/Vientiane': ['Lao'], 'Asia/Yangon': ['Burmese'], 'Asia/Kathmandu': ['Nepali'],
     'Europe/Madrid': ['Spanish'], 'Europe/Paris': ['French'], 'Europe/Rome': ['Italian'], 'Europe/Berlin': ['German'], 'Europe/Lisbon': ['Portuguese'], 'Europe/Istanbul': ['Turkish'],
     'Europe/Athens': ['Greek'], 'America/Mexico_City': ['Spanish'], 'America/Sao_Paulo': ['Portuguese'], 'America/Bogota': ['Spanish'], 'America/Lima': ['Spanish'], 'America/Argentina/Buenos_Aires': ['Spanish'] };
-  function suggested() { try { return TZ_LANG[Intl.DateTimeFormat().resolvedOptions().timeZone] || []; } catch (e) { return []; } }
+  // languages of where the trip goes (falls back to the phone's time zone)
+  function suggested() {
+    var txt = ''; try { var c = window.ppTrips && window.ppTrips.current && window.ppTrips.current(); txt = JSON.stringify(c || '') + (localStorage.getItem('pp_c_penpenToday:[]') || '').slice(0, 4000); } catch (e) {}
+    if (/philippines|cebu|dipolog|manila|bohol|davao|palawan|siargao|dumaguete|iloilo|boracay/i.test(txt)) return TZ_LANG['Asia/Manila'];
+    try { return TZ_LANG[Intl.DateTimeFormat().resolvedOptions().timeZone] || []; } catch (e) { return []; }
+  }
   function open(opts) {
     opts = opts || {};
     if (S) return;
@@ -65,11 +73,11 @@
     S = { el: w, turns: [], inT: '', outT: '', muted: false, model: 0, nextAt: 0, sources: [], mode: opts.mode || 'talk', lang: opts.lang || '' };
     document.getElementById('pp-t-end').onclick = close;
     try { S.ctx = new (window.AudioContext || window.webkitAudioContext)(); S.ctx.resume(); } catch (e) {}
-    if (S.mode === 'translate' && !S.lang) return pickLang();
+    if (S.mode === 'translate' && !S.lang) S.lang = localStorage.getItem('pp_tr_lang') || suggested()[0] || 'Tagalog';
     begin();
   }
   function pickLang() {
-    status('Translate English ⇄ …');
+    status('');
     var last = localStorage.getItem('pp_tr_lang') || '', here = suggested();
     var order = here.concat(last && here.indexOf(last) < 0 ? [last] : []);
     LANGS.forEach(function (l) { if (order.indexOf(l) < 0) order.push(l); });
@@ -87,11 +95,11 @@
       var go = e.target.closest('button[data-go]'), b = e.target.closest('button[data-l]');
       var l = go ? (document.getElementById('pp-t-ol').value || '').trim() : b && b.dataset.l;
       if (!l) return;
-      S.lang = l; localStorage.setItem('pp_tr_lang', S.lang); cap.onclick = null; cap.textContent = ''; begin();
+      cap.onclick = null; cap.textContent = ''; switchLang(l);
     };
   }
   function begin() {
-    if (S.mode === 'translate') status('🌐 English ⇄ ' + S.lang + ' · connecting…');
+    if (S.mode === 'translate') status('Connecting…');
     startMic().then(connect).catch(function (e) {
       status(e && e.name === 'NotAllowedError' ? 'Allow the microphone for penpen, then try again.' : "Couldn't start — try again.");
     });
@@ -101,13 +109,35 @@
 
 
   /* ---------- hold-to-talk: press, speak, let go (Talk has one button, Translate has Me / Them) ---------- */
-  function idle() { return S && S.mode === 'translate' ? '🌐 Hold a button and speak' : '🎙️ Hold the button and talk'; }
+  function idle() { return S && S.mode === 'translate' ? '' : '🎙️ Hold the button and talk'; }
+  // change language without leaving: reconnect with the new language
+  function switchLang(l) {
+    if (!S || !l) return;
+    S.lang = l; localStorage.setItem('pp_tr_lang', l);
+    var old = S.ws; S.ws = null; S.ready = false; S.model = 0; try { old && old.close(); } catch (e) {}
+    var box = S.el.querySelector('.ptt'); if (box) box.remove();
+    var lg = S.el.querySelector('.langs'); if (lg) lg.remove();
+    if (!S.stream) begin(); else connect();
+  }
+  function langRow() {
+    var here = suggested(), cur = S.lang, list = here.slice();
+    if (list.indexOf(cur) < 0) list.unshift(cur);
+    var row = document.createElement('div'); row.className = 'langs';
+    row.innerHTML = '<span>English ⇄</span>' + list.map(function (l) { return '<button type="button" data-l="' + l + '" class="' + (l === cur ? 'on' : '') + '">' + l.replace(/ \(.*\)/, '') + '</button>'; }).join('') + '<button type="button" data-more="1">More…</button>';
+    row.onclick = function (e) {
+      var b = e.target.closest('button'); if (!b) return;
+      if (b.dataset.more) { row.remove(); var box = S.el.querySelector('.ptt'); if (box) box.style.display = 'none'; return pickLang(); }
+      if (b.dataset.l !== S.lang) switchLang(b.dataset.l);
+    };
+    return row;
+  }
   function showPtt() {
     if (S.el.querySelector('.ptt')) return;
     var bar = S.el.querySelector('.bar');
     var box = document.createElement('div'); box.className = 'ptt';
     if (S.mode === 'translate') {
       var them = S.lang.replace(/ \(.*\)/, '');
+      bar.parentNode.insertBefore(langRow(), bar);
       box.innerHTML = '<button type="button" data-who="me">🙋 Me<small>hold · English</small></button><button type="button" data-who="them">🧑 Them<small>hold · ' + them + '</small></button>';
     } else box.innerHTML = '<button type="button" class="solo" data-who="me">🎙️ Hold to talk<small>let go when you\'re done</small></button>';
     bar.parentNode.insertBefore(box, bar);
