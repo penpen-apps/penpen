@@ -413,6 +413,6 @@
   window.ppGames = {
     list: GAMES,
     cards: function (best) { return '<div class="gcards">' + Object.keys(GAMES).map(function (k) { return '<button type="button" data-game="' + k + '"><span>' + GAMES[k].e + '</span><b>' + GAMES[k].t + '</b><small>' + (best && best[k] ? 'Best ' + best[k] : 'Works offline') + '</small></button>'; }).join('') + '</div>'; },
-    open: shell, quiz: quiz, sing: sing, stop: stop, _m: MAKERS
+    open: function (id, host, done) { return shell(host, id, done); }, quiz: quiz, sing: sing, stop: stop, _m: MAKERS
   };
 })();
