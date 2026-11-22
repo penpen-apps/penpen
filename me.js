@@ -33,6 +33,19 @@
     '#pp-me .chips{display:flex;flex-wrap:wrap;gap:8px;width:100%;padding-left:38px;box-sizing:border-box}' +
     '#pp-me .chips button{border:1.5px solid var(--line);background:var(--bg);color:var(--ink);border-radius:99px;padding:9px 14px;font:800 15px ' + F + ';cursor:pointer}' +
     '#pp-me .chips button.on{background:var(--accent);border-color:var(--accent);color:#fff}' +
+    '#pp-me .gcar{display:flex;gap:4px;overflow-x:auto;width:100%;padding:6px 0 4px;scroll-snap-type:x mandatory}' +
+    '#pp-me .gw{flex:0 0 84px;border:0;background:none;color:var(--ink);display:flex;flex-direction:column;align-items:center;gap:2px;font:800 12px ' + F + ';cursor:pointer;scroll-snap-align:start;padding:4px 0;border-radius:16px}' +
+    '#pp-me .gw svg{animation:ppgb 1.4s ease-in-out infinite alternate;transform-origin:50% 90%;border-radius:50%;padding:2px}#pp-me .gw.on svg{background:var(--accentSoft);box-shadow:0 0 0 3px var(--accent)}#pp-me .gw.on span{color:var(--accentText)}' +
+    '#pp-me .gw span{text-align:center;line-height:1.15}@keyframes ppgb{from{transform:translateY(0) rotate(-4deg)}to{transform:translateY(-5px) rotate(4deg)}}' +
+    '#pp-me .rows > a{display:flex;align-items:center;gap:12px;padding:15px 16px;border-top:1px solid var(--line);color:var(--ink);text-decoration:none;font:16px ' + F + '}' +
+    '#pp-me .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}#pp-me .stats.two{grid-template-columns:repeat(2,1fr);margin-top:8px}' +
+    '#pp-me .stats > div{background:var(--card);border-radius:18px;padding:14px 8px;text-align:center}#pp-me .stats b{display:block;font:900 26px ' + F + ';color:var(--ink)}#pp-me .stats span{color:var(--muted);font-size:13px;font-weight:700}' +
+    '#pp-me .buds{display:flex;gap:10px;overflow-x:auto}#pp-me .buds .bd{flex:0 0 100px;background:var(--card);border-radius:18px;padding:10px;text-align:center}#pp-me .buds svg{width:64px;height:64px}#pp-me .buds b{display:block}#pp-me .buds small{color:var(--muted);font-size:12px}' +
+    '#pp-me .album{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}' +
+    '#pp-me .pol{border:0;background:#fff;color:#13324A;border-radius:6px;padding:8px 8px 12px;box-shadow:0 4px 14px rgba(0,0,0,.12);text-align:left;font:inherit;cursor:pointer;transform:rotate(-1.5deg)}#pp-me .pol:nth-child(even){transform:rotate(1.5deg)}' +
+    '#pp-me .pol .ph{height:110px;border-radius:3px;background:linear-gradient(160deg,var(--accentSoft),var(--chip));display:grid;place-items:center;overflow:hidden;margin-bottom:8px}' +
+    '#pp-me .pol .cr{display:flex;align-items:flex-end;justify-content:center}#pp-me .pol .cr svg{width:54px;height:54px;margin:0 -6px}#pp-me .pol .big{font-size:40px}' +
+    '#pp-me .pol b{display:block;font:800 14px ' + F + '}#pp-me .pol small{display:block;color:#4F6475;font-size:12px;margin-top:2px}#pp-me .pol.here .ph{box-shadow:inset 0 0 0 3px var(--accent)}#pp-me .pol.add{background:var(--card);color:var(--ink)}' +
     '#pp-me .who{color:var(--muted);font-size:14px;text-align:center;margin:16px 0 4px}' +
     /* the profile card on Crew: flight, guide, scene and appearance now live elsewhere */
     '.pp-hidex{display:none!important}' +
@@ -127,10 +140,11 @@
   function guide() { return window.ppGuideNow ? window.ppGuideNow() : 'bubbly'; }
   function guideChips() {
     var g = guide();
-    return (window.ppGuides || [{ id: 'bubbly', label: 'penpen' }]).map(function (v) {
+    return (window.ppGuides || [{ id: 'bubbly', label: 'penpen' }]).map(function (v, n) {
       var L = window.ppLook, inner = L && L.svg(v.id), nav = document.querySelector('#navpen svg');
       if (!inner && nav) inner = nav.getAttribute('data-orig') || nav.innerHTML;
-      return '<button type="button" data-k="guide" data-v="' + v.id + '" class="gd' + (v.id === g ? ' on' : '') + '">' + (inner ? '<svg viewBox="-7 -14 134 134" width="30" height="30" aria-hidden="true">' + inner + '</svg>' : '') + (L ? L.name(v.id) : v.label) + '</button>';
+      return '<button type="button" data-k="guide" data-v="' + v.id + '" class="gw' + (v.id === g ? ' on' : '') + '" aria-label="' + esc(L ? L.name(v.id) : v.label) + '">' +
+        '<svg viewBox="-7 -14 134 134" width="64" height="64" aria-hidden="true" style="animation-delay:-' + (n * 0.37).toFixed(2) + 's">' + (inner || '') + '</svg><span>' + esc(L ? L.name(v.id) : v.label) + '</span></button>';
     }).join('');
   }
   // every penpen on screen wears the chosen guide's own look (and name tag)
@@ -151,31 +165,74 @@
   window.addEventListener('pp-guide', function () { setTimeout(dress, 30); });
   function chips(list, cur, kind) { return list.map(function (x) { return '<button type="button" data-k="' + kind + '" data-v="' + x[0] + '" class="' + (x[0] === cur ? 'on' : '') + '">' + x[1] + '</button>'; }).join(''); }
 
-  function openMe() {
+  var SHEET_HOME = '18G3VsiWgZBsLceIXun9507UXe9prThqQHIe1iFufEro';
+  function fmtD(d) { return d ? d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''; }
+  function isoD(s) { var m = String(s || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null; }
+  function cache(k) { try { return JSON.parse(localStorage.getItem('pp_c_' + k + ':[]') || 'null'); } catch (e) { return null; } }
+  function tripFacts() {
+    var P = cache('penpenPlan'), days = (P && P.days) || [], places = {};
+    days.forEach(function (d) { (d.stops || []).forEach(function (st) { var c = String(st.place || '').split(',').pop().trim(); if (c && !/airport|terminal/i.test(c)) places[c] = 1; }); });
+    return { start: days.length ? isoD(days[0].day) : null, end: days.length ? isoD(days[days.length - 1].day) : null, places: Object.keys(places) };
+  }
+  // My profile: a little travel album
+  function summary() {
+    var T = cache('penpenToday') || {}, f = tripFacts(), yr = new Date().getFullYear();
+    var list = []; try { list = JSON.parse(localStorage.getItem('pp_trips_list') || '[]'); } catch (e) {}
+    var cur = localStorage.getItem('pp_trip_id') || '';
+    if (!list.length) list = [{ id: cur, name: localStorage.getItem('pp_trip_name') || (T.hello && T.hello.trip) || 'This trip' }];
+    var trips = list.map(function (t) {
+      var here = (t.id || '') === cur, s = here && f.start ? f.start : isoD(t.start), e = here && f.end ? f.end : isoD(t.end);
+      return { id: t.id || '', name: t.name, s: s, e: e, here: here, where: t.where || '' };
+    });
+    var thisYear = trips.filter(function (t) { return !t.s || t.s.getFullYear() === yr; });
+    var days = thisYear.reduce(function (n, t) { return n + (t.s && t.e ? Math.round((t.e - t.s) / 864e5) + 1 : 0); }, 0);
+    var places = {}; f.places.forEach(function (p) { places[p] = 1; }); trips.forEach(function (t) { if (!t.here && t.where) t.where.split(/[-–,·]/).forEach(function (p) { if (p.trim()) places[p.trim()] = 1; }); });
+    var mine = T.budget && T.budget.mine ? Math.round(T.budget.mine.spent || 0) : 0;
+    var X = null; try { X = JSON.parse(localStorage.getItem('pp_trip') || 'null'); } catch (e) {}
+    var nExp = X && X.tabs && X.tabs.Expenses ? X.tabs.Expenses.rows.slice(1).filter(function (r) { return r[1]; }).length : 0;
+    var whos = [].slice.call(document.querySelectorAll('#pp-scene .pp-who:not(.pp-me)'));
+    var buddies = whos.map(function (w) { var sv = w.querySelector('svg'), nm = (w.textContent || '').trim(); return sv ? '<div class="bd">' + sv.outerHTML + '<b>' + esc(nm) + '</b><small>1 trip together</small></div>' : ''; }).join('');
+    var crew = whos.concat([document.querySelector('#pp-scene .pp-me')]).filter(Boolean).map(function (w) { var sv = w.querySelector('svg'); return sv ? sv.outerHTML : ''; }).join('');
+    var stat = function (n, l) { return '<div><b>' + n + '</b><span>' + l + '</span></div>'; };
+    return '<h3>' + yr + ' in travel</h3><div class="stats">' + stat(thisYear.length, thisYear.length === 1 ? 'Trip' : 'Trips') + stat(days, 'Days away') + stat(Object.keys(places).length, 'Places') + '</div>' +
+      '<div class="stats two">' + stat('₱' + mine.toLocaleString('en-US'), 'My share spent') + stat(nExp, 'Expenses logged') + '</div>' +
+      (buddies ? '<h3>Travel buddies</h3><div class="buds">' + buddies + '</div>' : '') +
+      '<h3>My trips</h3><div class="album">' + trips.map(function (t) {
+        return '<button type="button" class="pol' + (t.here ? ' here' : '') + '" data-trip="' + esc(t.id) + '" data-name="' + esc(t.name) + '"><div class="ph">' + (t.here && crew ? '<div class="cr">' + crew + '</div>' : '<span class="big">🧳</span>') + '</div>' +
+          '<b>' + esc(t.name) + '</b><small>' + (t.s ? fmtD(t.s) + (t.e ? ' – ' + fmtD(t.e) : '') + ', ' + t.s.getFullYear() : (t.where || '')) + (t.here ? ' · now' : '') + '</small></button>';
+      }).join('') + '<button type="button" class="pol add" data-a="newtrip"><div class="ph"><span class="big">＋</span></div><b>New trip</b><small>start planning</small></button></div>';
+  }
+  function openMe(mode) {
     if (document.getElementById('pp-me')) return;
+    var S = mode === 'settings';
     var cur = document.querySelector('button[aria-current="page"]'), back = cur && cur.textContent.trim();
-    var w = document.createElement('div'); w.id = 'pp-me'; w.setAttribute('role', 'dialog'); w.setAttribute('aria-label', 'My profile');
+    var w = document.createElement('div'); w.id = 'pp-me'; w.setAttribute('role', 'dialog'); w.setAttribute('aria-label', S ? 'Settings' : 'My profile');
+    if (S) w.className = 'pp-set';
     document.body.appendChild(w);
+    if (!S && window.ppTrips) window.ppTrips.list().then(function (l) {
+      try { localStorage.setItem('pp_trips_list', JSON.stringify(l.map(function (t) { return { id: t.id, name: t.name, start: t.start, end: t.end, where: t.where }; }))); } catch (e) {}
+      var a = w.querySelector('.sum'); if (a && document.body.contains(w)) a.innerHTML = summary();
+    }, function () {});
     function paint(editing, msg) {
-      var m = meData(), P = prefs();
-      w.innerHTML = '<div class="top"><button class="back" aria-label="Back">‹</button><h2>My profile</h2></div><div class="wrapme">' +
-        '<div class="mecard"><div class="av">' + avatar() + '</div><div><div class="nm">' + esc(m.name) + '</div><div class="ph">' + (m.phone ? '📞 ' + esc(m.phone) : 'No phone number yet') + '</div></div>' +
-        (editing ? '' : '<button type="button" class="ed" data-a="edit">✏️ Edit</button>') + '</div>' +
-        (editing ? '<div class="edit"><label for="pp-me-ph">My phone</label><input id="pp-me-ph" type="tel" inputmode="tel" placeholder="e.g. 0917 123 4567" value="' + esc(m.phone) + '">' +
-          '<div class="btns"><button type="button" data-a="cancel">Cancel</button><button type="button" class="save" data-a="save">Save</button></div>' +
-          '<button type="button" class="look" data-a="penguin">🎨 Edit my look</button><div class="msg">' + (msg || '') + '</div></div>' : '') +
-        '<button type="button" class="sethd" data-a="settings"><i>⚙️</i>Settings<span class="chev">' + (setOpen ? '▴' : '▾') + '</span></button>' +
-        (setOpen ? '<div class="rows">' +
-        '<div><i>🐧</i><span>Your guide <small>tap to hear</small></span><div class="chips">' + guideChips() + '</div></div>' +
-        '<div><i>🔈</i><span>Read replies out loud</span><div class="chips">' + chips([['on', 'On'], ['off', 'Off']], localStorage.getItem('pp_voice') === 'on' ? 'on' : 'off', 'aloud') + '</div></div>' +
-        '<div><i>🏝️</i><span>Scene</span><div class="chips">' + chips(SCENES, P.scene || 'auto', 'scene') + '</div></div>' +
-        '<div><i>🌗</i><span>Appearance</span><div class="chips">' + chips(MODES, P.mode || 'auto', 'mode') + '</div></div>' +
-        '<button type="button" data-a="install"><i>📲</i>Add penpen to my phone<span class="chev">›</span></button>' +
-        '<button type="button" data-a="out"><i>↩︎</i>Sign out</button>' +
-        '</div>' : '') + '<div class="who">' + esc(m.email) + '</div></div>';
+      var m = meData(), P = prefs(), sheet = 'https://docs.google.com/spreadsheets/d/' + (localStorage.getItem('pp_trip_id') || SHEET_HOME) + '/edit';
+      w.innerHTML = '<div class="top"><button class="back" aria-label="Back">‹</button><h2>' + (S ? 'Settings' : 'My profile') + '</h2></div><div class="wrapme">' +
+        (S ? '<div class="rows">' +
+          '<div><i>🐧</i><span>Your guide <small>tap one to hear them</small></span><div class="gcar">' + guideChips() + '</div></div>' +
+          '<div><i>🔈</i><span>Read replies out loud</span><div class="chips">' + chips([['on', 'On'], ['off', 'Off']], localStorage.getItem('pp_voice') === 'on' ? 'on' : 'off', 'aloud') + '</div></div>' +
+          '<div><i>🏝️</i><span>Scene <small>colours the whole app</small></span><div class="chips">' + chips(SCENES, P.scene || 'auto', 'scene') + '</div></div>' +
+          '<div><i>🌗</i><span>Appearance</span><div class="chips">' + chips(MODES, P.mode || 'auto', 'mode') + '</div></div>' +
+          '<a href="' + sheet + '" target="_blank" rel="noopener"><i>📊</i>Open this trip’s Google Sheet<span class="chev">↗</span></a>' +
+          '<button type="button" data-a="install"><i>📲</i>Add penpen to my phone<span class="chev">›</span></button>' +
+          '<button type="button" data-a="out"><i>↩︎</i>Sign out</button></div>'
+        : '<div class="mecard"><div class="av">' + avatar() + '</div><div><div class="nm">' + esc(m.name) + '</div><div class="ph">' + (m.phone ? '📞 ' + esc(m.phone) : 'No phone number yet') + '</div></div>' +
+          (editing ? '' : '<button type="button" class="ed" data-a="edit">✏️ Edit</button>') + '</div>' +
+          (editing ? '<div class="edit"><label for="pp-me-ph">My phone</label><input id="pp-me-ph" type="tel" inputmode="tel" placeholder="e.g. 0917 123 4567" value="' + esc(m.phone) + '">' +
+            '<div class="btns"><button type="button" data-a="cancel">Cancel</button><button type="button" class="save" data-a="save">Save</button></div>' +
+            '<button type="button" class="look" data-a="penguin">🎨 Edit my look</button><div class="msg">' + (msg || '') + '</div></div>' : '') +
+          '<div class="sum">' + summary() + '</div>') +
+        '<div class="who">' + esc(m.email) + '</div></div>';
       if (editing) setTimeout(function () { var i = document.getElementById('pp-me-ph'); if (i) i.focus(); }, 50);
     }
-    var setOpen = false;
     paint(false);
     function close() { w.remove(); if (back && back !== 'Crew' && !document.querySelector('button[aria-current="page"]')) { var b = navBtn(back); if (b) b.click(); } }
     w.onclick = function (e) {
@@ -195,7 +252,8 @@
         return;
       }
       var a = b.dataset.a;
-      if (a === 'settings') { setOpen = !setOpen; return paint(false); }
+      if (b.dataset.trip !== undefined) { if (b.classList.contains('here')) return close(); w.remove(); if (window.ppTrips) window.ppTrips.open(b.dataset.trip, b.dataset.name); return; }
+      if (a === 'newtrip') { w.remove(); if (window.ppOpenTrips) window.ppOpenTrips(); return; }
       if (a === 'edit') return paint(true);
       if (a === 'cancel') return paint(false);
       if (a === 'save') {
@@ -218,7 +276,8 @@
       if (a === 'out' && window.ppSignOut) window.ppSignOut();
     };
   }
-  window.ppOpenMe = openMe;
+  window.ppOpenMe = function () { openMe(); };
+  window.ppOpenSettings = function () { openMe('settings'); };
 
   /* ---------- Crew & Plan tidy-up ---------- */
   // penpen's place tips: turn the Maps address into a tappable button
@@ -250,12 +309,9 @@
         if (k.matches && k.matches('[data-tour]')) k.classList.add('pp-hidex');
       });
     }
-    // hotels, tours & transport belong with the plan
-    var tc = document.getElementById('trip-ct'), plan = document.querySelector('#p-plan .scroll') || document.getElementById('p-plan');
-    if (tc && plan && !plan.contains(tc)) {
-      var tip = plan.querySelector('.card.tip');
-      if (tip && tip.parentNode === plan) plan.insertBefore(tc, tip); else plan.appendChild(tc);
-    }
+    // hotels, tours & transport live on their own Bookings page (not in the itinerary)
+    var tc = document.getElementById('trip-ct'), sp = document.querySelector('#p-safety .scroll');
+    if (tc && sp && !sp.contains(tc)) sp.appendChild(tc);
     // "Whole trip" first in the Plan day picker
     var days = document.getElementById('days');
     if (days) { var w = [].slice.call(days.querySelectorAll('button')).filter(function (b) { return /whole trip/i.test(b.textContent); })[0];
