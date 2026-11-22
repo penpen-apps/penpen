@@ -243,7 +243,7 @@
           for (var j = 0; j <= 8; j++) back.push({ transform: 'translateX(' + (-120 + j * 15) + '%) rotate(' + (j % 2 ? 7 : -7) + 'deg)' });
           out.cancel();
           svg.animate(back, { duration: 1500, easing: 'linear' }).onfinish = function () {
-            if (svg.innerHTML === sideV) svg.innerHTML = front;
+            svg.innerHTML = front;
             svg.animate([{ transform: 'scale(1,1)' }, { transform: 'scale(1.1,.9)' }, { transform: 'scale(1,1)' }], { duration: 300 });
             end();
           };
