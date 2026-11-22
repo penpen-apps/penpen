@@ -40,7 +40,7 @@
     '#pp-me .sethd{display:flex;width:100%;align-items:center;gap:12px;margin-top:16px;border:0;background:var(--card);color:var(--ink);border-radius:20px;padding:15px 16px;font:800 16px ' + F + ';cursor:pointer;text-align:left}' +
     '#pp-me .sethd i{font-style:normal;font-size:20px}#pp-me .sethd .chev{margin-left:auto;color:var(--muted)}#pp-me .sethd + .rows{margin-top:8px}' +
     '#pp-me .rows small{color:var(--muted);font-weight:600;font-size:12.5px;margin-left:4px}' +
-    '.pp-acc{position:absolute;transform:translate(-50%,-50%);line-height:1;pointer-events:none;z-index:2;filter:drop-shadow(0 1px 1px rgba(0,0,0,.2))}' +
+    '.pp-acc{position:absolute;transform:translate(-50%,-50%);line-height:1;pointer-events:none;z-index:2;filter:drop-shadow(0 1px 1px rgba(0,0,0,.2));background:none!important;padding:0!important;box-shadow:none!important;border:0!important;margin:0!important}' +
     /* tap a penguin: a little speech bubble pops over its head */
     '.pp-tb{position:fixed;z-index:99950;max-width:230px;background:var(--card);color:var(--ink);font:700 14.5px/1.3 ' + F + ';padding:9px 12px;border-radius:16px;box-shadow:0 6px 20px rgba(19,50,74,.22);transform:translate(-50%,-100%);animation:ppTb .22s ease-out;pointer-events:none}' +
     '.pp-tb:after{content:"";position:absolute;left:50%;bottom:-7px;width:14px;height:14px;background:var(--card);transform:translateX(-50%) rotate(45deg);border-radius:2px}' +
@@ -239,7 +239,8 @@
     // "Whole trip" first in the Plan day picker
     var days = document.getElementById('days');
     if (days) { var w = [].slice.call(days.querySelectorAll('button')).filter(function (b) { return /whole trip/i.test(b.textContent); })[0];
-      if (w && w.parentNode.firstElementChild !== w) w.parentNode.insertBefore(w, w.parentNode.firstElementChild); }
+      if (w && w.parentNode.firstElementChild !== w) w.parentNode.insertBefore(w, w.parentNode.firstElementChild);
+      if (w && !tidy.whole && days.offsetParent) { tidy.whole = 1; w.click(); } }   // open the Plan on the whole trip
     buddies(); dress();
     var fr = document.querySelector('#p-safety .fred');
     if (fr && /Crew & contacts/.test(fr.textContent)) fr.childNodes.forEach(function (n) { if (n.nodeType === 3 && /Crew & contacts/.test(n.textContent)) n.textContent = n.textContent.replace('Crew & contacts', 'Crew & safety'); });
