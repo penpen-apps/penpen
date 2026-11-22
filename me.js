@@ -35,9 +35,28 @@
     '#pp-me .who{color:var(--muted);font-size:14px;text-align:center;margin:16px 0 4px}' +
     /* the profile card on Crew: flight, guide, scene and appearance now live elsewhere */
     '.pp-hidex{display:none!important}' +
+    'header #voice{display:none!important}' +
+    '#pp-me .look{display:inline-flex;align-items:center;gap:6px;margin-top:12px;border:1.5px solid var(--line);background:var(--bg);color:var(--ink);border-radius:99px;padding:8px 14px;font:800 14px ' + F + ';cursor:pointer}' +
+    '#pp-me .sethd{display:flex;width:100%;align-items:center;gap:12px;margin-top:16px;border:0;background:var(--card);color:var(--ink);border-radius:20px;padding:15px 16px;font:800 16px ' + F + ';cursor:pointer;text-align:left}' +
+    '#pp-me .sethd i{font-style:normal;font-size:20px}#pp-me .sethd .chev{margin-left:auto;color:var(--muted)}#pp-me .sethd + .rows{margin-top:8px}' +
+    '#pp-me .rows small{color:var(--muted);font-weight:600;font-size:12.5px;margin-left:4px}' +
+    '.pp-acc{position:absolute;transform:translate(-50%,-50%);line-height:1;pointer-events:none;z-index:2;filter:drop-shadow(0 1px 1px rgba(0,0,0,.2))}' +
+    /* tap a penguin: a little speech bubble pops over its head */
+    '.pp-tb{position:fixed;z-index:99950;max-width:230px;background:var(--card);color:var(--ink);font:700 14.5px/1.3 ' + F + ';padding:9px 12px;border-radius:16px;box-shadow:0 6px 20px rgba(19,50,74,.22);transform:translate(-50%,-100%);animation:ppTb .22s ease-out;pointer-events:none}' +
+    '.pp-tb:after{content:"";position:absolute;left:50%;bottom:-7px;width:14px;height:14px;background:var(--card);transform:translateX(-50%) rotate(45deg);border-radius:2px}' +
+    '@keyframes ppTb{from{opacity:0;transform:translate(-50%,-88%) scale(.85)}to{opacity:1;transform:translate(-50%,-100%)}}' +
+    /* little penpen that hangs around each page */
+    '.pp-budrow{position:relative;height:62px;margin:2px 0 4px;overflow:visible}' +
+    '.pp-buddy{position:absolute;left:0;top:2px;width:58px;height:58px;border:0;background:none;padding:0;cursor:pointer;animation:ppStroll 16s ease-in-out infinite}' +
+    '.pp-buddy .bd{position:relative;width:46px;height:46px;animation:ppWad 1.8s ease-in-out infinite}.pp-buddy svg{width:46px;height:46px}' +
+    '.pp-buddy .prop{position:absolute;right:-2px;bottom:6px;font-size:20px;animation:ppProp 1.2s ease-in-out infinite}' +
+    '@keyframes ppStroll{0%,8%{left:0}45%,55%{left:calc(100% - 60px)}92%,100%{left:0}}' +
+    '@keyframes ppProp{0%,100%{transform:rotate(-8deg)}50%{transform:rotate(8deg) translateY(-2px)}}' +
+    /* penpen on the map */
+    '.pp-mapen{background:none;border:0}.pp-mapen .mp{position:relative;width:40px;height:40px;animation:ppWad 1.4s ease-in-out infinite;filter:drop-shadow(0 3px 3px rgba(0,0,0,.3))}.pp-mapen svg{width:40px;height:40px}' +
     /* penguins with a mind of their own */
     '#pp-scene .pp-who > svg,#pp-scene .pp-guide > svg{transform-origin:50% 92%;transform-box:fill-box}' +
-    '.pp-a-hop{animation:ppHop .8s ease}.pp-a-wig{animation:ppWig2 .9s ease}.pp-a-look{animation:ppLook 1.6s ease}.pp-a-wad{animation:ppWad 1.8s ease}.pp-a-spin{animation:ppSpin 1s ease}.pp-a-dance{animation:ppDance 1.4s ease}' +
+    '.pp-a-hop{animation:ppHop .8s ease}.pp-a-wig{animation:ppWig2 .9s ease}.pp-a-wad{animation:ppWad 1.8s ease}.pp-a-dance{animation:ppDance 1.4s ease}' +
     '@keyframes ppHop{0%,100%{transform:translateY(0)}25%{transform:translateY(-20px) scale(1.03,.97)}50%{transform:translateY(0) scale(1.06,.92)}70%{transform:translateY(-7px)}}' +
     '@keyframes ppWig2{0%,100%{transform:rotate(0)}20%{transform:rotate(-9deg)}40%{transform:rotate(8deg)}60%{transform:rotate(-6deg)}80%{transform:rotate(4deg)}}' +
     '@keyframes ppLook{0%,100%{transform:scaleX(1)}20%,45%{transform:scaleX(-1)}55%,85%{transform:scaleX(1) rotate(4deg)}}' +
@@ -99,6 +118,32 @@
 
   var SCENES = [['auto', 'Auto'], ['beach', 'Beach'], ['mountain', 'Mountain'], ['city', 'City'], ['desert', 'Desert'], ['snow', 'Snow']];
   var MODES = [['light', 'Light'], ['dark', 'Dark'], ['auto', 'Match my phone']];
+  /* ---------- guides: one penpen, many personalities (voice + a little signature look) ---------- */
+  var ACC = { bubbly: '', sweet: '🎀', hyper: '⚡', buddy: '🧢', sunny: '🌻', coolcat: '🕶️', goofydad: '🥸', trailer: '🎬', surfer: '🌺', grandma: '👓' };
+  var EYES = { coolcat: 1, goofydad: 1, grandma: 1 };
+  function guide() { return window.ppGuideNow ? window.ppGuideNow() : 'bubbly'; }
+  function guideChips() {
+    var g = guide();
+    return (window.ppGuides || [{ id: 'bubbly', label: 'penpen' }]).map(function (v) {
+      return '<button type="button" data-k="guide" data-v="' + v.id + '" class="' + (v.id === g ? 'on' : '') + '">' + (ACC[v.id] ? ACC[v.id] + ' ' : '🐧 ') + v.label.replace(/^Movie /, '').replace(/ Bro$/, '') + '</button>';
+    }).join('');
+  }
+  // put the guide's signature thing on every penpen: the scene, the middle button, Talk, the map and the page buddies
+  function dress() {
+    var g = guide(), e = ACC[g] || '';
+    [].slice.call(document.querySelectorAll('#pp-scene .pp-guide, #navpen, #pp-talk .orb, .pp-buddy .bd, .pp-mapen .mp')).forEach(function (host) {
+      var a = host.querySelector(':scope > .pp-acc'), svg = host.querySelector('svg');
+      if (!e || !svg) { if (a) a.remove(); return; }
+      if (!a) { a = document.createElement('span'); a.className = 'pp-acc'; host.appendChild(a); if (getComputedStyle(host).position === 'static') host.style.position = 'relative'; }
+      var hr = host.getBoundingClientRect(), r = svg.getBoundingClientRect();
+      if (!r.width) return;
+      a.textContent = e;
+      a.style.fontSize = Math.round(r.width * (EYES[g] ? 0.42 : 0.34)) + 'px';
+      a.style.left = (r.left - hr.left + r.width / 2) + 'px';
+      a.style.top = (r.top - hr.top + r.height * (EYES[g] ? 0.38 : 0.06)) + 'px';
+    });
+  }
+  window.addEventListener('pp-guide', function () { setTimeout(dress, 30); });
   function chips(list, cur, kind) { return list.map(function (x) { return '<button type="button" data-k="' + kind + '" data-v="' + x[0] + '" class="' + (x[0] === cur ? 'on' : '') + '">' + x[1] + '</button>'; }).join(''); }
 
   function openMe() {
@@ -113,26 +158,39 @@
         (editing ? '' : '<button type="button" class="ed" data-a="edit">✏️ Edit</button>') + '</div>' +
         (editing ? '<div class="edit"><label for="pp-me-ph">My phone</label><input id="pp-me-ph" type="tel" inputmode="tel" placeholder="e.g. 0917 123 4567" value="' + esc(m.phone) + '">' +
           '<div class="btns"><button type="button" data-a="cancel">Cancel</button><button type="button" class="save" data-a="save">Save</button></div>' +
-          '<div class="btns"><button type="button" data-a="penguin">🐧 Change my penguin</button></div><div class="msg">' + (msg || '') + '</div></div>' : '') +
-        '<h3>Settings</h3><div class="rows">' +
-        '<button type="button" data-a="voice"><i>🔊</i>penpen\'s voice<span class="chev">›</span></button>' +
+          '<button type="button" class="look" data-a="penguin">🎨 Edit my look</button><div class="msg">' + (msg || '') + '</div></div>' : '') +
+        '<button type="button" class="sethd" data-a="settings"><i>⚙️</i>Settings<span class="chev">' + (setOpen ? '▴' : '▾') + '</span></button>' +
+        (setOpen ? '<div class="rows">' +
+        '<div><i>🐧</i><span>Your guide <small>tap to hear</small></span><div class="chips">' + guideChips() + '</div></div>' +
+        '<div><i>🔈</i><span>Read replies out loud</span><div class="chips">' + chips([['on', 'On'], ['off', 'Off']], localStorage.getItem('pp_voice') === 'on' ? 'on' : 'off', 'aloud') + '</div></div>' +
         '<div><i>🏝️</i><span>Scene</span><div class="chips">' + chips(SCENES, P.scene || 'auto', 'scene') + '</div></div>' +
         '<div><i>🌗</i><span>Appearance</span><div class="chips">' + chips(MODES, P.mode || 'auto', 'mode') + '</div></div>' +
         '<button type="button" data-a="install"><i>📲</i>Add penpen to my phone<span class="chev">›</span></button>' +
         '<button type="button" data-a="out"><i>↩︎</i>Sign out</button>' +
-        '</div><div class="who">' + esc(m.email) + '</div></div>';
+        '</div>' : '') + '<div class="who">' + esc(m.email) + '</div></div>';
       if (editing) setTimeout(function () { var i = document.getElementById('pp-me-ph'); if (i) i.focus(); }, 50);
     }
+    var setOpen = false;
     paint(false);
     function close() { w.remove(); if (back && back !== 'Crew' && !document.querySelector('button[aria-current="page"]')) { var b = navBtn(back); if (b) b.click(); } }
     w.onclick = function (e) {
       var b = e.target.closest('button'); if (!b) return;
       if (b.classList.contains('back')) return close();
+      if (b.dataset.k === 'guide') {
+        [].slice.call(b.parentNode.children).forEach(function (x) { x.classList.toggle('on', x === b); });
+        if (window.ppPickGuide) window.ppPickGuide(b.dataset.v); dress(); return;
+      }
+      if (b.dataset.k === 'aloud') {
+        var on = localStorage.getItem('pp_voice') === 'on', want = b.dataset.v === 'on', vb = document.getElementById('voice');
+        if (on !== want && vb) vb.click();
+        [].slice.call(b.parentNode.children).forEach(function (x) { x.classList.toggle('on', x === b); }); return;
+      }
       if (b.dataset.k) {
         if (pref(b.dataset.k + ':' + b.dataset.v)) { [].slice.call(b.parentNode.children).forEach(function (x) { x.classList.toggle('on', x === b); }); }
         return;
       }
       var a = b.dataset.a;
+      if (a === 'settings') { setOpen = !setOpen; return paint(false); }
       if (a === 'edit') return paint(true);
       if (a === 'cancel') return paint(false);
       if (a === 'save') {
@@ -178,13 +236,18 @@
       var tip = plan.querySelector('.card.tip');
       if (tip && tip.parentNode === plan) plan.insertBefore(tc, tip); else plan.appendChild(tc);
     }
+    // "Whole trip" first in the Plan day picker
+    var days = document.getElementById('days');
+    if (days) { var w = [].slice.call(days.querySelectorAll('button')).filter(function (b) { return /whole trip/i.test(b.textContent); })[0];
+      if (w && w.parentNode.firstElementChild !== w) w.parentNode.insertBefore(w, w.parentNode.firstElementChild); }
+    buddies(); dress();
     var fr = document.querySelector('#p-safety .fred');
     if (fr && /Crew & contacts/.test(fr.textContent)) fr.childNodes.forEach(function (n) { if (n.nodeType === 3 && /Crew & contacts/.test(n.textContent)) n.textContent = n.textContent.replace('Crew & contacts', 'Crew & safety'); });
     if (fr && fr.firstElementChild && /Crew & contacts/.test(fr.firstElementChild.textContent) && !fr.firstElementChild.children.length) fr.firstElementChild.textContent = 'Crew & safety';
   }
 
   /* ---------- penguins with a mind of their own ---------- */
-  var MOVES = ['pp-a-hop', 'pp-a-wig', 'pp-a-look', 'pp-a-wad', 'pp-a-spin', 'pp-a-dance'];
+  var MOVES = ['pp-a-hop', 'pp-a-wig', 'pp-a-wad', 'pp-a-dance'];
   var EMO = ['♪', '❤️', '✨', '😆', '🐟', '💦', '❗', '😴'];
   function wiggle() {
     setTimeout(wiggle, 2200 + Math.random() * 2600);
@@ -201,6 +264,106 @@
       e.style.left = (r.left - R.left + r.width * 0.62) + 'px'; e.style.top = (r.top - R.top - 6) + 'px';
       sc.appendChild(e); setTimeout(function () { e.remove(); }, 1700);
     }
+  }
+
+
+  /* ---------- tap a penguin: speech bubble over its head ---------- */
+  var PEN = '<svg viewBox="0 0 120 120" aria-hidden="true"><ellipse cx="60" cy="112" rx="30" ry="5" fill="#000" opacity=".08"/><path d="M60 14c-26 0-40 22-40 50 0 26 16 44 40 44s40-18 40-44c0-28-14-50-40-50z" fill="#2E3A4A"/><ellipse cx="60" cy="76" rx="25" ry="28" fill="#FFF8EE"/><circle cx="48.5" cy="50" r="13" fill="#FFF8EE"/><circle cx="71.5" cy="50" r="13" fill="#FFF8EE"/><circle cx="48.5" cy="51" r="5.2" fill="#1E1E1E"/><circle cx="71.5" cy="51" r="5.2" fill="#1E1E1E"/><circle cx="50.3" cy="49" r="1.8" fill="#fff"/><circle cx="73.3" cy="49" r="1.8" fill="#fff"/><path d="M54 60q6 7 12 0q-6 4-12 0z" fill="#F4A62A"/><ellipse cx="40" cy="62" rx="5" ry="3" fill="#F7A9A0" opacity=".6"/><ellipse cx="80" cy="62" rx="5" ry="3" fill="#F7A9A0" opacity=".6"/><ellipse cx="48" cy="106" rx="9" ry="4" fill="#F4A62A"/><ellipse cx="72" cy="106" rx="9" ry="4" fill="#F4A62A"/></svg>';
+  function penSvg() { var g = document.querySelector('#pp-scene .pp-guide > svg'); return g ? g.outerHTML.replace(/ class="[^"]*"/, '') : PEN; }
+  var ME_LINES = ['Is it beach time yet? 🏖️', 'I packed snacks. For emergencies. 🍫', 'Did everyone bring sunscreen? ☀️', 'Take my photo here! 📸', 'Mango shake later? 🥭', 'I\'m ready for whale sharks! 🐋', 'Window seat is mine 😎'];
+  var THEY_LINES = ['Who\'s hungry? 🍜', 'Lechon, anyone? 🍖', 'Let\'s not miss the boat! ⛴️', 'I\'ll carry the bags! 💪', 'Sunset photos later? 🌅', 'Practising my snorkel face 🤿', 'Did someone say ice cream? 🍦'];
+  var lastLine = {};
+  function pickLine(list, key) { var i; do { i = Math.floor(Math.random() * list.length); } while (list.length > 1 && i === lastLine[key]); lastLine[key] = i; return list[i]; }
+  function bubble(el, text, ms) {
+    [].slice.call(document.querySelectorAll('.pp-tb')).forEach(function (x) { x.remove(); });
+    var r = el.getBoundingClientRect(), b = document.createElement('div'); b.className = 'pp-tb'; b.textContent = text;
+    b.style.left = Math.max(120, Math.min(window.innerWidth - 120, r.left + r.width / 2)) + 'px'; b.style.top = (r.top - 6) + 'px';
+    document.body.appendChild(b);
+    var kill = function () { b.remove(); window.removeEventListener('scroll', kill, true); };
+    window.addEventListener('scroll', kill, true); setTimeout(kill, ms || 4200);
+  }
+  function hop(el) { if (!el) return; MOVES.forEach(function (x) { el.classList.remove(x); }); void el.getBoundingClientRect(); el.classList.add('pp-a-hop'); setTimeout(function () { el.classList.remove('pp-a-hop'); }, 900); }
+  function say(text) { try { window.speechSynthesis.speak(new SpeechSynthesisUtterance(text)); } catch (e) {} }
+  document.addEventListener('click', function (e) {
+    var p = e.target.closest && e.target.closest('#pp-scene .pp-who, #pp-scene .pp-guide');
+    if (!p) return;
+    e.stopPropagation(); e.preventDefault();
+    var svg = p.querySelector('svg') || p, guideTap = p.classList.contains('pp-guide');
+    var text = guideTap ? (window.ppCheer ? window.ppCheer() : 'Hi! I\'m penpen 🐧') : pickLine(p.classList.contains('pp-me') ? ME_LINES : THEY_LINES, p.textContent);
+    hop(svg); bubble(svg, text);
+    if (guideTap) say(text);
+  }, true);
+
+  /* ---------- a little penpen on each page ---------- */
+  var BUD = {
+    'p-money': ['🧮', ['Crunching the numbers… beep boop 🧮', 'Tell me any expense — I\'ll split it fairly.', 'Tap More for who paid what.']],
+    'p-safety': ['🩹', ['Stay together and stay safe! 💛', 'Tap Call 911 if you ever need help.', 'Add your emergency contact below.']],
+    'p-diary': ['✏️', ['One tiny memory a day — future you will love it.', 'Photos and voice notes work too! 📸', 'What made you laugh today? 😄']]
+  };
+  function buddies() {
+    Object.keys(BUD).forEach(function (id) {
+      var pane = document.getElementById(id); if (!pane) return;
+      var host = pane.querySelector('.scroll') || pane;
+      if (host.querySelector(':scope > .pp-budrow')) return;
+      var row = document.createElement('div'); row.className = 'pp-budrow';
+      row.innerHTML = '<button type="button" class="pp-buddy" aria-label="penpen"><div class="bd">' + penSvg() + '</div><span class="prop">' + BUD[id][0] + '</span></button>';
+      host.insertBefore(row, host.firstChild);
+      var btn = row.querySelector('.pp-buddy');
+      btn.style.animationDelay = (-Math.random() * 16) + 's';
+      btn.onclick = function (e) { e.stopPropagation(); var t = pickLine(BUD[id][1], id); hop(btn.querySelector('.bd')); bubble(btn, t); };
+    });
+  }
+
+  /* ---------- penpen on the map: walks the route (real time during the trip) ---------- */
+  (function hookLeaflet() {
+    function addHook(Lf) { if (!Lf || Lf.__pp || !Lf.Map) return; Lf.__pp = 1; Lf.Map.addInitHook(function () { var m = this; window.ppMap = m; setTimeout(function () { mapPen(m); }, 700); }); }
+    if (window.L) return addHook(window.L);
+    var real;
+    try { Object.defineProperty(window, 'L', { configurable: true, get: function () { return real; }, set: function (v) { real = v; try { addHook(v); } catch (e) {} } }); } catch (e) {}
+  })();
+  var mapTok = 0;
+  function at(day, time, k) {
+    var m = String(time || '').match(/(\d{1,2}):(\d{2})\s*([AP]M)/i), d = new Date(day + 'T00:00:00');
+    if (m) d.setHours((+m[1] % 12) + (/p/i.test(m[3]) ? 12 : 0), +m[2]); else d.setHours(9 + 2 * k);
+    return d.getTime();
+  }
+  function mapPen(map) {
+    var Lf = window.L, P = null; try { P = JSON.parse(localStorage.getItem('pp_c_penpenPlan:[]') || 'null'); } catch (e) {}
+    if (!Lf || !map || !P || !P.days) return;
+    var st = [];
+    P.days.forEach(function (d) { (d.stops || []).forEach(function (s, k) { if (s.lat && s.lng) st.push({ ll: [s.lat, s.lng], t: at(d.day, s.time, k), what: s.what }); }); });
+    if (!st.length) return;
+    var my = ++mapTok;
+    var icon = Lf.divIcon({ className: 'pp-mapen', html: '<div class="mp">' + penSvg() + '</div>', iconSize: [40, 40], iconAnchor: [20, 36] });
+    var mk = Lf.marker(st[0].ll, { icon: icon, zIndexOffset: 1000, keyboard: false }).addTo(map);
+    var next = st[0].what;
+    mk.on('click', function () { var el = mk.getElement(); if (el) bubble(el, Date.now() < st[0].t ? 'Practising the route! First stop: ' + st[0].what + ' 🗺️' : 'On my way to: ' + next + ' 🐧'); });
+    setTimeout(dress, 50);
+    var lerp = function (a, b, f) { return [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f]; };
+    var now = Date.now(), last = st[st.length - 1];
+    if (now >= st[0].t) {
+      // during the trip: where penpen should be right now, between the last stop and the next one
+      var place = function () {
+        if (my !== mapTok) return;
+        var t = Date.now(), i = 0;
+        while (i < st.length - 1 && st[i + 1].t <= t) i++;
+        if (t >= last.t || i >= st.length - 1) { mk.setLatLng(last.ll); next = last.what; return; }
+        var a = st[i], b = st[i + 1], f = Math.max(0, Math.min(1, (t - a.t) / Math.max(1, b.t - a.t)));
+        next = b.what; mk.setLatLng(lerp(a.ll, b.ll, f));
+        setTimeout(place, 30000);
+      };
+      return place();
+    }
+    // before the trip: penpen practises the whole route, stop by stop
+    var seg = 0, t0 = performance.now(), SEG = 2600, PAUSE = 700;
+    (function step(ts) {
+      if (my !== mapTok || !map._loaded) return;
+      var a = st[seg], b = st[(seg + 1) % st.length], el = ts - t0;
+      if (el < PAUSE) mk.setLatLng(a.ll);
+      else { var f = Math.min(1, (el - PAUSE) / SEG); f = f < .5 ? 2 * f * f : 1 - Math.pow(-2 * f + 2, 2) / 2; mk.setLatLng(lerp(a.ll, b.ll, f)); }
+      if (el >= PAUSE + SEG) { seg = (seg + 1) % st.length; t0 = ts; next = st[(seg + 1) % st.length].what; }
+      requestAnimationFrame(step);
+    })(performance.now());
   }
 
   function start() {
