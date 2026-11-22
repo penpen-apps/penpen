@@ -70,7 +70,9 @@
 
   function prefs() { try { return JSON.parse(localStorage.getItem('pp_prefs') || '{}'); } catch (e) { return {}; } }
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
-  function navBtn(label) { return [].slice.call(document.querySelectorAll('button')).filter(function (b) { return b.textContent.trim() === label && b.className !== 'back'; })[0]; }
+  function navBtn(label) {
+    if (label === 'Crew' || label === 'More') { var nb = document.querySelector('nav button[data-p="p-safety"]'); return nb && { click: function () { if (window.ppNavGo) window.ppNavGo('p-safety'); else nb.click(); } }; }
+    return [].slice.call(document.querySelectorAll('button')).filter(function (b) { return b.textContent.trim() === label && b.className !== 'back'; })[0]; }
 
   /* ---------- light / dark ---------- */
   var mq = window.matchMedia('(prefers-color-scheme: dark)');
