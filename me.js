@@ -318,7 +318,6 @@
 
   /* ---------- a little penpen on each page ---------- */
   var BUD = {
-    'p-diary': ['✏️', ['One tiny memory a day — future you will love it.', 'Photos and voice notes work too! 📸', 'What made you laugh today? 😄']]
   };
   function buddies() {
     Object.keys(BUD).forEach(function (id) {
