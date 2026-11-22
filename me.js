@@ -9,6 +9,7 @@
   var DARK = '--bg:#0B1E2D;--card:#13293B;--ink:#EAF4F7;--muted:#A7BCC9;--line:#21405A;--accent:#11606B;--accentText:#5FD8E2;--accentInk:#FFFFFF;--accentSoft:#123C48;--sun:#FFC93C;--sunInk:#3A2700;--chip:#1A3348;--leaf:#5BD39A;--warn:#FFB25C;--warnSoft:#3A2812;--danger:#FF8A80';
   var F = 'Nunito,-apple-system,BlinkMacSystemFont,sans-serif';
   var css =
+    '.pp-maplink{display:inline-block;margin-top:6px;padding:6px 12px;border-radius:99px;background:var(--accent,#237566);color:var(--accentText,#fff)!important;font-weight:800;text-decoration:none;font-size:14px}' +
     'html.ppl{' + LIGHT + '}html.ppd{' + DARK + '}html.ppd{color-scheme:dark}html.ppl{color-scheme:light}' +
     /* My profile */
     '#pp-me{position:fixed;inset:0;z-index:99960;background:var(--bg);color:var(--ink);overflow:auto;padding:calc(14px + env(safe-area-inset-top)) 16px calc(30px + env(safe-area-inset-bottom));font:16px/1.4 ' + F + '}' +
@@ -216,7 +217,20 @@
   window.ppOpenMe = openMe;
 
   /* ---------- Crew & Plan tidy-up ---------- */
+  // penpen's place tips: turn the Maps address into a tappable button
+  function mapLinks() {
+    document.querySelectorAll('.msg:not([data-lk])').forEach(function (m) {
+      m.setAttribute('data-lk', '1');
+      var t = m.textContent, i = t.indexOf('https://www.google.com/maps/');
+      if (i < 0) return;
+      var url = t.slice(i).split(/\s/)[0], name = t.slice(0, i).trim();
+      m.textContent = name + ' ';
+      var a = document.createElement('a'); a.href = url; a.target = '_blank'; a.rel = 'noopener'; a.className = 'pp-maplink'; a.textContent = 'Open in Google Maps ›';
+      m.appendChild(a);
+    });
+  }
   function tidy() {
+    mapLinks();
     // penpen is always the guide
     if (prefs().guide && prefs().guide !== 'penpen') pref('guide:penpen');
     // profile card on Crew: hide flight + the settings that moved to My profile
