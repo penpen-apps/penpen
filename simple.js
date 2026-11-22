@@ -33,7 +33,7 @@
 
   function txt(el) { return (el && el.textContent || '').replace(/\s+/g, ' ').trim(); }
   function click(sel) { var b = typeof sel === 'string' ? document.querySelector(sel) : sel; if (b) b.click(); }
-  function nav(label) { var b = [].slice.call(document.querySelectorAll('button')).filter(function (x) { return x.textContent.trim() === label && x.className !== 'back'; })[0]; if (b) b.click(); }
+  function nav(label) { if (window.ppGoTab && window.ppGoTab(label)) return; var b = [].slice.call(document.querySelectorAll('button')).filter(function (x) { return x.textContent.trim() === label && x.className !== 'back'; })[0]; if (b) b.click(); }
 
   function today() {
     var t = document.getElementById('today'); if (!t) return;
