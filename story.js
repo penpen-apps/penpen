@@ -7,7 +7,7 @@
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
   function get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } }
   function cached(fn) { return get('pp_c_' + fn + ':[]'); }
-  function nav(label) { var b = [].slice.call(document.querySelectorAll('button')).filter(function (x) { return x.textContent.trim() === label && x.className !== 'back'; })[0]; if (b) b.click(); }
+  function nav(label) { if (window.ppGoTab && window.ppGoTab(label)) return; var b = [].slice.call(document.querySelectorAll('button')).filter(function (x) { return x.textContent.trim() === label && x.className !== 'back'; })[0]; if (b) b.click(); }
   var fresh = {};
   function load(fn) {   // cached answer now; ask the server again at most every 5 minutes
     var now = Date.now();
@@ -297,6 +297,7 @@
   }
   window.ppOpenTrips = openTrips;
   function profileRow() {
+    return;   // trips now live in My profile's album
     var w = document.querySelector('#pp-me .wrapme'); if (!w || w.querySelector('.pp-tripsrow')) return;
     var b = document.createElement('button'); b.type = 'button'; b.className = 'pp-tripsrow';
     b.innerHTML = '<span style="font-size:24px">🧳</span><span><b>My trips</b><small>' + esc(localStorage.getItem('pp_trip_name') || ((cached('penpenToday') || {}).hello || {}).trip || 'Switch trip or start a new one') + '</small></span><span class="chev">›</span>';
