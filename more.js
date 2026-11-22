@@ -88,7 +88,7 @@
       '<button type="button" class="newtrip" data-m="newtrip"><i>＋</i><span><b>Start a new trip</b><small>Plan it with penpen and invite your crew</small></span></button>' +
       [
         ['crew', '👥', 'Crew', 'Who’s on the trip · Invite', OFF],
-        ['safety', '🛟', 'Safety', 'SOS · Nearby help · Emergency contacts', ''],
+        ['safety', '🛟', 'Safety', 'SOS · Nearby help · Emergency contacts', '<em class="off">SOS calls work offline</em>'],
         ['book', '🏨', 'Bookings', 'Hotels · Tours · Transport', OFF],
         ['diary', '📔', 'Diary', 'Memories · Photos · Notes', ''],
         ['play', '🎮', 'Play', 'Feed penpen · Games · Quiz', OFF],
@@ -382,9 +382,10 @@
       // the water rises and penpen paddles about
       var NS = 'http://www.w3.org/2000/svg', g = document.createElementNS(NS, 'g');
       g.innerHTML = '<path d="M-20 82 Q0 74 20 82 T60 82 T100 82 T140 82 L140 140 L-20 140 Z" fill="#7CC7DB" opacity=".9"><animate attributeName="d" dur="1.2s" repeatCount="indefinite" values="M-20 82 Q0 74 20 82 T60 82 T100 82 T140 82 L140 140 L-20 140 Z;M-20 82 Q0 90 20 82 T60 82 T100 82 T140 82 L140 140 L-20 140 Z;M-20 82 Q0 74 20 82 T60 82 T100 82 T140 82 L140 140 L-20 140 Z"/></path><circle cx="20" cy="70" r="3" fill="#fff" opacity=".8"/><circle cx="98" cy="66" r="2.5" fill="#fff" opacity=".8"/>';
+      var f0 = svg.innerHTML; if (window.ppLook && window.ppLook.side) { var sd = window.ppLook.side(window.ppGuideNow ? window.ppGuideNow() : 'bubbly', ''); if (sd) svg.innerHTML = sd; }
       svg.appendChild(g);
       if (talk) pop(pick(['Splash! 💦', 'Swimming to Bohol 🏊', 'Water’s nice! 🌊']));
-      anim(svg, [{ transform: 'translate(0,10%) rotate(0)' }, { transform: 'translate(-8%,12%) rotate(-6deg)' }, { transform: 'translate(8%,8%) rotate(6deg)' }, { transform: 'translate(-6%,12%) rotate(-4deg)' }, { transform: 'translate(0,10%) rotate(0)' }], 2600, function () { g.remove(); next(); });
+      anim(svg, [{ transform: 'translate(-30%,14%) rotate(80deg)' }, { transform: 'translate(-8%,16%) rotate(74deg)' }, { transform: 'translate(10%,12%) rotate(86deg)' }, { transform: 'translate(30%,16%) rotate(78deg)' }, { transform: 'translate(0,10%) rotate(0)' }], 2800, function () { g.remove(); svg.innerHTML = f0; next(); });
       return;
     }
     if (k === 'spin' && window.ppLook) {
