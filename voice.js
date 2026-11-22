@@ -88,7 +88,8 @@
     synth.speak = function (u) {
       var v = pick || 'bubbly';
       if (v === 'phone' || !navigator.onLine || !window.ppCall) { u.pitch = 1.35; u.rate = 1.05; return nativeSpeak(u); }
-      var text = u.text, my = ++sayId;
+      var text = String(u.text || '').replace(/(https?:\/\/|tel:)\S+/g, '').trim(), my = ++sayId;
+      if (!text) return;
       getClip(text, v).then(function (a) { if (my === sayId) return playPcm(a.audio, a.mime); })
         .catch(function () { if (my === sayId) nativeSpeak(u); });
     };
