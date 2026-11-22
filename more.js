@@ -324,7 +324,7 @@
   };
 
   /* ---------- the middle penpen has a life of his own ---------- */
-  var SAY = ['Use me to translate! 🌐', 'Drop your expenses here 💸', '"Lunch 450, I paid" — just tell me!', 'Where to next? 🗺️', 'I\'m not lost, I\'m exploring 🐧',
+  var SAY = ['I’m your trouble buddy… I mean travel buddy 😇', 'Log it or lose it! exPENPENses 💸', 'What do you call a penguin who tracks money? An exPENPENse report 🐧', 'Why don’t penguins get lost? They always ice-plore with a map 🗺️', 'I’m not lazy, I’m in penguin power-saving mode 🔋', 'Chill-axing… penguin style 🧊', 'Ice to meet you! 🧊', 'Who’s the coolest travel buddy? Me. Literally. 🥶', 'Use me to translate! 🌐', 'Drop your expenses here 💸', '"Lunch 450, I paid" — just tell me!', 'Where to next? 🗺️', 'I\'m not lost, I\'m exploring 🐧',
     'Ask me where to eat 🍜', 'Got sunscreen? ☀️', 'Tap me, I\'m bored 🥱', 'Need a route? I\'ve got 5 🗺️', 'I know a guy… for lechon 🐷', 'Fish tacos? No? OK 🐟',
     'Hydrate, hooman 💧', 'I can call Brad for you 📞', 'Psst… tap me 👀', '✨', '🐟', '🥥', '🧊', '💭', '🎶'];
   var FACTS = ['Penguins can’t fly, but they “fly” underwater at up to 35 km/h 🐧', 'The Philippines has about 7,641 islands 🏝️', 'A group of penguins on land is called a waddle 🐧🐧', 'Whale sharks are the biggest fish in the world 🐋', 'Penguins slide on their bellies to save energy — like me! 🛷', 'Cebu’s Magellan’s Cross dates back to 1521 ✝️', '“Salamat” means thank you 🙏', 'Emperor penguins can dive over 500 m deep 🌊', 'Mango is the national fruit of the Philippines 🥭', 'Penguins have a gland that filters salt from seawater 🧂', 'Puso — rice cooked in woven palm leaves — is a Cebu classic 🍚', 'Gentoo penguins give pebbles as gifts 💎'];
