@@ -201,11 +201,12 @@
     var T = I.T, st = String(T.settle || ''), m = st.match(/^(.+?) owes (.+?) (₱?[\d,.]+)$/);
     if (m && I.me && (m[1] === I.me || m[2] === I.me)) {
       var amt = m[3].replace(/\.\d\d$/, '');
-      out.push({ id: 'owe:' + st, ic: '💸', t: m[1] === I.me ? 'You owe ' + m[2] + ' ' + amt : m[1] + ' owes you ' + amt, s: 'Tap to settle up when you\'re ready', go: 'Money' });
+      out.push({ id: 'owe:' + st, ic: '💸', t: m[1] === I.me ? 'You owe ' + m[2] + ' ' + amt : m[1] + ' owes you ' + amt, s: 'Tap to settle up when you\'re ready', go: 'Money', todo: true });
     }
     var look = T.look; var n = Array.isArray(look) ? look.length : (look && (look.count || look.n)) || 0;
-    if (n) out.push({ id: 'look:' + n, ic: '🔎', t: n + (n === 1 ? ' entry needs' : ' entries need') + ' a look', s: 'Quick check so the money adds up', go: 'Money' });
+    if (n) out.push({ id: 'look:' + n, ic: '🔎', t: n + (n === 1 ? ' entry needs' : ' entries need') + ' a look', s: 'Quick check so the money adds up', go: 'Money', todo: true });
     if (I.phase === 'before' && I.left !== null && I.left <= 3 && I.left >= 1) out.push({ id: 'soon:' + td, ic: '🎒', t: I.left === 1 ? 'Trip starts tomorrow!' : 'Trip in ' + I.left + ' days', s: 'Passport · charger · sunscreen · pesos', go: 'Plan' });
+    if (window.ppFeed) { try { out = out.concat(window.ppFeed()); } catch (e) {} }   // app updates + what the crew logged this week
     return out;
   }
   function seen() { return get('pp_bell_seen') || {}; }
@@ -213,9 +214,10 @@
     var me = document.getElementById('pp-mebtn'); if (!me) return;
     var b = document.getElementById('pp-bell');
     if (!b) { b = document.createElement('button'); b.id = 'pp-bell'; b.type = 'button'; b.setAttribute('aria-label', 'Reminders'); b.onclick = openBell; me.parentNode.insertBefore(b, me); }
-    var S = seen(), all = items(), n = all.filter(function (x) { return !S[x.id]; }).length;
-    var h = '🔔' + (all.length ? '<em class="' + (n ? '' : 'seen') + '">' + all.length + '</em>' : '');
-    b.setAttribute('aria-label', all.length + ' reminders' + (n ? ', ' + n + ' new' : ''));
+    // the number = new things + money to-dos that aren't finished yet; read updates stay in the list for a week
+    var S = seen(), all = items(), n = all.filter(function (x) { return !S[x.id] || x.todo; }).length;
+    var h = '🔔' + (n ? '<em>' + n + '</em>' : '');
+    b.setAttribute('aria-label', 'Notifications' + (n ? ', ' + n + ' new' : ''));
     if (b.dataset.h !== h) { b.innerHTML = h; b.dataset.h = h; }
   }
   // a little dropdown that opens right under the button you tapped (like normal notifications)
@@ -238,9 +240,9 @@
   function openBell() {
     var list = items(), S = seen();
     var body = list.length ? list.map(function (x, i) {
-      return '<button type="button" class="it' + (S[x.id] ? '' : ' new') + '" data-i="' + i + '"><span class="ic">' + x.ic + '</span><span><b>' + esc(x.t) + '</b><small>' + esc(x.s) + '</small></span></button>';
-    }).join('') : '<div class="empty">🐧 All quiet! I\'ll ring here the day before each of your flights and boats.</div>';
-    var s = sheet('Reminders', body, document.getElementById('pp-bell'), 'right');
+      return '<button type="button" class="it' + (S[x.id] && !x.todo ? '' : ' new') + '" data-i="' + i + '"><span class="ic">' + x.ic + '</span><span><b>' + esc(x.t) + '</b><small>' + esc(x.s) + '</small></span></button>';
+    }).join('') : '<div class="empty">🐧 All quiet! Updates, reminders and what your crew logs show up here.</div>';
+    var s = sheet('Notifications', body, document.getElementById('pp-bell'), 'right');
     list.forEach(function (x) { S[x.id] = 1; }); localStorage.setItem('pp_bell_seen', JSON.stringify(S)); bell();
     s.querySelector('.bd').onclick = function (e) { var b = e.target.closest('.it'); if (!b) return; s.remove(); nav(list[+b.dataset.i].go); };
   }
