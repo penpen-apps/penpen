@@ -73,7 +73,7 @@
     S = { el: w, turns: [], inT: '', outT: '', muted: false, model: 0, nextAt: 0, sources: [], mode: opts.mode || 'talk', lang: opts.lang || '' };
     document.getElementById('pp-t-end').onclick = close;
     try { S.ctx = new (window.AudioContext || window.webkitAudioContext)(); S.ctx.resume(); } catch (e) {}
-    if (S.mode === 'translate' && !S.lang) S.lang = localStorage.getItem('pp_tr_lang') || suggested()[0] || 'Tagalog';
+    if (S.mode === 'translate' && !S.lang) S.lang = (Date.now() - (+localStorage.getItem('pp_tr_lang_t') || 0) < 6 * 36e5 && localStorage.getItem('pp_tr_lang')) || suggested()[0] || 'Tagalog';
     begin();
   }
   function pickLang() {
@@ -113,7 +113,7 @@
   // change language without leaving: reconnect with the new language
   function switchLang(l) {
     if (!S || !l) return;
-    S.lang = l; localStorage.setItem('pp_tr_lang', l);
+    S.lang = l; localStorage.setItem('pp_tr_lang', l); localStorage.setItem('pp_tr_lang_t', String(Date.now()));
     var old = S.ws; S.ws = null; S.ready = false; S.model = 0; try { old && old.close(); } catch (e) {}
     var box = S.el.querySelector('.ptt'); if (box) box.remove();
     var lg = S.el.querySelector('.langs'); if (lg) lg.remove();
