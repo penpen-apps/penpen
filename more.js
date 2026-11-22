@@ -39,8 +39,9 @@
   }
 
   /* ---------- bottom bar ---------- */
-  var MORE_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>';
+  var MORE_ICON = '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>';
   var pass = false;
+  window.ppNavGo = function (id) { var b = $('nav button[data-p="' + id + '"]'); if (!b) return; pass = true; try { b.click(); } finally { pass = false; } };
   function label(btn, txt) {
     if (!btn) return;
     var n = [].slice.call(btn.childNodes).filter(function (x) { return x.nodeType === 3 && x.textContent.trim(); })[0];
@@ -82,8 +83,12 @@
       if (k === 'crew') { pass = true; btn.click(); pass = false; }
       else if (k === 'diary') { var d = document.getElementById('to-diary'); if (d) d.click(); }
       else if (k === 'book') {
-        var p = $('nav button[data-p="p-plan"]'); if (p) p.click();
-        setTimeout(function () { var t = document.getElementById('trip-ct'); if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 350);
+        var tc = document.getElementById('trip-ct'), empty = !tc || !tc.children.length;
+        if (empty) window.ppNavGo('p-safety');   // Crew fills in the bookings list the first time
+        setTimeout(function () {
+          window.ppNavGo('p-plan');
+          setTimeout(function () { var t = document.getElementById('trip-ct'); if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 350);
+        }, empty ? 600 : 0);
       }
       else if (k === 'me' && window.ppOpenMe) window.ppOpenMe();
     };
@@ -133,7 +138,7 @@
       if (openCat === k) row += '<div class="items">' + c.items.map(function (x) {
         var tag = x.later ? '<em class="t later">not paid yet</em>' : x.personal ? '<em class="t">personal</em>' : '';
         var amt = x.cur === 'PHP' ? '₱' + x.amt : x.amt + ' ' + x.cur;
-        return '<div class="it"><span><b>' + esc(x.what) + '</b><small>' + esc(x.date) + ' · ' + esc(x.by) + ' paid ' + tag + '</small></span><span class="a">' + esc(amt) + '</span></div>';
+        return '<div class="it"><span><b>' + esc(x.what) + '</b><small>' + esc(x.date) + ' · ' + esc(x.by) + (x.later ? ' pays ' : ' paid ') + tag + '</small></span><span class="a">' + esc(amt) + '</span></div>';
       }).join('') + '</div>';
       return row;
     }).join('');
@@ -203,7 +208,7 @@
     '#pp-moremenu button{display:flex;align-items:center;gap:12px;width:100%;border:0;background:none;color:inherit;text-align:left;padding:11px 12px;border-radius:12px;font:inherit;cursor:pointer}' +
     '#pp-moremenu button:hover,#pp-moremenu button:focus-visible{background:var(--chip)}#pp-moremenu i{font-style:normal;font-size:22px}' +
     '#pp-moremenu b{display:block;font-weight:800;font-size:15px}#pp-moremenu small{display:block;color:var(--muted);font-size:12.5px;font-weight:600}' +
-    '#pp-cats{cursor:pointer}#pp-cats .pp-cat-t::after{content:" ▾";opacity:.6}body.pp-dash-on #pp-cats .pp-cat-t::after{content:" ▴"}' +
+    '#trip-ct:empty{display:none}#pp-cats{cursor:pointer}#pp-cats .pp-cat-t::after{content:" ▾";opacity:.6}body.pp-dash-on #pp-cats .pp-cat-t::after{content:" ▴"}' +
     '#pp-dash{padding:6px!important;margin-top:8px;font-family:' + F + '}' +
     '#pp-dash .dc{display:flex;align-items:center;gap:10px;width:100%;border:0;background:none;color:var(--ink);font:inherit;text-align:left;padding:10px;border-radius:14px;cursor:pointer}' +
     '#pp-dash .dc:hover,#pp-dash .dc.open{background:var(--chip)}#pp-dash .dc i{font-style:normal;font-size:22px;width:30px;text-align:center}' +
