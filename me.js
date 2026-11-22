@@ -38,7 +38,9 @@
     '#pp-me .chips button.on{background:var(--accent);border-color:var(--accent);color:#fff}' +
     '#pp-me .gcar{display:flex;gap:4px;overflow-x:auto;width:100%;padding:6px 0 4px;scroll-snap-type:x mandatory}' +
     '#pp-me .gw{flex:0 0 84px;border:0;background:none;color:var(--ink);display:flex;flex-direction:column;align-items:center;gap:2px;font:800 12px ' + F + ';cursor:pointer;scroll-snap-align:start;padding:4px 0;border-radius:16px}' +
-    '#pp-me .gw svg{animation:ppgb 1.4s ease-in-out infinite alternate;transform-origin:50% 90%;border-radius:50%;padding:2px}#pp-me .gw.on svg{background:var(--accentSoft);box-shadow:0 0 0 3px var(--accent)}#pp-me .gw.on span{color:var(--accentText)}' +
+    '#pp-me .gw svg{animation:ppgb 1.4s ease-in-out infinite alternate;transform-origin:50% 90%;border-radius:50%;padding:2px}#pp-me .gw svg{transition:transform .25s}#pp-me .gw:not(.on){opacity:.75}#pp-me .gw.on svg{transform:scale(1.3);animation:none}#pp-me .gw.on span{color:var(--accentText);font-weight:900;margin-top:10px}' +
+    '#pp-me .gdesc{flex-basis:100%;margin:6px 0 0;color:var(--muted);font:700 14px/1.35 ' + F + ';text-align:center}#pp-me .swrow{flex-wrap:nowrap!important;gap:12px}#pp-me .swrow small{display:block;margin:3px 0 0!important;line-height:1.35}' +
+    '#pp-me .sw{flex:none;width:54px;height:32px;border-radius:99px;border:0;background:#C9C2B6;position:relative;cursor:pointer;padding:0;transition:background .2s}#pp-me .sw i{position:absolute;top:3px;left:3px;width:26px;height:26px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:left .2s}#pp-me .sw.on{background:#237566}#pp-me .sw.on i{left:25px}' +
     '#pp-me .gw span{text-align:center;line-height:1.15}@keyframes ppgb{from{transform:translateY(0) rotate(-4deg)}to{transform:translateY(-5px) rotate(4deg)}}' +
     '#pp-me .rows > a{display:flex;align-items:center;gap:12px;padding:15px 16px;border-top:1px solid var(--line);color:var(--ink);text-decoration:none;font:16px ' + F + '}' +
     '#pp-me .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}#pp-me .stats.two{grid-template-columns:repeat(2,1fr);margin-top:8px}' +
@@ -221,19 +223,18 @@
       var m = meData(), P = prefs(), sheet = 'https://docs.google.com/spreadsheets/d/' + (localStorage.getItem('pp_trip_id') || SHEET_HOME) + '/edit';
       w.innerHTML = '<div class="top"><button class="back" aria-label="Back">‹</button><h2>' + (S ? 'Settings' : 'My profile') + '</h2></div><div class="wrapme">' +
         (S ? '<details class="grp" open><summary><i>🐧</i><span>penpen and voice <small>Guide · Read replies out loud</small></span><span class="chev">▾</span></summary><div class="rows">' +
-          '<div><span>Your guide <small>tap one to hear them</small></span><div class="gcar">' + guideChips() + '</div></div>' +
-          '<div><span>Read replies out loud</span><div class="chips">' + chips([['on', 'On'], ['off', 'Off']], localStorage.getItem('pp_voice') === 'on' ? 'on' : 'off', 'aloud') + '</div></div></div></details>' +
+          '<div><span>Your guide <small>tap one to meet them</small></span><div class="gcar">' + guideChips() + '</div><p class="gdesc" id="pp-gdesc">' + esc(window.ppLook && window.ppLook.tag ? window.ppLook.name(guide()) + ' · ' + window.ppLook.tag(guide()) : '') + '</p></div>' +
+          '<div class="swrow"><span>Read replies out loud <small>Off: penpen’s chat replies are text only. Talking to penpen and Translate always use voice.</small></span>' + (function () { var on = localStorage.getItem('pp_voice') === 'on'; return '<button type="button" data-k="aloud" data-v="' + (on ? 'off' : 'on') + '" class="sw' + (on ? ' on' : '') + '" role="switch" aria-checked="' + on + '" aria-label="Read replies out loud"><i></i></button>'; })() + '</div></div></details>' +
           '<details class="grp"><summary><i>🎨</i><span>Look <small>Scene · Light or dark</small></span><span class="chev">▾</span></summary><div class="rows">' +
           '<div><span>Scene <small>colours the whole app</small></span><div class="chips">' + chips(SCENES, P.scene || 'auto', 'scene') + '</div></div>' +
           '<div><span>Appearance</span><div class="chips">' + chips(MODES, P.mode || 'auto', 'mode') + '</div></div></div></details>' +
           '<details class="grp"><summary><i>🧳</i><span>Trips <small>My trips · Trip sheet</small></span><span class="chev">▾</span></summary><div class="rows">' +
           '<button type="button" data-a="newtrip"><span>My trips <small>switch trips or start a new one</small></span><span class="chev">›</span></button>' +
           '<a href="' + sheet + '" target="_blank" rel="noopener">Open this trip’s Google Sheet<span class="chev">↗</span></a></div></details>' +
-          '<details class="grp"><summary><i>💬</i><span>Help and support <small>Feature tour · How to use · Privacy</small></span><span class="chev">▾</span></summary><div class="rows">' +
-          '<button type="button" data-x="tour"><span>Feature tour <small>penpen shows you around</small></span><span class="chev">›</span></button>' +
-          '<button type="button" data-x="howto"><span>How to use penpen <small>what to say, with examples</small></span><span class="chev">›</span></button>' +
-          '<button type="button" data-x="priv"><span>Privacy and account <small>Location · Your data · Clear this phone</small></span><span class="chev">›</span></button></div></details>' +
-          '<details class="grp"><summary><i>ℹ️</i><span>About penpen</span><span class="chev">▾</span></summary><div class="rows"><div><span>penpen’s chat, voice and translation are powered by Google Gemini. Games and saved trip info work offline.</span></div></div></details>' +
+          '<details class="grp"><summary><i>💬</i><span>Help and support <small>Quick tour · Privacy · About</small></span><span class="chev">▾</span></summary><div class="rows">' +
+          '<button type="button" data-x="tour"><span>Quick tour <small>penpen shows you around</small></span><span class="chev">›</span></button>' +
+          '<button type="button" data-x="priv"><span>Privacy and account <small>Location · Your data · Clear this phone</small></span><span class="chev">›</span></button>' +
+          '<button type="button" data-x="about"><span>About penpen <small>What penpen is · Built with Gemini</small></span><span class="chev">›</span></button></div></details>' +
           '<div class="rows solo"><button type="button" data-a="install"><i>📲</i>Add penpen to my phone<span class="chev">›</span></button>' +
           '<button type="button" data-a="out"><i>↩︎</i>Sign out</button></div>'
         : '<div class="mecard"><div class="av">' + avatar() + '</div><div><div class="nm">' + esc(m.name) + '</div><div class="ph">' + (m.phone ? '📞 ' + esc(m.phone) : 'No phone number yet') + '</div></div>' +
@@ -252,11 +253,14 @@
       if (b.classList.contains('back')) return close();
       if (b.dataset.k === 'guide') {
         [].slice.call(b.parentNode.children).forEach(function (x) { x.classList.toggle('on', x === b); });
-        if (window.ppPickGuide) window.ppPickGuide(b.dataset.v); dress(); return;
+        if (window.ppPickGuide) window.ppPickGuide(b.dataset.v); dress();
+        var gd = document.getElementById('pp-gdesc'); if (gd && window.ppLook && window.ppLook.tag) gd.textContent = window.ppLook.name(b.dataset.v) + ' · ' + window.ppLook.tag(b.dataset.v);
+        b.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' }); return;
       }
       if (b.dataset.k === 'aloud') {
         var on = localStorage.getItem('pp_voice') === 'on', want = b.dataset.v === 'on', vb = document.getElementById('voice');
-        if (on !== want && vb) vb.click();
+        if (on !== want && vb) vb.click(); else if (on !== want) localStorage.setItem('pp_voice', want ? 'on' : 'off');
+        if (b.classList.contains('sw')) { b.classList.toggle('on', want); b.dataset.v = want ? 'off' : 'on'; b.setAttribute('aria-checked', String(want)); return; }
         [].slice.call(b.parentNode.children).forEach(function (x) { x.classList.toggle('on', x === b); }); return;
       }
       if (b.dataset.k) {
@@ -381,7 +385,7 @@
     var text = guideTap ? (window.ppCheer ? window.ppCheer() : 'Hi! I\'m penpen 🐧') : pickLine(p.classList.contains('pp-me') ? ME_LINES : THEY_LINES, p.textContent);
     if (p.classList.contains('pp-me') && window.ppMove) window.ppMove(svg); else hop(svg);
     bubble(svg, text);
-    if (guideTap) say(text);
+    if (guideTap && localStorage.getItem('pp_voice') === 'on') say(text);
   }, true);
 
   /* ---------- a little penpen on each page ---------- */
