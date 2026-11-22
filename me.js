@@ -27,6 +27,9 @@
     '#pp-me .edit .btns .save{background:var(--accent);color:#fff;border-color:var(--accent)}#pp-me .edit .msg{text-align:center;color:var(--muted);font-size:14px;margin-top:8px;min-height:18px}' +
     '#pp-me h3{font:900 13px ' + F + ';letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:22px 4px 8px}' +
     '#pp-me .rows{background:var(--card);border-radius:20px;overflow:hidden}' +
+    '#pp-me details.grp{background:var(--card);border-radius:20px;margin-bottom:10px;overflow:hidden}#pp-me details.grp summary{display:flex;align-items:center;gap:12px;padding:15px 16px;cursor:pointer;list-style:none;font:800 16px ' + F + ';color:var(--ink)}#pp-me details.grp summary::-webkit-details-marker{display:none}' +
+    '#pp-me details.grp summary small{display:block;color:var(--muted);font-weight:700;font-size:12.5px;margin:2px 0 0}#pp-me details.grp summary i{font-style:normal;font-size:22px;width:28px;text-align:center}#pp-me details.grp summary .chev{margin-left:auto;color:var(--muted);transition:transform .2s}#pp-me details.grp[open] summary .chev{transform:rotate(180deg)}' +
+    '#pp-me details.grp .rows{border-radius:0;border-top:1px solid var(--line)}#pp-me details.grp .rows > div > span{font-size:15px;line-height:1.35}#pp-me .rows.solo{margin-top:4px}' +
     '#pp-me .rows > button,#pp-me .rows > div{display:flex;width:100%;align-items:center;gap:12px;border:0;background:none;font:16px ' + F + ';color:var(--ink);padding:15px 16px;border-top:1px solid var(--line);text-align:left;box-sizing:border-box}' +
     '#pp-me .rows > :first-child{border-top:0}#pp-me .rows i{font-style:normal;font-size:20px;width:26px;text-align:center}#pp-me .rows .chev{margin-left:auto;color:var(--muted)}' +
     '#pp-me .rows > div{flex-wrap:wrap}#pp-me .rows > div > span{flex:1 0 auto}' +
@@ -217,15 +220,21 @@
     function paint(editing, msg) {
       var m = meData(), P = prefs(), sheet = 'https://docs.google.com/spreadsheets/d/' + (localStorage.getItem('pp_trip_id') || SHEET_HOME) + '/edit';
       w.innerHTML = '<div class="top"><button class="back" aria-label="Back">‹</button><h2>' + (S ? 'Settings' : 'My profile') + '</h2></div><div class="wrapme">' +
-        (S ? '<div class="rows">' +
-          '<div><i>🐧</i><span>Your guide <small>tap one to hear them</small></span><div class="gcar">' + guideChips() + '</div></div>' +
-          '<div><i>🔈</i><span>Read replies out loud</span><div class="chips">' + chips([['on', 'On'], ['off', 'Off']], localStorage.getItem('pp_voice') === 'on' ? 'on' : 'off', 'aloud') + '</div></div>' +
-          '<div><i>🏝️</i><span>Scene <small>colours the whole app</small></span><div class="chips">' + chips(SCENES, P.scene || 'auto', 'scene') + '</div></div>' +
-          '<div><i>🌗</i><span>Appearance</span><div class="chips">' + chips(MODES, P.mode || 'auto', 'mode') + '</div></div>' +
-          '<button type="button" data-a="newtrip"><i>🧳</i><span>My trips <small>switch trips or start a new one</small></span><span class="chev">›</span></button>' +
-          '<a href="' + sheet + '" target="_blank" rel="noopener"><i>📊</i>Open this trip’s Google Sheet<span class="chev">↗</span></a>' +
-          '<details class="howto"><summary><i>💡</i>How to use penpen<span class="chev">▾</span></summary><div class="hw">' + (window.ppHelpHtml ? window.ppHelpHtml() : '') + '</div></details>' +
-          '<button type="button" data-a="install"><i>📲</i>Add penpen to my phone<span class="chev">›</span></button>' +
+        (S ? '<details class="grp" open><summary><i>🐧</i><span>penpen and voice <small>Guide · Read replies out loud</small></span><span class="chev">▾</span></summary><div class="rows">' +
+          '<div><span>Your guide <small>tap one to hear them</small></span><div class="gcar">' + guideChips() + '</div></div>' +
+          '<div><span>Read replies out loud</span><div class="chips">' + chips([['on', 'On'], ['off', 'Off']], localStorage.getItem('pp_voice') === 'on' ? 'on' : 'off', 'aloud') + '</div></div></div></details>' +
+          '<details class="grp"><summary><i>🎨</i><span>Look <small>Scene · Light or dark</small></span><span class="chev">▾</span></summary><div class="rows">' +
+          '<div><span>Scene <small>colours the whole app</small></span><div class="chips">' + chips(SCENES, P.scene || 'auto', 'scene') + '</div></div>' +
+          '<div><span>Appearance</span><div class="chips">' + chips(MODES, P.mode || 'auto', 'mode') + '</div></div></div></details>' +
+          '<details class="grp"><summary><i>🧳</i><span>Trips <small>My trips · Trip sheet</small></span><span class="chev">▾</span></summary><div class="rows">' +
+          '<button type="button" data-a="newtrip"><span>My trips <small>switch trips or start a new one</small></span><span class="chev">›</span></button>' +
+          '<a href="' + sheet + '" target="_blank" rel="noopener">Open this trip’s Google Sheet<span class="chev">↗</span></a></div></details>' +
+          '<details class="grp"><summary><i>💬</i><span>Help and support <small>Feature tour · How to use · Privacy</small></span><span class="chev">▾</span></summary><div class="rows">' +
+          '<button type="button" data-x="tour"><span>Feature tour <small>penpen shows you around</small></span><span class="chev">›</span></button>' +
+          '<button type="button" data-x="howto"><span>How to use penpen <small>what to say, with examples</small></span><span class="chev">›</span></button>' +
+          '<button type="button" data-x="priv"><span>Privacy and account <small>Location · Your data · Clear this phone</small></span><span class="chev">›</span></button></div></details>' +
+          '<details class="grp"><summary><i>ℹ️</i><span>About penpen</span><span class="chev">▾</span></summary><div class="rows"><div><span>penpen’s chat, voice and translation are powered by Google Gemini. Games and saved trip info work offline.</span></div></div></details>' +
+          '<div class="rows solo"><button type="button" data-a="install"><i>📲</i>Add penpen to my phone<span class="chev">›</span></button>' +
           '<button type="button" data-a="out"><i>↩︎</i>Sign out</button></div>'
         : '<div class="mecard"><div class="av">' + avatar() + '</div><div><div class="nm">' + esc(m.name) + '</div><div class="ph">' + (m.phone ? '📞 ' + esc(m.phone) : 'No phone number yet') + '</div></div>' +
           (editing ? '' : '<button type="button" class="ed" data-a="edit">✏️ Edit</button>') + '</div>' +
