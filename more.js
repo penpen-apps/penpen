@@ -69,8 +69,8 @@
     if (crew) crew.classList.toggle('on', onMore);
     var v = document.body.getAttribute('data-ppv') || 'crew'; if (!document.body.getAttribute('data-ppv')) view('crew'); else view(v);
     // translate, front and centre on penpen's chat page
-    var ch = document.getElementById('p-chat'), tb = ch && [].slice.call(ch.querySelectorAll('button')).filter(function (x) { return /translate/i.test(x.textContent) && !x.id; })[0];
-    if (tb && !document.getElementById('pp-trbig')) { var big = document.createElement('button'); big.type = 'button'; big.id = 'pp-trbig'; big.innerHTML = '<span>🌐</span><b>Translate<small>Bisaya · Tagalog ⇄ English — hold & talk</small></b><i>›</i>'; big.onclick = function () { tb.click(); }; var host = ch.querySelector('.scroll') || ch; host.insertBefore(big, host.firstChild); }
+    var ch = document.getElementById('p-chat'), tb = document.getElementById('pp-tr-chip'), dock = ch && ch.querySelector('.dock');
+    if (tb && dock && !document.getElementById('pp-trbig')) { var big = document.createElement('button'); big.type = 'button'; big.id = 'pp-trbig'; big.innerHTML = '<span>🌐</span><b>Translate<small>Bisaya · Tagalog ⇄ English — hold & talk</small></b><i>›</i>'; big.onclick = function () { tb.click(); }; dock.insertBefore(big, dock.firstChild); }
     // page titles and back buttons follow the new names
     $$('#p-plan *').forEach(function (e) { if (!e.children.length && e.textContent.trim() === 'Plan') e.textContent = 'Itinerary'; });
     $$('#p-audit button, #p-rcpt button').forEach(function (b) { if (b.textContent.trim() === '‹ Money') b.textContent = '‹ Expenses'; });
@@ -309,7 +309,7 @@
     'body[data-ppv=safety] #p-safety #crew,body[data-ppv=safety] #p-safety #trip-ct{display:none!important}' +
     'body[data-ppv=book] #p-safety .scroll > :not(.fred):not(#trip-ct){display:none!important}' +
     'html[data-sc] header.hero{background-color:var(--accentSoft)!important}' +
-    '#pp-trbig{display:flex;align-items:center;gap:12px;width:100%;margin:0 0 12px;border:0;border-radius:20px;padding:14px 16px;background:linear-gradient(135deg,var(--accent),var(--accentText));color:#fff;text-align:left;font:800 18px ' + F + ';box-shadow:0 8px 20px rgba(0,0,0,.15);cursor:pointer}' +
+    '#pp-tr-chip{display:none!important}#pp-trbig{display:flex;align-items:center;gap:12px;width:calc(100% - 20px);margin:10px 10px 6px;border:0;border-radius:20px;padding:14px 16px;background:linear-gradient(135deg,var(--accent),var(--accentText));color:#fff;text-align:left;font:800 18px ' + F + ';box-shadow:0 8px 20px rgba(0,0,0,.15);cursor:pointer}' +
     '#pp-trbig span{font-size:30px}#pp-trbig b{flex:1}#pp-trbig small{display:block;font-weight:700;font-size:13px;opacity:.9}#pp-trbig i{font-style:normal;font-size:24px}' +
     '#pp-navsay{position:fixed;z-index:55;max-width:220px;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:16px;padding:7px 12px;font:800 13.5px ' + F + ';box-shadow:0 6px 18px rgba(0,0,0,.14);pointer-events:none;animation:ppns .25s cubic-bezier(.2,1.4,.4,1)}' +
     '#pp-navsay.out{opacity:0;transform:translateY(4px);transition:.35s}@keyframes ppns{from{opacity:0;transform:translateY(8px) scale(.8)}}' +
