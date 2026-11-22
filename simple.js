@@ -2,7 +2,7 @@
    Today: the story (story.js), the crew scene and two tiles (who owes · diary).
    Money: one big total, who owes, what's left to pay. Everything else sits under "More". */
 // the story, the 🔔 bell and My trips live in story.js
-['me.js', 'story.js'].forEach(function (f) { var s = document.createElement('script'); s.src = f; document.head.appendChild(s); });
+['guides.js', 'me.js', 'story.js', 'more.js'].forEach(function (f) { var s = document.createElement('script'); s.src = f; document.head.appendChild(s); });
 (function () {
   var KEY = 'pp_simple';
   function on() { return true; }   // always simple
@@ -102,7 +102,7 @@
   function paintMore() {
     var b = document.getElementById('pp-morebtn'), m = document.getElementById('money'); if (!b || !m) return;
     var n = +(m.dataset.needs || 0), open = document.body.classList.contains('pp-more-on');
-    var h = open ? 'Less ‹' : 'More ›' + (n ? ' <span class="pp-badge">' + n + ' to check</span>' : '') + ' <small>who paid what · audit · receipt</small>';
+    var h = open ? 'Less ‹' : 'Details ›' + (n ? ' <span class="pp-badge">' + n + ' to check</span>' : '') + ' <small>who paid what · audit · receipt</small>';
     if (b.dataset.h !== h) { b.innerHTML = h; b.dataset.h = h; }
   }
   var PAL = ['#237566', '#F4A62A', '#4A90C2', '#C8553D', '#8E7CC3', '#6BAF5C', '#E39BB6', '#7A8B99'];
