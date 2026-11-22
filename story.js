@@ -57,7 +57,11 @@
     '.pp-sheet .go[disabled]{opacity:.6}.pp-sheet .note{font-size:13px;color:var(--muted);margin-top:8px;text-align:center}' +
     '#pp-me .pp-tripsrow{display:flex;width:100%;align-items:center;gap:12px;border:0;background:#237566;color:#fff;border-radius:18px;padding:15px 16px;margin:12px 0 0;font:inherit;text-align:left;cursor:pointer}' +
     '#pp-me .pp-tripsrow small{display:block;opacity:.85;font-size:13px}#pp-me .pp-tripsrow .chev{margin-left:auto}' +
-    '#pp-bell em.seen{background:var(--muted)}';
+    '#pp-bell em.seen{background:var(--muted)}' +
+    '.pp-pop{background:rgba(19,50,74,.18);display:block}.pp-pop .in{position:fixed;max-height:min(70vh,520px);border-radius:20px;padding:14px 12px 12px;box-shadow:0 14px 40px rgba(19,50,74,.28);animation:ppDrop .16s ease-out}' +
+    '.pp-pop .in:before{content:"";position:absolute;top:-7px;left:var(--ax,20px);width:14px;height:14px;background:var(--bg);transform:rotate(45deg);border-radius:3px}' +
+    '.pp-pop h2{font-size:18px;margin:0 2px 10px}.pp-pop h2 button{width:30px;height:30px;font-size:15px}.pp-pop .it{padding:11px 12px}' +
+    '@keyframes ppDrop{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}';
 
   /* ---------- reading the trip ---------- */
   function info() {
@@ -141,12 +145,10 @@
     document.querySelector('#pp-story-hero .trip').onclick = openTrips;
     // who's coming
     var o = others(I), crew = !o.length ? '🧳 Solo trip · just you & penpen' : o.length === 1 ? '👫 You & ' + esc(o[0]) + ' · travel buddies' : '🐧 Your crew · ' + (o.length + 1) + ' travel buddies';
-    put(t, 'pp-story-crew', 'div', crew, document.getElementById('pp-story-hero').nextSibling);
-    // penpen says it — a speech bubble that points at him in the scene
-    var say = put(t, 'pp-story-say', 'div', '<span class="hear" aria-hidden="true">🔊</span><span class="who">penpen</span>' + cheer(I), sc);
-    var g = sc.querySelector('.pp-guide > svg');
-    if (g) { var gr = g.getBoundingClientRect(), br = say.getBoundingClientRect(); if (br.width) say.style.setProperty('--tx', Math.max(16, Math.min(br.width - 40, gr.left + gr.width / 2 - br.left - 8)) + 'px'); }
-    say.onclick = function () { try { speechSynthesis.speak(new SpeechSynthesisUtterance(say.textContent.replace('🔊', '').replace(/^penpen/, '').trim())); } catch (e) {} };
+    put(t, 'pp-story-crew', 'div', crew, sc);
+    // penpen's line now pops up over his head when you tap him (me.js)
+    var old = document.getElementById('pp-story-say'); if (old) old.remove();
+    window.ppCheer = function () { var d = document.createElement('div'); d.innerHTML = cheer(info()); return d.textContent; };
     // the header already has the date; the countdown lives in the big card
     var dt = document.querySelector('header .date');
     if (dt && / · \d+ days? to go/i.test(dt.textContent)) dt.textContent = dt.textContent.replace(/ · \d+ days? to go/i, '');
@@ -215,18 +217,29 @@
     b.setAttribute('aria-label', all.length + ' reminders' + (n ? ', ' + n + ' new' : ''));
     if (b.dataset.h !== h) { b.innerHTML = h; b.dataset.h = h; }
   }
-  function sheet(title, body) {
-    var s = document.createElement('div'); s.className = 'pp-sheet';
+  // a little dropdown that opens right under the button you tapped (like normal notifications)
+  function sheet(title, body, anchor, align) {
+    [].slice.call(document.querySelectorAll('.pp-sheet')).forEach(function (x) { x.remove(); });
+    var s = document.createElement('div'); s.className = 'pp-sheet pp-pop';
     s.innerHTML = '<div class="in"><h2>' + title + '<button type="button" aria-label="Close">✕</button></h2><div class="bd">' + body + '</div></div>';
     s.onclick = function (e) { if (e.target === s || e.target.closest('h2 button')) s.remove(); };
-    document.body.appendChild(s); return s;
+    document.body.appendChild(s);
+    var inn = s.querySelector('.in'), W = Math.min(380, window.innerWidth - 20);
+    inn.style.width = W + 'px';
+    if (anchor) {
+      var r = anchor.getBoundingClientRect(), left = align === 'left' ? r.left : r.right - W;
+      left = Math.max(10, Math.min(window.innerWidth - W - 10, left));
+      inn.style.left = left + 'px'; inn.style.top = (r.bottom + 10) + 'px';
+      inn.style.setProperty('--ax', Math.max(14, Math.min(W - 28, r.left + r.width / 2 - left - 8)) + 'px');
+    }
+    return s;
   }
   function openBell() {
     var list = items(), S = seen();
     var body = list.length ? list.map(function (x, i) {
       return '<button type="button" class="it' + (S[x.id] ? '' : ' new') + '" data-i="' + i + '"><span class="ic">' + x.ic + '</span><span><b>' + esc(x.t) + '</b><small>' + esc(x.s) + '</small></span></button>';
     }).join('') : '<div class="empty">🐧 All quiet! I\'ll ring here the day before each of your flights and boats.</div>';
-    var s = sheet('Reminders', body);
+    var s = sheet('Reminders', body, document.getElementById('pp-bell'), 'right');
     list.forEach(function (x) { S[x.id] = 1; }); localStorage.setItem('pp_bell_seen', JSON.stringify(S)); bell();
     s.querySelector('.bd').onclick = function (e) { var b = e.target.closest('.it'); if (!b) return; s.remove(); nav(list[+b.dataset.i].go); };
   }
@@ -234,7 +247,7 @@
   /* ---------- 🧳 My trips ---------- */
   function openTrips() {
     if (!window.ppTrips) return;
-    var s = sheet('My trips', '<div class="empty">Loading your trips…</div>');
+    var s = sheet('My trips', '<div class="empty">Loading your trips…</div>', this && this.nodeType ? this : document.querySelector('#pp-story-hero .trip'), 'left');
     var bd = s.querySelector('.bd');
     window.ppTrips.list().then(function (l) {
       var cur = window.ppTrips.current();
