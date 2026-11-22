@@ -149,6 +149,7 @@
     // penpen's line now pops up over his head when you tap him (me.js)
     var old = document.getElementById('pp-story-say'); if (old) old.remove();
     window.ppCheer = function () { var d = document.createElement('div'); d.innerHTML = cheer(info()); return d.textContent; };
+    if (window.ppVoicePrefetch && paint.pf !== window.ppCheer()) { paint.pf = window.ppCheer(); setTimeout(function () { window.ppVoicePrefetch(paint.pf); }, 1500); }   // ready before you tap him
     // the header already has the date; the countdown lives in the big card
     var dt = document.querySelector('header .date');
     if (dt && / · \d+ days? to go/i.test(dt.textContent)) dt.textContent = dt.textContent.replace(/ · \d+ days? to go/i, '');
