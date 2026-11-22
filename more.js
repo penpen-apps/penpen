@@ -30,7 +30,11 @@
     }).join('');
   }
   function scene() {
-    var p = get('pp_prefs') || {}, s = p.scene && p.scene !== 'auto' ? p.scene : localStorage.getItem('pp_trip_theme');
+    // follow the scene picture that's actually on Today (works for "Auto" too)
+    var FILL = { '#DCEDE7': 'beach', '#E2ECF3': 'mountain', '#E6E3F0': 'city', '#F7E6C8': 'desert', '#E7F0F7': 'snow' };
+    var r = document.querySelector('#pp-scene svg.pp-bg rect'), s = r && FILL[String(r.getAttribute('fill')).toUpperCase()];
+    if (s) { try { localStorage.setItem('pp_sc_seen', s); } catch (e) {} }
+    else { var p = get('pp_prefs') || {}; s = p.scene && p.scene !== 'auto' ? p.scene : localStorage.getItem('pp_sc_seen'); }
     if (!SC[s]) s = '';
     var h = document.documentElement;
     if ((h.getAttribute('data-sc') || '') !== s) { if (s) h.setAttribute('data-sc', s); else h.removeAttribute('data-sc'); }
