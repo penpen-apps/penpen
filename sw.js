@@ -1,5 +1,5 @@
 // penpen offline cache: keeps the app shell so it opens without internet.
-const V = 'penpen-v28';
+const V = 'penpen-v29';
 const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'boot.js', 'voice.js', 'talk.js', 'ui.js', 'simple.js', 'story.js', 'me.js', 'guides.js', 'more.js', 'polish.js', 'games.js', 'play.js', 'icon.svg', 'icon-192.png',
   'https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(V).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())); });
