@@ -8,12 +8,10 @@
   var KEY = 'pp_pet';
   var COIN = '<i class="cn" aria-label="coins"></i>';
   var FOODS = {
-    fish:   { e: '🐟', n: 'Fish', food: 18, joy: 4, price: 0 },
-    apple:  { e: '🍎', n: 'Apple', food: 10, joy: 3, price: 5 },
-    veg:    { e: '🥦', n: 'Veggies', food: 12, joy: 1, hp: 4, price: 5 },
-    tuna:   { e: '🍱', n: 'Tuna', food: 30, joy: 8, price: 15 },
-    sushi:  { e: '🍣', n: 'Sushi', food: 25, joy: 15, price: 20 },
-    mango:  { e: '🥭', n: 'Mango', food: 15, joy: 10, price: 10 },
+    fish:   { e: '🐟', n: 'Fish', food: 18, joy: 4, en: 4, price: 0 },
+    mango:  { e: '🥭', n: 'Mango', food: 15, joy: 10, en: 8, price: 10 },
+    sushi:  { e: '🍣', n: 'Sushi', food: 30, joy: 15, en: 10, price: 20 },
+    bat:    { e: '🔋', n: 'Battery', food: 0, joy: 2, en: 45, price: 25 },
     meds:   { e: '💊', n: 'Medicine', food: 0, joy: 0, hp: 45, price: 12 }
   };
   var WEAR = {
@@ -75,8 +73,10 @@
   }
   function rewardExpenses(p) {
     var n = expenseCount(); if (n < 0) return 0;
-    if (p.exp < 0) { p.exp = n; return 0; }
-    var add = Math.max(0, n - p.exp); p.exp = n;
+    // one penpen for you across every trip: count each trip's expenses separately
+    var tid = localStorage.getItem('pp_trip_id') || 'home'; p.expBy = p.expBy || {};
+    if (p.expBy[tid] == null) { p.expBy[tid] = n; if (p.exp < 0) p.exp = n; return 0; }
+    var add = Math.max(0, n - p.expBy[tid]); p.expBy[tid] = n; p.exp = n;
     if (add) p.bag.fish = (p.bag.fish || 0) + add;
     return add;
   }
@@ -137,7 +137,7 @@
     var h = '<div class="top"><button class="back" aria-label="Back">‹</button><h2>' + (tab === 'pet' ? 'Play' : { games: 'Games', slide: 'Belly Slide', quiz: 'Professor Pen’s quiz', sing: 'Sing with penpen', shop: 'Shop' }[tab]) + '</h2><span class="coins">' + COIN + ' <b id="pp-coins">' + p.coins + '</b></span></div><div class="wrap">' + tabs();
     if (tab === 'pet') {
       h += '<div class="petrow"><div class="bats">' + battery(p.food, '🍽️', 'Full') + battery(p.joy, '💛', 'Happy') + '</div><div class="stage' + (p.asleep ? ' night' : '') + '"><div class="pen' + (p.ghost ? ' ghost' : sick(p) ? ' sick' : p.asleep ? ' zz' : '') + '" id="pp-petpen">' +
-        (p.ghost ? ghostSvg() : '<svg viewBox="-7 -14 134 134" width="160" height="160" aria-hidden="true">' + inner() + (p.asleep ? '<path class="shut" d="M45 49 Q51 54 57 49 M63 49 Q69 54 75 49" fill="none" stroke="#1F2A36" stroke-width="3" stroke-linecap="round"/>' : '') + '</svg>' + (wear.e ? '<span class="wear">' + wear.e + '</span>' : '') + (sick(p) ? '<span class="fx">🤒</span>' : p.asleep ? '<span class="fx">💤</span>' : '')) +
+        (p.ghost ? ghostSvg() : '<svg viewBox="-7 -14 134 134" width="160" height="160" aria-hidden="true">' + inner() + (p.asleep ? '<path class="shut" d="M45 49 Q51 54 57 49 M63 49 Q69 54 75 49" fill="none" stroke="#1F2A36" stroke-width="3" stroke-linecap="round"/>' : '') + '</svg>' + (wear.e ? '<span class="wear">' + wear.e + '</span>' : '') + (sick(p) ? '<span class="fx">🤒</span>' : p.asleep ? '<span class="fx">💤</span><span class="bed">🛏️</span>' : '')) +
         '</div><div class="say" id="pp-say">' + (msg || mood(p)) + '</div></div>' +
         (p.ghost ? '' : p.asleep ? '<button data-act="wake" class="zbtn">☀️ Wake</button>' : '<button data-act="sleep" class="zbtn">💤 Sleep</button>') +
         '</div><div class="bats">' + battery(p.energy, '⚡', 'Energy') + battery(p.hp, '❤️', 'Health') + '</div></div>' +
@@ -146,6 +146,7 @@
         h += '<div class="row2"><button data-act="reset">✨ Start over with a new penpen</button></div><p class="tip">Ghosts don’t eat. Start over to hatch a new penpen (your coins stay).</p>';
       } else {
         h += '<h3>Drag food to penpen <small>(or tap it)</small></h3><div class="foods">' + Object.keys(FOODS).map(function (k) { var n = p.bag[k] || 0; return '<button data-feed="' + k + '"' + (n ? '' : ' disabled') + '><span>' + FOODS[k].e + '</span>' + FOODS[k].n + '<small>×' + n + '</small></button>'; }).join('') + '</div>' +
+          '<div class="petacts"><button data-act="tickle">🪶 Tickle</button><button data-act="selfie">📸 Selfie</button><button data-act="album">🖼 Album' + (album().length ? ' (' + album().length + ')' : '') + '</button></div>' +
           '<p class="tip">Rub or tap his belly for love 💕 · Log an expense → get a 🐟 · He gets tired if he never sleeps, and sick if he’s starving.</p>';
       }
     } else if (tab === 'slide') {
@@ -159,9 +160,9 @@
     } else if (tab === 'quiz' || tab === 'games' || tab === 'sing') {
       h += '<div id="pp-ghost-host"></div>';
     } else {
-      h += '<h3>Food & care</h3><div class="shop">' + Object.keys(FOODS).filter(function (k) { return FOODS[k].price; }).map(function (k) { return '<button data-buy="f:' + k + '"><span>' + FOODS[k].e + '</span>' + FOODS[k].n + '<small>' + COIN + ' ' + FOODS[k].price + '</small></button>'; }).join('') + '</div>' +
+      h += '<h3>Food & care</h3><div class="shop">' + Object.keys(FOODS).filter(function (k) { return FOODS[k].price; }).map(function (k) { return '<button data-buy="f:' + k + '"><span>' + FOODS[k].e + '</span>' + FOODS[k].n + '<small>' + COIN + ' ' + FOODS[k].price + '</small><em>' + eff(FOODS[k]) + '</em></button>'; }).join('') + '</div>' +
         '<h3>Outfits</h3><div class="shop">' + Object.keys(WEAR).map(function (k) { var own = p.own[k], on = p.wear === k; return '<button data-buy="w:' + k + '" class="' + (on ? 'on' : '') + '"><span>' + (WEAR[k].e || '🚫') + '</span>' + WEAR[k].n + '<small>' + (on ? 'wearing' : own ? 'wear' : WEAR[k].price ? COIN + ' ' + WEAR[k].price : 'free') + '</small></button>'; }).join('') + '</div>' +
-        '<p class="tip">Earn coins in Games and Quiz. More games, outfits and coin packs coming soon.</p>';
+        '<p class="tip">Earn coins in Games and Quiz. A 🔋 Battery tops up energy so he can keep playing.</p>';
     }
     w.innerHTML = h + '</div>';
     if (tab === 'pet' && !p.ghost) petHooks();
@@ -183,12 +184,44 @@
       document.body.appendChild(hrt); setTimeout(function (el) { el.remove(); }.bind(null, hrt), 1200);
     }
   }
+  function eff(f) { return [f.food ? '🍽️+' + f.food : '', f.en ? '⚡+' + f.en : '', f.hp ? '❤️+' + f.hp : '', f.joy > 5 ? '💛+' + f.joy : ''].filter(Boolean).join(' '); }
+  function album() { try { return JSON.parse(localStorage.getItem('pp_album') || '[]'); } catch (e) { return []; } }
+  function selfie() {
+    var p = load(), wear = (WEAR[p.wear] || {}).e || '';
+    var sv = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="-7 -14 134 134" width="400" height="400">' + inner() + (p.asleep ? '<path d="M45 49 Q51 54 57 49 M63 49 Q69 54 75 49" fill="none" stroke="#1F2A36" stroke-width="3" stroke-linecap="round"/>' : '') + (wear ? '<text x="60" y="8" font-size="30" text-anchor="middle">' + wear + '</text>' : '') + '</svg>';
+    var img = new Image(), c = document.createElement('canvas'); c.width = 480; c.height = 560;
+    img.onload = function () {
+      var x = c.getContext('2d'), g = x.createLinearGradient(0, 0, 0, 560), bgs = [['#BFE6F5', '#FFF4DE'], ['#FFD9C2', '#FFF1E6'], ['#D9F2E3', '#F5FBF0'], ['#E6E0FF', '#FFF4FB']], bg = pick(bgs);
+      g.addColorStop(0, bg[0]); g.addColorStop(1, bg[1]); x.fillStyle = '#fff'; x.fillRect(0, 0, 480, 560); x.fillStyle = g; x.fillRect(20, 20, 440, 440);
+      x.drawImage(img, 40, 40, 400, 400);
+      x.fillStyle = '#13324A'; x.font = '800 26px Nunito, sans-serif'; x.textAlign = 'center';
+      x.fillText(pick(['Me & my penpen 🐧', 'Cheese! 🧀', 'Travel buddy 💛', 'Peace ✌️']), 240, 500);
+      x.font = '700 16px Nunito, sans-serif'; x.fillStyle = '#7A8B99'; x.fillText(new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + ' · Level ' + level(p), 240, 530);
+      var url = c.toDataURL('image/jpeg', 0.8), a = album(); a.unshift({ u: url, t: now() }); a = a.slice(0, 12);
+      try { localStorage.setItem('pp_album', JSON.stringify(a)); } catch (e) { a.pop(); try { localStorage.setItem('pp_album', JSON.stringify(a)); } catch (x2) {} }
+      var q = load(); q.joy = clamp(q.joy + 4); q.xp += 1; save(q);
+      showAlbum('📸 Snap! Saved to the album.');
+    };
+    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(sv);
+  }
+  function showAlbum(msg) {
+    var a = album(), box = document.createElement('div'); box.className = 'pp-album';
+    box.innerHTML = '<div class="al-in"><div class="al-top"><b>🖼 penpen’s album</b><button type="button" class="al-x" aria-label="Close">✕</button></div>' + (msg ? '<p class="al-msg">' + msg + '</p>' : '') +
+      (a.length ? '<div class="al-grid">' + a.map(function (x, i) { return '<figure><img alt="Selfie ' + (i + 1) + '" src="' + x.u + '"><figcaption><a download="penpen-selfie.jpg" href="' + x.u + '">Save</a> · <button type="button" data-del="' + i + '">Delete</button></figcaption></figure>'; }).join('') + '</div>' : '<p class="al-msg">No selfies yet. Tap 📸 Selfie!</p>') +
+      '<p class="al-tip">Keeps your last 12 on this phone.</p></div>';
+    document.body.appendChild(box);
+    box.onclick = function (e) {
+      if (e.target === box || e.target.closest('.al-x')) { box.remove(); paint(); return; }
+      var d = e.target.closest('[data-del]'); if (d) { var l = album(); l.splice(+d.dataset.del, 1); localStorage.setItem('pp_album', JSON.stringify(l)); box.remove(); showAlbum(); }
+    };
+  }
   function feed(k) {
     var p = load(), f = FOODS[k]; if (p.ghost || !(p.bag[k] > 0)) return;
     if (p.asleep) return say('Shh… he’s sleeping 💤');
-    if (k !== 'meds' && p.food >= 100) return say('I’m stuffed! Maybe later 😋');
-    p.bag[k]--; p.food = clamp(p.food + f.food); p.joy = clamp(p.joy + f.joy); p.hp = clamp(p.hp + (f.hp || 0)); p.xp += 2; save(p);
-    paint(k === 'meds' ? 'Bleh… but I feel better! 💊' : pick(['Nom nom nom! ' + f.e + ' 😋', 'Yum, ' + f.n.toLowerCase() + '! ' + f.e, 'Salamat! So full 😌 ' + f.e]));
+    if (k !== 'meds' && k !== 'bat' && p.food >= 100) return say('I’m stuffed! Maybe later 😋');
+    if (k === 'bat' && p.energy >= 100) return say('Already fully charged! ⚡');
+    p.bag[k]--; p.food = clamp(p.food + f.food); p.joy = clamp(p.joy + f.joy); p.energy = clamp(p.energy + (f.en || 0)); p.hp = clamp(p.hp + (f.hp || 0)); p.xp += 2; save(p);
+    paint(k === 'meds' ? 'Bleh… but I feel better! 💊' : k === 'bat' ? 'Bzzzt! Recharged ⚡😎' : pick(['Nom nom nom! ' + f.e + ' 😋', 'Yum, ' + f.n.toLowerCase() + '! ' + f.e, 'Salamat! So full 😌 ' + f.e]));
     var pen = document.getElementById('pp-petpen'); if (pen) { hop(pen); var r = pen.getBoundingClientRect(); hearts(r.left + r.width / 2, r.top + r.height * 0.4, 2, '😋'); }
   }
   function petHooks() {
@@ -237,6 +270,16 @@
         var q = load(); q.coins += coins; q.xp += Math.ceil(coins / 2); q.joy = clamp(q.joy + 8); q.hp = clamp(q.hp - 4); q.bests = q.bests || {}; if (score > (q.bests[id] || 0)) q.bests[id] = score; if (id === 'slide' && score > q.best) q.best = score; save(q); setCoins(q);
       });
     }
+    if (b.dataset.act === 'tickle') {
+      if (p.ghost) return; if (p.asleep) return say('Zzz… *giggles in his sleep* 💤');
+      p.joy = clamp(p.joy + 6); p.energy = clamp(p.energy - 1); p.xp += 1; save(p); refreshBats(p);
+      say(pick(['Hahaha stop it!! 🤣', 'Not the flippers! 😂', 'Hehehe… again! 🪶', 'I’m… so… ticklish 🤭']));
+      var tp = document.getElementById('pp-petpen'); if (tp && tp.animate) tp.animate([{ transform: 'rotate(0)' }, { transform: 'rotate(-10deg)' }, { transform: 'rotate(10deg)' }, { transform: 'rotate(-8deg)' }, { transform: 'rotate(8deg)' }, { transform: 'rotate(0)' }], { duration: 600 });
+      if (tp) { var tr = tp.getBoundingClientRect(); hearts(tr.left + tr.width / 2, tr.top + tr.height * 0.3, 3, '😂'); }
+      return;
+    }
+    if (b.dataset.act === 'selfie') { if (p.ghost) return; return selfie(); }
+    if (b.dataset.act === 'album') return showAlbum();
     if (b.dataset.act === 'sleep') { p.asleep = true; save(p); return paint('Night night 💤'); }
     if (b.dataset.act === 'wake') { p.asleep = false; save(p); return paint(p.energy > 70 ? 'Good morning! ☀️ Fully charged' : 'Yawn… still a bit sleepy 😪'); }
     if (b.dataset.act === 'reset') { var c = p.coins, np = fresh(); np.coins = c; np.exp = p.exp; save(np); return paint('Hello again! 🐣 A brand-new penpen'); }
@@ -417,7 +460,8 @@
     '#pp-play .bat .tip{width:12px;height:4px;border-radius:2px 2px 0 0;background:var(--line)}#pp-play .bat .cell{width:26px;height:46px;border:2.5px solid var(--line);border-radius:7px;display:flex;align-items:flex-end;overflow:hidden;padding:2px;box-sizing:border-box}#pp-play .bat u{display:block;width:100%;border-radius:3px;transition:height .4s}' +
     '#pp-play .bat b{font-size:15px;line-height:1}#pp-play .bat small{font-size:11px;font-weight:800;color:var(--muted)}' +
     '#pp-play .lv{text-align:center;color:var(--muted);font-weight:800;font-size:13.5px;margin:10px 0 0}' +
-    '#pp-play .foods,#pp-play .shop{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}#pp-play .shop{grid-template-columns:repeat(3,1fr)}' +
+    '#pp-play .petacts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0 0}#pp-play .petacts button{border:1.5px solid var(--line);background:var(--card);color:var(--ink);border-radius:16px;padding:10px 4px;font:800 14px ' + F + '}#pp-play .shop em{font-style:normal;font-size:11px;color:var(--muted);font-weight:700;margin-top:2px}#pp-play .bed{position:absolute;left:50%;bottom:-6px;transform:translateX(-50%);font-size:64px;z-index:0;opacity:.9;pointer-events:none}#pp-play .pen{position:relative;z-index:1}#pp-play .pen.zz svg{position:relative;z-index:1}.pp-album{position:fixed;inset:0;z-index:99990;background:rgba(10,20,30,.55);display:flex;align-items:flex-end;justify-content:center}.pp-album .al-in{background:var(--card,#fff);color:var(--ink,#13324A);width:100%;max-width:520px;max-height:86vh;overflow:auto;border-radius:24px 24px 0 0;padding:16px;font-family:' + F + '}.pp-album .al-top{display:flex;justify-content:space-between;align-items:center;font-size:18px}.pp-album .al-x{border:0;background:none;font-size:20px}.pp-album .al-msg{color:var(--muted);font-weight:700}.pp-album .al-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.pp-album figure{margin:0}.pp-album img{width:100%;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.15)}.pp-album figcaption{font-size:13px;text-align:center;margin-top:4px}.pp-album figcaption a,.pp-album figcaption button{color:#237566;font-weight:800;border:0;background:none;font:inherit;font-weight:800;padding:0}.pp-album .al-tip{font-size:12px;color:var(--muted);text-align:center}' +
+    '#pp-play .foods,#pp-play .shop{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}#pp-play .shop{grid-template-columns:repeat(3,1fr)}' +
     '#pp-play .foods button,#pp-play .shop button{border:1.5px solid var(--line);background:var(--card);color:var(--ink);border-radius:16px;padding:8px 2px;font:800 12.5px ' + F + ';cursor:grab;display:flex;flex-direction:column;align-items:center;gap:1px;touch-action:none}' +
     '#pp-play .foods span,#pp-play .shop span{font-size:28px}#pp-play small{color:var(--muted);font-weight:700}#pp-play button[disabled]{opacity:.4}#pp-play .shop .on{border-color:var(--accent);background:var(--accentSoft)}' +
     '#pp-play .row2{display:flex;gap:8px;margin-top:12px}#pp-play .row2 button{flex:1;border:0;background:var(--accent);color:#fff;border-radius:14px;padding:12px 6px;font:800 14.5px ' + F + ';cursor:pointer}' +
