@@ -366,7 +366,8 @@
     '#pp-nap .pen{position:relative;display:inline-block;opacity:.85}#pp-nap .pen svg .pp-eyes{display:none}#pp-nap .pen span{position:absolute;right:-8px;top:0;font-size:28px}#pp-nap b{display:block;font-size:19px;font-weight:900;margin:6px 0}#pp-nap p{margin:0 0 14px;font-weight:700;color:var(--muted,#4A6274);line-height:1.4}' +
     '#pp-nap button{width:100%;min-height:50px;border:0;border-radius:99px;background:#237566;color:#fff;font:900 16px ' + F + '}' +
     '.pp-ptoast{position:fixed;left:16px;right:16px;bottom:calc(90px + env(safe-area-inset-bottom));z-index:99990;background:#13324A;color:#fff;border-radius:16px;padding:12px 14px;font:800 14px ' + F + ';text-align:center;box-shadow:0 8px 24px rgba(0,0,0,.25)}' +
-    'body:not([data-ppv="crew"]) #pp-solo{display:none}#pp-solo{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:14px;margin:0 0 12px;font-family:' + F + ';color:var(--ink)}#pp-solo b{display:block;font-size:16px;font-weight:900}#pp-solo p{margin:4px 0 10px;color:var(--muted);font-weight:700;font-size:14px;line-height:1.4}#pp-solo button{border:0;border-radius:99px;background:#237566;color:#fff;padding:10px 16px;font:900 14px ' + F + ';cursor:pointer}' +
+'#trip-ct .pp-bk{display:grid;grid-template-columns:40px 1fr;column-gap:10px;align-items:start;padding:12px 0;border-bottom:1px solid var(--line)}#trip-ct .pp-bk:last-of-type{border-bottom:0}#trip-ct .pp-bk>*{grid-column:2}#trip-ct .pp-bk>.bki{grid-column:1;grid-row:1/span 3;width:40px;height:40px;border-radius:12px;background:var(--soft,#EEF5F8);display:flex;align-items:center;justify-content:center;font-size:20px}#trip-ct .pp-bk .n{font-weight:800;font-size:16px}#trip-ct .pp-bk .d{font-size:13px;color:var(--muted);margin-top:2px}#trip-ct .pp-bk.bk-due .d{color:#B4561F;font-weight:700}#trip-ct .pp-bk .ctb,#trip-ct .pp-bk .missing{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;font-size:13px}#trip-ct .pp-bk .ctb:empty{display:none}#trip-ct .pp-bk .ctb a,#trip-ct .pp-bk .missing a,#trip-ct .pp-bk .missing button{padding:5px 11px!important;min-height:0!important;font-size:13px!important;border-radius:999px!important;border:1px solid var(--line)!important;background:var(--card)!important;color:var(--ink)!important;font-weight:700;box-shadow:none!important;text-decoration:none}#pp-bk-empty{text-align:center;padding:18px 8px}#pp-bk-empty .bke{font-size:44px}#pp-bk-empty b{display:block;font-size:17px;margin:6px 0}#pp-bk-empty p{color:var(--muted);font-size:14px;margin:0 0 14px}#pp-bk-empty button{border:0;border-radius:999px;padding:11px 18px;font-weight:800;background:var(--accent,#1F7A6D);color:#fff;font-family:inherit;font-size:15px}#pp-bk-tip{margin-top:10px;padding:10px 12px;border-radius:14px;background:var(--soft,#EEF5F8);font-size:13px;color:var(--muted)}' +
+        'body:not([data-ppv="crew"]) #pp-solo{display:none}#pp-solo{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:14px;margin:0 0 12px;font-family:' + F + ';color:var(--ink)}#pp-solo b{display:block;font-size:16px;font-weight:900}#pp-solo p{margin:4px 0 10px;color:var(--muted);font-weight:700;font-size:14px;line-height:1.4}#pp-solo button{border:0;border-radius:99px;background:#237566;color:#fff;padding:10px 16px;font:900 14px ' + F + ';cursor:pointer}' +
     '#pp-off{position:fixed;left:10px;right:10px;top:calc(8px + env(safe-area-inset-top));z-index:70;background:#13324A;color:#fff;border-radius:16px;padding:10px 14px;font:700 13px/1.35 ' + F + ';box-shadow:0 6px 20px rgba(0,0,0,.25)}#pp-off b{display:block;font-size:14px}' +
     '#pp-tour{position:fixed;inset:0;z-index:99980;background:linear-gradient(#DCEDF5,#F6F1E8);color:#13324A;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;font-family:' + F + ';text-align:center}' +
     '#pp-tour .skip{position:absolute;top:calc(14px + env(safe-area-inset-top));right:16px;border:0;background:rgba(255,255,255,.8);border-radius:99px;padding:8px 16px;font:800 15px ' + F + ';color:#13324A;cursor:pointer}' +
@@ -397,6 +398,30 @@
       setTimeout(function () { var x = [].slice.call(document.querySelectorAll('#p-safety button')).filter(function (y) { return /invite/i.test(y.textContent) && y.offsetParent; })[0]; if (x) x.click(); }, 500);
     };
   }
+  function bookings() {
+    var tc = $('#trip-ct'); if (!tc) return;
+    $$('#trip-ct > .kick').forEach(function (k) { k.style.display = 'none'; });
+    var rows = $$('#trip-ct > .ct');
+    rows.forEach(function (r) {
+      if (r.dataset.bk) return; r.dataset.bk = '1'; r.classList.add('pp-bk');
+      var n = $('.n', r), t = ((n && n.textContent) || '') + ' ' + (($('.d', r) || {}).textContent || '');
+      var ic = /air|flight|plane/i.test(t) ? '✈️' : /ferry|boat|ship|port/i.test(t) ? '⛴️' : /tour|trip|wander|island|hop/i.test(t) ? '🗺️' : /van|bus|car|grab|taxi|transfer/i.test(t) ? '🚐' : /hotel|inn|suite|pension|resort|hostel|lodge|stay|room/i.test(t) ? '🏨' : '📌';
+      var i = document.createElement('span'); i.className = 'bki'; i.textContent = ic; r.insertBefore(i, r.firstChild);
+      $$('a', r).forEach(function (a) { if (/^Directions$/.test(a.textContent.trim())) a.textContent = '📍 Map'; if (/Find number/.test(a.textContent)) a.textContent = '🔎 Number'; });
+      $$('button.add', r).forEach(function (b) { b.textContent = '＋'; b.title = 'Add a number'; });
+      var due = $('.d', r); if (due && /balance|to pay|unpaid/i.test(due.textContent)) r.classList.add('bk-due');
+    });
+    var empty = $('#pp-bk-empty'), tip = $('#pp-bk-tip');
+    if (!rows.length && !empty) {
+      empty = document.createElement('div'); empty.id = 'pp-bk-empty';
+      empty.innerHTML = '<div class="bke">🧳</div><b>No confirmed bookings yet</b><p>Booked a hotel, boat or tour? Let penpen know. Send him a screenshot of the confirmation or just tell him, and he’ll keep it here for you.</p><button type="button">💬 Tell penpen</button>';
+      tc.appendChild(empty);
+      $('button', empty).onclick = function () { var nb = $('#navpen'); if (nb) nb.click(); setTimeout(function () { var s = $('#say'); if (s) { s.value = 'I booked '; s.focus(); } }, 120); };
+    }
+    if (rows.length && empty) empty.remove();
+    if (rows.length && !tip) { tip = document.createElement('div'); tip.id = 'pp-bk-tip'; tip.textContent = '📷 Booked something new? Send penpen a screenshot and he’ll add it here.'; tc.appendChild(tip); }
+    if (tip && tip !== tc.lastElementChild) tc.appendChild(tip);
+  }
   function solo() {
     var sc = $('#crew'); if (!sc) return;
     $$('#crew .kick').forEach(function (k) { if (/^your crew$/i.test(k.textContent.trim())) k.textContent = 'YOUR TRAVEL BUDDIES'; });
@@ -408,7 +433,7 @@
     sc.insertBefore(box, sc.firstChild);
     $('button', box).onclick = function () { var x = $$('#crew .kick').filter(function (k) { return /^invite to this trip$/i.test(k.textContent.trim()); })[0]; if (x) (x.parentElement || x).scrollIntoView({ behavior: 'smooth', block: 'start' }); };
   }
-  function tick() { try { startCard(); solo(); fillNav(); hero(); daily(); paintWx(); settingsExtras(); calendar(); wrapTalk(); chatHome(); } catch (e) { console.warn('polish', e); } }
+  function tick() { try { startCard(); solo(); bookings(); fillNav(); hero(); daily(); paintWx(); settingsExtras(); calendar(); wrapTalk(); chatHome(); } catch (e) { console.warn('polish', e); } }
   function start() {
     var st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
     new MutationObserver(function () { clearTimeout(start.t); start.t = setTimeout(tick, 60); }).observe(document.body, { childList: true, subtree: true, characterData: true });
