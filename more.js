@@ -52,7 +52,7 @@
     if (label === 'Settings' && window.ppOpenSettings) { window.ppOpenSettings(); return true; }
     var id = TABS[label]; if (!id) return false; if (id === 'p-safety') view('crew'); window.ppNavGo(id); return true; };
   // Crew, Safety and Bookings share one page in the app; each gets its own view
-  var VIEWS = { crew: 'Crew', safety: 'Safety', book: 'Bookings' };
+  var VIEWS = { crew: 'Travel buddies', safety: 'Safety', book: 'Bookings' };
   function view(v) { document.body.setAttribute('data-ppv', v); var f = $('#p-safety .fred'); if (f && !f.children.length && f.textContent !== VIEWS[v]) f.textContent = VIEWS[v]; }
   window.ppNavGo = function (id) { var b = $('nav button[data-p="' + id + '"]'); if (!b) return; pass = true; try { b.click(); } finally { pass = false; } };
   function label(btn, txt) {
@@ -87,7 +87,7 @@
     m.innerHTML = '<div class="top"><button class="back" type="button" aria-label="Back">‹</button><h2>More</h2></div><div class="wrap">' +
       '<button type="button" class="newtrip" data-m="newtrip"><i>＋</i><span><b>Start a new trip</b><small>Plan it with penpen and invite your crew</small></span></button>' +
       [
-        ['crew', '👥', 'Crew', 'Who’s on the trip · Invite', OFF],
+        ['crew', '👥', 'Travel buddies', 'Who’s on the trip · Invite', OFF],
         ['safety', '🛟', 'Safety', 'SOS · Nearby help · Emergency contacts', '<em class="off">SOS calls work offline</em>'],
         ['book', '🏨', 'Bookings', 'Hotels · Tours · Transport', OFF],
         ['diary', '📔', 'Diary', 'Memories · Photos · Notes', ''],
@@ -122,7 +122,7 @@
     ['💸', 'Log expenses', 'Say what you paid — penpen writes it down and splits it.', ['“Lunch 450, I paid”', '“Brad paid 1,200 for the van, shared”', '“Dinner 3,200, my treat”', '“Who owes who?”', '“Undo”']],
     ['🌐', 'Translate', 'On penpen’s chat, tap the big Translate bar. Hold your button to speak English, hold theirs for Bisaya or Tagalog.', []],
     ['🗺️', 'Itinerary', 'Every day of the trip with times, places and directions. Tell penpen to change it.', ['“Move canyoneering to 9 am”', '“Add dinner at Larsian on Dec 5 at 7 pm”']],
-    ['👥', 'Crew, Safety & Bookings', 'In More: who’s on the trip and the invite QR, SOS and nearby help, and your hotels, tours and transport.', []],
+    ['👥', 'Travel buddies, Safety & Bookings', 'In More: who’s on the trip and the invite QR, SOS and nearby help, and your hotels, tours and transport.', []],
     ['📔', 'Diary', 'Write, talk or add photos. Group diary is shared with everyone; Just me is only for you.', ['“Dear diary, today we swam with whale sharks…”']],
     ['🎮', 'Play', 'Look after penpen and play Belly Slide — even with no signal. Every expense you log earns a 🐟.', []],
     ['⚙️', 'Settings', 'Pick your guide, voice, scene and light/dark, and open the trip’s Google Sheet.', []]
@@ -136,7 +136,7 @@
     ['u1122-play', '🎮', 'New: Play', 'Look after penpen, Belly Slide down a snowy hill, exercise and trivia — works offline', 'Play'],
     ['u1122-voice', '🛠️', 'Fixed: logging by voice', 'Telling penpen an expense works again', 'Money'],
     ['u1122-diary', '🔒', 'Diary: Just me is private', 'Your own Google Doc, with a link to open it', 'Diary'],
-    ['u1122-more', '🧭', 'More menu', 'Crew, Safety, Bookings, Diary, Play and Settings each have their own page', 'More']
+    ['u1122-more', '🧭', 'More menu', 'Travel buddies, Safety, Bookings, Diary, Play and Settings each have their own page', 'More']
   ];
   window.ppFeed = function () {
     var out = [], first = get('pp_feed_first') || {}, nowT = Date.now(), WEEK = 7 * 864e5, changed = false;
