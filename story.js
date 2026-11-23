@@ -282,7 +282,7 @@
     bd.innerHTML = '<label>Trip name</label><input id="pp-nt-name" placeholder="e.g. Bohol with Mom" maxlength="60">' +
       '<label>Where to?</label><input id="pp-nt-where" placeholder="e.g. Bohol" maxlength="80">' +
       '<div class="two"><div><label>From</label><input id="pp-nt-start" type="date"></div><div><label>To</label><input id="pp-nt-end" type="date"></div></div>' +
-      '<button type="button" class="go" id="pp-nt-go">Start this trip 🐧</button><div class="note">You\'ll be the trip creator — invite your travel buddies from Crew.</div>';
+      '<button type="button" class="go" id="pp-nt-go">Start this trip 🐧</button><div class="note">You\'ll be the trip creator — invite your travel buddies right after.</div>';
     bd.onclick = null;
     var go = document.getElementById('pp-nt-go');
     go.onclick = function () {
