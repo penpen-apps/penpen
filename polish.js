@@ -398,14 +398,15 @@
     };
   }
   function solo() {
-    var sc = $('#p-safety .scroll') || $('#p-safety'); if (!sc) return;
+    var sc = $('#crew'); if (!sc) return;
+    $$('#crew .kick').forEach(function (k) { if (/^your crew$/i.test(k.textContent.trim())) k.textContent = 'Your travel buddies'; });
     var T = cache('penpenToday') || {}, n = (T.people || []).length, box = $('#pp-solo');
     if (n > 1) { if (box) box.remove(); return; }
     if (box) return;
     box = document.createElement('div'); box.id = 'pp-solo';
     box.innerHTML = '<b>🧳 Travelling solo? Love that.</b><p>It’s just you and penpen for now. If a friend ever wants to tag along, you can share your invite. No pressure!</p><button type="button">📲 Share my invite</button>';
     sc.insertBefore(box, sc.firstChild);
-    $('button', box).onclick = function () { var x = [].slice.call(document.querySelectorAll('#p-safety button')).filter(function (y) { return /invite|qr/i.test(y.textContent) && y.offsetParent && !box.contains(y); })[0]; if (x) x.click(); };
+    $('button', box).onclick = function () { var x = $$('#crew .kick').filter(function (k) { return /^invite to this trip$/i.test(k.textContent.trim()); })[0]; if (x) (x.parentElement || x).scrollIntoView({ behavior: 'smooth', block: 'start' }); };
   }
   function tick() { try { startCard(); solo(); fillNav(); hero(); daily(); paintWx(); settingsExtras(); calendar(); wrapTalk(); chatHome(); } catch (e) { console.warn('polish', e); } }
   function start() {
