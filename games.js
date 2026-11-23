@@ -147,7 +147,7 @@
         objs.slice().sort(function (a, b) { return b.z - a.z; }).forEach(function (o) { var sz = 18 + (1 - o.z) * 70; emoji(c, o.k, laneX(o.l, o.z), yOf(o.z) - sz * 0.35, sz); });
         c.fillStyle = 'rgba(0,0,0,.08)'; c.beginPath(); c.ellipse(px, H * 0.9, 36, 9, 0, 0, 7); c.fill();
         c.fillStyle = 'rgba(255,255,255,.9)'; for (var q = 0; q < 6; q++) { c.beginPath(); c.arc(px - 40 + q * 16, H * 0.9 + Math.sin(dist + q) * 3, 6 + (q % 3) * 2, 0, 7); c.fill(); }
-        var im = penImg(); c.save(); c.translate(px, H * 0.84); c.rotate(lean * 0.2); c.scale(1.25, 0.62);
+        var im = penImg(); c.save(); c.translate(px, H * 0.9 - 46); c.rotate(lean * 0.2);
         if (im.complete && im.naturalWidth) c.drawImage(im, -48, -48, 96, 96); c.restore();
         c.fillStyle = '#fff'; flakes.forEach(function (f) { c.beginPath(); c.arc(f[0], f[1], f[2], 0, 7); c.fill(); });
       }
