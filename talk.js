@@ -33,7 +33,7 @@
     '#pp-talk .ptt{display:flex;gap:12px;width:100%;max-width:440px}#pp-talk .ptt button{flex:1;min-height:96px;border-radius:24px;border:0;font:800 17px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#13324A;box-shadow:0 4px 14px rgba(0,0,0,.1);touch-action:none;user-select:none;-webkit-user-select:none}' +
     '#pp-talk .st:empty{display:none}' +
     '#pp-talk .langs{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;align-items:center;margin-bottom:12px;max-width:440px}#pp-talk .langs span{font-weight:800;opacity:.7;font-size:15px}' +
-    '#pp-talk .langs button{border:1.5px solid #237566;background:rgba(255,255,255,.7);color:#13324A;border-radius:99px;padding:7px 13px;font:800 14px Nunito,-apple-system,sans-serif}#pp-talk .langs button.on{background:#237566;color:#fff}' +
+    '#pp-talk .langs button{border:1.5px solid #237566;background:rgba(255,255,255,.7);color:#13324A;border-radius:99px;padding:7px 13px;font:800 14px Nunito,-apple-system,sans-serif}#pp-talk .langs button.on{background:#237566;color:#fff}#pp-talk .langs button.me{background:#13324A;color:#fff;border-color:#13324A}#pp-talk .langs button.sw{width:38px;height:38px;padding:0;font-size:18px;transition:transform .3s}#pp-talk .langs button.sw.spin{transform:rotate(180deg)}#pp-talk .ptt.swapped{flex-direction:row-reverse}' +
     '#pp-talk .ptt button.solo{min-height:120px;font-size:21px}#pp-talk .ptt button.on{background:#C8553D;color:#fff;transform:scale(.97)}#pp-talk .ptt small{display:block;font-weight:700;font-size:13px;opacity:.75;margin-top:4px}' +
     '@media (max-height:720px){#pp-talk{padding-top:calc(16px + env(safe-area-inset-top));padding-bottom:calc(18px + env(safe-area-inset-bottom))}#pp-talk .orb{width:170px;height:170px}#pp-talk .pen{width:118px;height:118px}#pp-talk .cap{font-size:17px}}';
   var PEN = '<svg class="pen" viewBox="0 0 120 120" aria-hidden="true"><ellipse cx="60" cy="112" rx="30" ry="5" fill="#000" opacity=".08"/><path d="M60 14c-26 0-40 22-40 50 0 26 16 44 40 44s40-18 40-44c0-28-14-50-40-50z" fill="#2E3A4A"/><ellipse cx="60" cy="76" rx="25" ry="28" fill="#FFF8EE"/><circle cx="48.5" cy="50" r="13" fill="#FFF8EE"/><circle cx="71.5" cy="50" r="13" fill="#FFF8EE"/><circle cx="48.5" cy="51" r="5.2" fill="#1E1E1E"/><circle cx="71.5" cy="51" r="5.2" fill="#1E1E1E"/><circle cx="50.3" cy="49" r="1.8" fill="#fff"/><circle cx="73.3" cy="49" r="1.8" fill="#fff"/><path d="M54 60q6 7 12 0q-6 4-12 0z" fill="#F4A62A"/><ellipse cx="40" cy="62" rx="5" ry="3" fill="#F7A9A0" opacity=".6"/><ellipse cx="80" cy="62" rx="5" ry="3" fill="#F7A9A0" opacity=".6"/><ellipse cx="48" cy="106" rx="9" ry="4" fill="#F4A62A"/><ellipse cx="72" cy="106" rx="9" ry="4" fill="#F4A62A"/></svg>';
@@ -55,6 +55,8 @@
     'Europe/Madrid': ['Spanish'], 'Europe/Paris': ['French'], 'Europe/Rome': ['Italian'], 'Europe/Berlin': ['German'], 'Europe/Lisbon': ['Portuguese'], 'Europe/Istanbul': ['Turkish'],
     'Europe/Athens': ['Greek'], 'America/Mexico_City': ['Spanish'], 'America/Sao_Paulo': ['Portuguese'], 'America/Bogota': ['Spanish'], 'America/Lima': ['Spanish'], 'America/Argentina/Buenos_Aires': ['Spanish'] };
   // languages of where the trip goes (falls back to the phone's time zone)
+  function myLang() { return localStorage.getItem('pp_tr_me') || 'English'; }
+  function short(l) { return String(l).replace(/ \(.*\)/, ''); }
   function suggested() {
     var txt = ''; try { var c = window.ppTrips && window.ppTrips.current && window.ppTrips.current(); txt = JSON.stringify(c || '') + (localStorage.getItem('pp_c_penpenToday:[]') || '').slice(0, 4000); } catch (e) {}
     if (/philippines|cebu|dipolog|manila|bohol|davao|palawan|siargao|dumaguete|iloilo|boracay/i.test(txt)) return TZ_LANG['Asia/Manila'];
@@ -76,15 +78,16 @@
     if (S.mode === 'translate' && !S.lang) S.lang = (Date.now() - (+localStorage.getItem('pp_tr_lang_t') || 0) < 6 * 36e5 && localStorage.getItem('pp_tr_lang')) || suggested()[0] || 'Tagalog';
     begin();
   }
-  function pickLang() {
-    status('');
-    var last = localStorage.getItem('pp_tr_lang') || '', here = suggested();
-    var order = here.concat(last && here.indexOf(last) < 0 ? [last] : []);
+  function pickLang(forMe) {
+    status(forMe ? 'Which language do you speak?' : '');
+    var last = localStorage.getItem('pp_tr_lang') || '', here = forMe ? [] : suggested();
+    var order = forMe ? ['English'] : here.concat(last && here.indexOf(last) < 0 ? [last] : []);
     LANGS.forEach(function (l) { if (order.indexOf(l) < 0) order.push(l); });
+    if (forMe) here = [];
     var cap = document.getElementById('pp-t-cap');
     var chip = function (l, top) { return '<button type="button" data-l="' + l + '" style="font:inherit;font-size:16px;border-radius:14px;padding:10px 14px;border:1.5px solid #237566;background:' + (top ? '#237566;color:#fff' : 'rgba(255,255,255,.7);color:#13324A') + '">' + (here.indexOf(l) >= 0 ? '📍 ' : '') + l + '</button>'; };
     cap.innerHTML = '<div style="max-height:46vh;overflow:auto;display:flex;flex-wrap:wrap;gap:8px;justify-content:center">' +
-      order.map(function (l, i) { return chip(l, i < Math.max(1, here.length)); }).join('') +
+      order.map(function (l, i) { return chip(l, forMe ? l === myLang() : i < Math.max(1, here.length)); }).join('') +
       '<button type="button" data-other="1" style="font:inherit;font-size:16px;border-radius:14px;padding:10px 14px;border:1.5px dashed #237566;background:none;color:#237566">Other…</button></div>';
     cap.onclick = function (e) {
       if (!S) return;
@@ -95,7 +98,9 @@
       var go = e.target.closest('button[data-go]'), b = e.target.closest('button[data-l]');
       var l = go ? (document.getElementById('pp-t-ol').value || '').trim() : b && b.dataset.l;
       if (!l) return;
-      cap.onclick = null; cap.textContent = ''; switchLang(l);
+      cap.onclick = null; cap.textContent = '';
+      if (forMe) { localStorage.setItem('pp_tr_me', l); if (l === S.lang) S.lang = l === 'English' ? (suggested()[0] || 'Tagalog') : 'English'; switchLang(S.lang, true); }
+      else switchLang(l);
     };
   }
   function begin() {
@@ -111,8 +116,9 @@
   /* ---------- hold-to-talk: press, speak, let go (Talk has one button, Translate has Me / Them) ---------- */
   function idle() { return S && S.mode === 'translate' ? '' : '🎙️ Hold the button and talk'; }
   // change language without leaving: reconnect with the new language
-  function switchLang(l) {
+  function switchLang(l, force) {
     if (!S || !l) return;
+    if (l === myLang() && !force) return;
     S.lang = l; localStorage.setItem('pp_tr_lang', l); localStorage.setItem('pp_tr_lang_t', String(Date.now()));
     var old = S.ws; S.ws = null; S.ready = false; S.model = 0; try { old && old.close(); } catch (e) {}
     var box = S.el.querySelector('.ptt'); if (box) box.remove();
@@ -120,12 +126,14 @@
     if (!S.stream) begin(); else connect();
   }
   function langRow() {
-    var here = suggested(), cur = S.lang, list = here.slice();
+    var here = suggested().filter(function (l) { return l !== myLang(); }), cur = S.lang, list = here.slice();
     if (list.indexOf(cur) < 0) list.unshift(cur);
     var row = document.createElement('div'); row.className = 'langs';
-    row.innerHTML = '<span>English ⇄</span>' + list.map(function (l) { return '<button type="button" data-l="' + l + '" class="' + (l === cur ? 'on' : '') + '">' + l.replace(/ \(.*\)/, '') + '</button>'; }).join('') + '<button type="button" data-more="1">More…</button>';
+    row.innerHTML = '<button type="button" class="me" data-me="1" title="Change your language">🙋 ' + short(myLang()) + ' ▾</button><button type="button" class="sw" data-swap="1" aria-label="Swap sides">⇄</button>' + list.map(function (l) { return '<button type="button" data-l="' + l + '" class="' + (l === cur ? 'on' : '') + '">' + l.replace(/ \(.*\)/, '') + '</button>'; }).join('') + '<button type="button" data-more="1">More…</button>';
     row.onclick = function (e) {
       var b = e.target.closest('button'); if (!b) return;
+      if (b.dataset.swap) { S.swap = !S.swap; b.classList.toggle('spin'); var bx = S.el.querySelector('.ptt'); if (bx) bx.classList.toggle('swapped', !!S.swap); return; }
+      if (b.dataset.me) { row.remove(); var bm = S.el.querySelector('.ptt'); if (bm) bm.style.display = 'none'; return pickLang(true); }
       if (b.dataset.more) { row.remove(); var box = S.el.querySelector('.ptt'); if (box) box.style.display = 'none'; return pickLang(); }
       if (b.dataset.l !== S.lang) switchLang(b.dataset.l);
     };
@@ -138,7 +146,7 @@
     if (S.mode === 'translate') {
       var them = S.lang.replace(/ \(.*\)/, '');
       bar.parentNode.insertBefore(langRow(), bar);
-      box.innerHTML = '<button type="button" data-who="me">🙋 Me<small>hold · English</small></button><button type="button" data-who="them">🧑 Them<small>hold · ' + them + '</small></button>';
+      box.innerHTML = '<button type="button" data-who="me">🙋 Me<small>hold · ' + short(myLang()) + '</small></button><button type="button" data-who="them">🧑 Them<small>hold · ' + them + '</small></button>';
     } else box.innerHTML = '<button type="button" class="solo" data-who="me">🎙️ Hold to talk<small>let go when you\'re done</small></button>';
     bar.parentNode.insertBefore(box, bar);
     box.querySelectorAll('button').forEach(function (b) {
@@ -165,8 +173,10 @@
   function connect() {
     if (!S) return;
     status('Connecting…');
-    window.ppCall('penpenLiveStart', [persona(), S.mode, S.lang]).then(function (L) {
+    var me = myLang(), sendLang = S.mode === 'translate' && S.lang === 'English' ? me : S.lang;
+    window.ppCall('penpenLiveStart', [persona(), S.mode, sendLang]).then(function (L) {
       if (!S) return;
+      if (S.mode === 'translate' && me !== 'English' && S.lang !== 'English' && L && L.system) L.system = L.system.replace(/\bEnglish\b/g, me);
       S.L = L;
       var ws = new WebSocket(WS + encodeURIComponent(L.token)); S.ws = ws;
       ws.onopen = function () {
@@ -287,7 +297,7 @@
     s.el.remove(); S = null;
     var log = document.getElementById('log');
     if (log && s.turns.length) {
-      if (s.mode === 'translate') { var hd = document.createElement('div'); hd.className = 'msg pp'; hd.textContent = '🌐 Translation (English ⇄ ' + s.lang + ')'; log.appendChild(hd); }
+      if (s.mode === 'translate') { var hd = document.createElement('div'); hd.className = 'msg pp'; hd.textContent = '🌐 Translation (' + myLang() + ' ⇄ ' + s.lang + ')'; log.appendChild(hd); }
       s.turns.forEach(function (t) { var d = document.createElement('div'); d.className = 'msg ' + t.who; d.textContent = t.t; log.appendChild(d); });
       log.scrollTop = log.scrollHeight;
     }
