@@ -366,7 +366,8 @@
     '#pp-nap .pen{position:relative;display:inline-block;opacity:.85}#pp-nap .pen svg .pp-eyes{display:none}#pp-nap .pen span{position:absolute;right:-8px;top:0;font-size:28px}#pp-nap b{display:block;font-size:19px;font-weight:900;margin:6px 0}#pp-nap p{margin:0 0 14px;font-weight:700;color:var(--muted,#4A6274);line-height:1.4}' +
     '#pp-nap button{width:100%;min-height:50px;border:0;border-radius:99px;background:#237566;color:#fff;font:900 16px ' + F + '}' +
     '.pp-ptoast{position:fixed;left:16px;right:16px;bottom:calc(90px + env(safe-area-inset-bottom));z-index:99990;background:#13324A;color:#fff;border-radius:16px;padding:12px 14px;font:800 14px ' + F + ';text-align:center;box-shadow:0 8px 24px rgba(0,0,0,.25)}' +
-'.pp-dia #pp-dhead{background:linear-gradient(135deg,#FFF6E5,#FDEBD9);border-radius:20px;padding:14px 16px;margin:4px 0 10px;border:1px solid #F3DCC0}.pp-dia .dh-d{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#B4793A}.pp-dia .dh-q{font-size:18px;font-weight:900;color:var(--ink);margin-top:2px}.pp-dia #d-text{background:#FFFDF7 repeating-linear-gradient(transparent,transparent 31px,#EFE6D6 31px,#EFE6D6 32px);line-height:32px;padding:4px 14px;min-height:170px;border:1px solid #EFE2CC;border-radius:18px;font-size:16px}.pp-dia .phbtns{display:grid!important;grid-template-columns:repeat(4,1fr);gap:8px}.pp-dia .phbtns>*{border-radius:16px!important;min-height:56px;font-size:13px!important;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}#pp-dstrip{display:none;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:8px;margin:10px 0}#pp-dstrip .dth{position:relative;aspect-ratio:1;border-radius:14px;overflow:hidden;box-shadow:0 2px 6px rgba(0,0,0,.12);transform:rotate(-1.5deg)}#pp-dstrip .dth:nth-child(2n){transform:rotate(1.5deg)}#pp-dstrip img{width:100%;height:100%;object-fit:cover;display:block}#pp-dstrip button{position:absolute;top:4px;right:4px;width:24px;height:24px;border-radius:50%;border:0;background:rgba(0,0,0,.55);color:#fff;font-size:12px;padding:0;line-height:24px}.pp-dia #d-prev{display:none!important}' +
+'#pp-mcrumb{display:none;align-items:center;gap:10px;width:100%;border:0;background:none;padding:4px 0 10px;font-family:inherit;color:var(--ink);text-align:left;cursor:pointer}#pp-mcrumb .bk{width:40px;height:40px;border-radius:50%;background:var(--card);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:900}#pp-mcrumb small{display:block;font-size:12px;color:var(--muted);font-weight:800}#pp-mcrumb b{font-size:22px;font-weight:900}body.pp-more-on #pp-mcrumb{display:flex}body.pp-more-on #to-add,body.pp-more-on #money>.stats,body.pp-more-on #pp-cats,body.pp-more-on #pp-mtip,body.pp-more-on #pp-morebtn{display:none!important}#stops .stop{cursor:pointer;position:relative}#stops .stop .b{padding-right:18px}#stops .stop::after{content:"›";position:absolute;right:4px;top:6px;font-size:20px;color:var(--muted);font-weight:800}.pp-stopd .sd-when{font-weight:900;font-size:15px;margin-bottom:6px}.pp-stopd .sd-m{font-size:15px;margin:6px 0;line-height:1.4}.sd-btns{display:flex;flex-direction:column;gap:10px;margin-top:14px}.sd-b{display:block;text-align:center;padding:13px;border-radius:16px;border:1px solid var(--line);background:var(--card);color:var(--ink);font:800 15px inherit;font-family:inherit;text-decoration:none}.sd-b.p{background:#237566;color:#fff;border-color:#237566}' +
+    '.pp-dia #pp-dhead{background:linear-gradient(135deg,#FFF6E5,#FDEBD9);border-radius:20px;padding:14px 16px;margin:4px 0 10px;border:1px solid #F3DCC0}.pp-dia .dh-d{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#B4793A}.pp-dia .dh-q{font-size:18px;font-weight:900;color:var(--ink);margin-top:2px}.pp-dia #d-text{background:#FFFDF7 repeating-linear-gradient(transparent,transparent 31px,#EFE6D6 31px,#EFE6D6 32px);line-height:32px;padding:4px 14px;min-height:170px;border:1px solid #EFE2CC;border-radius:18px;font-size:16px}.pp-dia .phbtns{display:grid!important;grid-template-columns:repeat(4,1fr);gap:8px}.pp-dia .phbtns>*{border-radius:16px!important;min-height:56px;font-size:13px!important;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}#pp-dstrip{display:none;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:8px;margin:10px 0}#pp-dstrip .dth{position:relative;aspect-ratio:1;border-radius:14px;overflow:hidden;box-shadow:0 2px 6px rgba(0,0,0,.12);transform:rotate(-1.5deg)}#pp-dstrip .dth:nth-child(2n){transform:rotate(1.5deg)}#pp-dstrip img{width:100%;height:100%;object-fit:cover;display:block}#pp-dstrip button{position:absolute;top:4px;right:4px;width:24px;height:24px;border-radius:50%;border:0;background:rgba(0,0,0,.55);color:#fff;font-size:12px;padding:0;line-height:24px}.pp-dia #d-prev{display:none!important}' +
     '#trip-ct .pp-bk{display:grid;grid-template-columns:40px 1fr;column-gap:10px;align-items:start;padding:12px 0;border-bottom:1px solid var(--line)}#trip-ct .pp-bk:last-of-type{border-bottom:0}#trip-ct .pp-bk>*{grid-column:2}#trip-ct .pp-bk>.bki{grid-column:1;grid-row:1/span 3;width:40px!important;height:40px!important;border-radius:12px;background:#EEF5F8;display:flex!important;align-items:center;justify-content:center;font-size:22px!important;line-height:1}#trip-ct .pp-bk .n{font-weight:800;font-size:16px}#trip-ct .pp-bk .d{font-size:13px;color:var(--muted);margin-top:2px}#trip-ct .pp-bk.bk-due .d{color:#B4561F;font-weight:700}#trip-ct .pp-bk .ctb,#trip-ct .pp-bk .missing{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;font-size:13px}#trip-ct .pp-bk .ctb:empty{display:none}#trip-ct .pp-bk .pp-num{display:contents}#trip-ct .pp-bk .pp-num input{flex:1;min-width:140px;padding:6px 10px;border-radius:999px;border:1px solid var(--line);font:inherit}#trip-ct .pp-bk .ctb a,#trip-ct .pp-bk .ctb button,#trip-ct .pp-bk .missing a,#trip-ct .pp-bk .missing button{padding:5px 11px!important;min-height:0!important;font-size:13px!important;border-radius:999px!important;border:1px solid var(--line)!important;background:var(--card)!important;color:var(--ink)!important;font-weight:700;box-shadow:none!important;text-decoration:none}#pp-bk-empty{text-align:center;padding:18px 8px}#pp-bk-empty .bke{font-size:44px}#pp-bk-empty b{display:block;font-size:17px;margin:6px 0}#pp-bk-empty p{color:var(--muted);font-size:14px;margin:0 0 14px}#pp-bk-empty button{border:0;border-radius:999px;padding:11px 18px;font-weight:800;background:var(--accent,#1F7A6D);color:#fff;font-family:inherit;font-size:15px}#pp-bk-tip{margin-top:10px;padding:10px 12px;border-radius:14px;background:var(--soft,#EEF5F8);font-size:13px;color:var(--muted)}' +
         'body:not([data-ppv="crew"]) #pp-solo{display:none}#pp-solo{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:14px;margin:0 0 12px;font-family:' + F + ';color:var(--ink)}#pp-solo b{display:block;font-size:16px;font-weight:900}#pp-solo p{margin:4px 0 10px;color:var(--muted);font-weight:700;font-size:14px;line-height:1.4}#pp-solo button{border:0;border-radius:99px;background:#237566;color:#fff;padding:10px 16px;font:900 14px ' + F + ';cursor:pointer}' +
     '#pp-off{position:fixed;left:10px;right:10px;top:calc(8px + env(safe-area-inset-top));z-index:70;background:#13324A;color:#fff;border-radius:16px;padding:10px 14px;font:700 13px/1.35 ' + F + ';box-shadow:0 6px 20px rgba(0,0,0,.25)}#pp-off b{display:block;font-size:14px}' +
@@ -441,6 +442,35 @@
       next();
     };
   }
+  function subPages() {
+    // Expenses › Details opens like its own page
+    var sc = $('#p-money .scroll') || $('#p-money');
+    if (sc && !$('#pp-mcrumb')) {
+      var c = document.createElement('button'); c.type = 'button'; c.id = 'pp-mcrumb'; c.innerHTML = '<span class="bk">‹</span><span><small>Expenses ›</small><b>Details</b></span>';
+      c.onclick = function () { var b = $('#pp-morebtn'); if (b && document.body.classList.contains('pp-more-on')) b.click(); };
+      sc.insertBefore(c, sc.firstChild);
+      var mb = $('#pp-morebtn'); if (mb && !mb.dataset.top) { mb.dataset.top = '1'; mb.addEventListener('click', function () { setTimeout(function () { sc.scrollTop = 0; window.scrollTo(0, 0); }, 30); }); }
+    }
+    // Itinerary: tap a stop to open it
+    var st = $('#stops');
+    if (st && !st.dataset.sub) {
+      st.dataset.sub = '1';
+      st.addEventListener('click', function (e) {
+        if (e.target.closest('a')) return;
+        var row = e.target.closest('.stop'); if (!row) return;
+        var w = ($('.w', row) || {}).textContent || '', ms = $$('.m', row).map(function (x) { return x.textContent; }), dir = $('a', row);
+        var day = '', k = row.previousElementSibling; while (k && !k.classList.contains('kick')) k = k.previousElementSibling;
+        if (k) day = k.textContent; else { var on = $('#days button[aria-pressed="true"], #days button.on'); if (on) day = on.textContent; }
+        var tm = w.indexOf(' · ') > 0 ? w.split(' · ')[0] : '', what = tm ? w.slice(tm.length + 3) : w;
+        var body = '<div class="pc col pp-stopd">' + (day || tm ? '<div class="sd-when">🕒 ' + esc([day, tm].filter(Boolean).join(' · ')) + '</div>' : '') +
+          ms.map(function (m, i) { return '<div class="sd-m">' + (i === 0 ? '📍 ' : '📝 ') + esc(m) + '</div>'; }).join('') + '</div>' +
+          '<div class="sd-btns">' + (dir ? '<a class="sd-b p" target="_blank" rel="noopener" href="' + esc(dir.href) + '">🧭 Directions</a>' : '') +
+          '<button type="button" class="sd-b" data-q="ask">💬 Ask penpen about this</button><button type="button" class="sd-b" data-q="edit">✏️ Change this stop</button></div>';
+        var pg = page('pp-stop', what, body, 'Itinerary');
+        $$('button[data-q]', pg).forEach(function (b) { b.onclick = function () { pg.remove(); var nb = $('#navpen'); if (nb) nb.click(); setTimeout(function () { var s = $('#say'); if (s) { s.value = b.dataset.q === 'ask' ? 'Tell me about ' + what + (ms[0] ? ' (' + ms[0] + ')' : '') : 'Change “' + what + '”' + (day ? ' on ' + day : '') + ': '; s.focus(); } }, 150); }; });
+      });
+    }
+  }
   function bookings() {
     var tc = $('#trip-ct'); if (!tc) return;
     $$('#trip-ct > .kick').forEach(function (k) { k.style.display = 'none'; });
@@ -448,7 +478,7 @@
     rows.forEach(function (r) {
       if (r.dataset.bk) return; r.dataset.bk = '1'; r.classList.add('pp-bk');
       var n = $('.n', r), t = ((n && n.textContent) || '') + ' ' + (($('.d', r) || {}).textContent || '');
-      var ic = /air|flight|plane/i.test(t) ? '✈️' : /ferry|boat|ship|port/i.test(t) ? '⛴️' : /tour|trip|wander|island|hop/i.test(t) ? '🗺️' : /van|bus|car|grab|taxi|transfer/i.test(t) ? '🚐' : /hotel|inn|suite|pension|resort|hostel|lodge|stay|room/i.test(t) ? '🏨' : '📌';
+      var ic = /air|flight|plane/i.test(t) ? '✈️' : /ferry|boat|ship|port\b/i.test(t) ? '⛴️' : /hotel|\binn\b|suite|pension|resort|hostel|lodge|room/i.test(t) ? '🏨' : /\btours?\b|wander|island|hopping/i.test(t) ? '🗺️' : /\bvan\b|\bbus\b|\bcar\b|grab|taxi|transfer/i.test(t) ? '🚐' : '📌';
       var i = document.createElement('span'); i.className = 'bki'; i.textContent = ic; r.insertBefore(i, r.firstChild);
       $$('a', r).forEach(function (a) { if (/^Directions$/.test(a.textContent.trim())) a.textContent = '📍 Map'; if (/Find number/.test(a.textContent)) a.textContent = '🔎 Number'; });
       $$('button.add', r).forEach(function (b) { b.textContent = '＋'; b.title = 'Add a number'; });
@@ -481,7 +511,7 @@
     sc.insertBefore(box, sc.firstChild);
     $('button', box).onclick = function () { var x = $$('#crew .kick').filter(function (k) { return /^invite to this trip$/i.test(k.textContent.trim()); })[0]; if (x) (x.parentElement || x).scrollIntoView({ behavior: 'smooth', block: 'start' }); };
   }
-  function tick() { try { startCard(); solo(); bookings(); diary(); fillNav(); hero(); daily(); paintWx(); settingsExtras(); calendar(); wrapTalk(); chatHome(); } catch (e) { console.warn('polish', e); } }
+  function tick() { try { startCard(); solo(); bookings(); diary(); subPages(); fillNav(); hero(); daily(); paintWx(); settingsExtras(); calendar(); wrapTalk(); chatHome(); } catch (e) { console.warn('polish', e); } }
   function start() {
     var st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
     new MutationObserver(function () { clearTimeout(start.t); start.t = setTimeout(tick, 60); }).observe(document.body, { childList: true, subtree: true, characterData: true });
