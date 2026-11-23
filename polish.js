@@ -129,7 +129,7 @@
       '<li><b>We never sell</b> your data or use it for ads.</li></ul></div>' +
       '<div class="pc"><div class="ph"><i>🧹</i><div><b>Clear this phone</b><small>Removes everything penpen saved on this phone: the offline copy of every trip, your Play pet and coins, and your settings. Your trips themselves stay safe in their Google Sheets. You’ll need to sign in again.</small></div></div>' +
       '<button type="button" class="pbtn off" data-a="clear">Clear</button></div>' +
-      '<p class="pnote">To delete your details from a trip, ask the trip’s creator to remove you from the crew.</p>', from);
+      '<p class="pnote">To delete your details from a trip, ask the trip’s creator to remove you from the trip.</p>', from);
     w.addEventListener('click', function (e) {
       var b = e.target.closest('[data-a]'); if (!b) return;
       if (b.dataset.a === 'loc') {
@@ -366,6 +366,7 @@
     '#pp-nap .pen{position:relative;display:inline-block;opacity:.85}#pp-nap .pen svg .pp-eyes{display:none}#pp-nap .pen span{position:absolute;right:-8px;top:0;font-size:28px}#pp-nap b{display:block;font-size:19px;font-weight:900;margin:6px 0}#pp-nap p{margin:0 0 14px;font-weight:700;color:var(--muted,#4A6274);line-height:1.4}' +
     '#pp-nap button{width:100%;min-height:50px;border:0;border-radius:99px;background:#237566;color:#fff;font:900 16px ' + F + '}' +
     '.pp-ptoast{position:fixed;left:16px;right:16px;bottom:calc(90px + env(safe-area-inset-bottom));z-index:99990;background:#13324A;color:#fff;border-radius:16px;padding:12px 14px;font:800 14px ' + F + ';text-align:center;box-shadow:0 8px 24px rgba(0,0,0,.25)}' +
+    'body:not([data-ppv="crew"]) #pp-solo{display:none}#pp-solo{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:14px;margin:0 0 12px;font-family:' + F + ';color:var(--ink)}#pp-solo b{display:block;font-size:16px;font-weight:900}#pp-solo p{margin:4px 0 10px;color:var(--muted);font-weight:700;font-size:14px;line-height:1.4}#pp-solo button{border:0;border-radius:99px;background:#237566;color:#fff;padding:10px 16px;font:900 14px ' + F + ';cursor:pointer}' +
     '#pp-off{position:fixed;left:10px;right:10px;top:calc(8px + env(safe-area-inset-top));z-index:70;background:#13324A;color:#fff;border-radius:16px;padding:10px 14px;font:700 13px/1.35 ' + F + ';box-shadow:0 6px 20px rgba(0,0,0,.25)}#pp-off b{display:block;font-size:14px}' +
     '#pp-tour{position:fixed;inset:0;z-index:99980;background:linear-gradient(#DCEDF5,#F6F1E8);color:#13324A;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;font-family:' + F + ';text-align:center}' +
     '#pp-tour .skip{position:absolute;top:calc(14px + env(safe-area-inset-top));right:16px;border:0;background:rgba(255,255,255,.8);border-radius:99px;padding:8px 16px;font:800 15px ' + F + ';color:#13324A;cursor:pointer}' +
@@ -396,7 +397,17 @@
       setTimeout(function () { var x = [].slice.call(document.querySelectorAll('#p-safety button')).filter(function (y) { return /invite/i.test(y.textContent) && y.offsetParent; })[0]; if (x) x.click(); }, 500);
     };
   }
-  function tick() { try { startCard(); fillNav(); hero(); daily(); paintWx(); settingsExtras(); calendar(); wrapTalk(); chatHome(); } catch (e) { console.warn('polish', e); } }
+  function solo() {
+    var sc = $('#p-safety .scroll') || $('#p-safety'); if (!sc) return;
+    var T = cache('penpenToday') || {}, n = (T.people || []).length, box = $('#pp-solo');
+    if (n > 1) { if (box) box.remove(); return; }
+    if (box) return;
+    box = document.createElement('div'); box.id = 'pp-solo';
+    box.innerHTML = '<b>🧳 Travelling solo? Love that.</b><p>It’s just you and penpen for now. If a friend ever wants to tag along, you can share your invite. No pressure!</p><button type="button">📲 Share my invite</button>';
+    sc.insertBefore(box, sc.firstChild);
+    $('button', box).onclick = function () { var x = [].slice.call(document.querySelectorAll('#p-safety button')).filter(function (y) { return /invite|qr/i.test(y.textContent) && y.offsetParent && !box.contains(y); })[0]; if (x) x.click(); };
+  }
+  function tick() { try { startCard(); solo(); fillNav(); hero(); daily(); paintWx(); settingsExtras(); calendar(); wrapTalk(); chatHome(); } catch (e) { console.warn('polish', e); } }
   function start() {
     var st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
     new MutationObserver(function () { clearTimeout(start.t); start.t = setTimeout(tick, 60); }).observe(document.body, { childList: true, subtree: true, characterData: true });
