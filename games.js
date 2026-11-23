@@ -314,6 +314,81 @@
     { t: 'complete', q: 'Penguins drink seawater because a special gland removes the ____.', o: ['salt', 'sand', 'fish'], a: 0 }
   ];
   var PROF = '<g transform="translate(60 22)"><rect x="-22" y="-8" width="44" height="6" rx="2" fill="#1F2A36"/><path d="M-14 -2 L14 -2 L10 6 L-10 6 Z" fill="#1F2A36"/><path d="M18 -5 L24 10" stroke="#F2A33A" stroke-width="2.5"/><circle cx="24" cy="12" r="3" fill="#F2A33A"/></g><g fill="none" stroke="#1F2A36" stroke-width="2.4"><circle cx="51" cy="49" r="8"/><circle cx="69" cy="49" r="8"/><path d="M59 49 L61 49"/></g>';
+  /* ---------- Learn with penpen: bite-size Bisaya & Tagalog lessons ---------- */
+  var LESSONS = {
+    'Bisaya (Cebuano)': [
+      { t: 'Hello & thanks', e: '👋', w: [['Good morning', 'Maayong buntag'], ['Thank you', 'Salamat'], ['Thank you very much', 'Daghang salamat'], ['Yes', 'Oo'], ['No', 'Dili'], ['You’re welcome', 'Walay sapayan']] },
+      { t: 'Food', e: '🍚', w: [['Delicious!', 'Lami kaayo!'], ['Water', 'Tubig'], ['Rice', 'Kan-on'], ['I’m hungry', 'Gigutom ko'], ['Fish', 'Isda'], ['The bill, please', 'Palihug, ang bill']] },
+      { t: 'Getting around', e: '🛺', w: [['Stop here (in a jeepney)', 'Para lang!'], ['Where is…?', 'Asa ang…?'], ['Left', 'Wala'], ['Right', 'Tuo'], ['Near', 'Duol'], ['Far', 'Layo']] },
+      { t: 'Shopping', e: '🛍️', w: [['How much is this?', 'Pila ni?'], ['Expensive', 'Mahal'], ['Cheap', 'Barato'], ['Can you lower the price?', 'Pwede menos?'], ['One', 'Usa'], ['Two', 'Duha']] }
+    ],
+    'Tagalog': [
+      { t: 'Hello & thanks', e: '👋', w: [['Good morning', 'Magandang umaga'], ['Thank you', 'Salamat'], ['Thank you very much', 'Maraming salamat'], ['Yes', 'Oo'], ['No', 'Hindi'], ['You’re welcome', 'Walang anuman']] },
+      { t: 'Food', e: '🍚', w: [['Delicious!', 'Ang sarap!'], ['Water', 'Tubig'], ['Rice', 'Kanin'], ['I’m hungry', 'Gutom na ako'], ['Fish', 'Isda'], ['The bill, please', 'Bill po, please']] },
+      { t: 'Getting around', e: '🛺', w: [['Stop here (in a jeepney)', 'Para po!'], ['Where is…?', 'Saan ang…?'], ['Left', 'Kaliwa'], ['Right', 'Kanan'], ['Near', 'Malapit'], ['Far', 'Malayo']] },
+      { t: 'Shopping', e: '🛍️', w: [['How much is this?', 'Magkano ito?'], ['Expensive', 'Mahal'], ['Cheap', 'Mura'], ['Can you lower the price?', 'Pwede pong tawad?'], ['One', 'Isa'], ['Two', 'Dalawa']] }
+    ]
+  };
+  function lget() { try { return JSON.parse(localStorage.getItem('pp_learn') || '{}'); } catch (e) { return {}; } }
+  function lset(o) { try { localStorage.setItem('pp_learn', JSON.stringify(o)); } catch (e) {} }
+  function sayIt(t) { try { if (!window.speechSynthesis) return; speechSynthesis.cancel(); var u = new SpeechSynthesisUtterance(t); u.lang = 'fil-PH'; u.rate = 0.85; speechSynthesis.speak(u); } catch (e) {} }
+  function learn(host, award) {
+    stop();
+    var L = lget(); L.lang = L.lang || 'Bisaya (Cebuano)'; L.done = L.done || {};
+    function home(msg) {
+      var ls = LESSONS[L.lang], today = new Date().toDateString();
+      host.innerHTML = '<div class="lrn"><div class="lrh"><b>📚 Learn with penpen</b><small>' + (L.streak ? '🔥 ' + L.streak + '-day streak' : 'Learn a few words a day') + '</small></div>' +
+        (msg ? '<p class="lrmsg">' + msg + '</p>' : '') +
+        '<div class="lrlang">' + Object.keys(LESSONS).map(function (k) { return '<button type="button" data-ll="' + k + '" class="' + (k === L.lang ? 'on' : '') + '">' + k.replace(/ \(.*\)/, '') + '</button>'; }).join('') + '</div>' +
+        '<div class="lrlist">' + ls.map(function (l, i) { var st = L.done[L.lang + i] || 0; return '<button type="button" data-li="' + i + '"><span>' + l.e + '</span><b>' + l.t + '</b><small>' + (st ? '⭐'.repeat(st) + '☆'.repeat(3 - st) : l.w.length + ' words') + '</small></button>'; }).join('') + '</div>' +
+        '<p class="lrtip">Tap 🔊 to hear each word. Works offline. ' + (L.last === today ? 'Come back tomorrow to keep your streak!' : '') + '</p></div>';
+      host.onclick = function (e) {
+        var b = e.target.closest('button'); if (!b) return;
+        if (b.dataset.ll) { L.lang = b.dataset.ll; lset(L); return home(); }
+        if (b.dataset.li != null) return lesson(+b.dataset.li);
+      };
+    }
+    function lesson(li) {
+      var ls = LESSONS[L.lang][li], words = ls.w.slice(), step = 0, right = 0, mode = 'learn';
+      var qs = words.map(function (w, i) { return i; }).sort(function () { return Math.random() - 0.5; }).slice(0, 4);
+      function card() {
+        if (mode === 'learn') {
+          if (step >= words.length) { mode = 'quiz'; step = 0; return card(); }
+          var w = words[step];
+          host.innerHTML = '<div class="lrn"><div class="lrh"><button type="button" class="lrx" data-x="1">✕</button><b>' + ls.e + ' ' + ls.t + '</b><small>Learn ' + (step + 1) + ' / ' + words.length + '</small></div><div class="lrbar"><i style="width:' + Math.round(100 * step / (words.length + qs.length)) + '%"></i></div>' +
+            '<div class="lrcard"><small>' + w[0] + '</small><b>' + w[1] + '</b><button type="button" data-say="' + w[1] + '">🔊 Hear it</button></div><button type="button" class="lrgo" data-next="1">Got it →</button></div>';
+          sayIt(w[1]); return;
+        }
+        if (step >= qs.length) return finish();
+        var q = words[qs[step]], opts = [qs[step]];
+        while (opts.length < 3) { var r = Math.floor(Math.random() * words.length); if (opts.indexOf(r) < 0) opts.push(r); }
+        opts.sort(function () { return Math.random() - 0.5; });
+        host.innerHTML = '<div class="lrn"><div class="lrh"><button type="button" class="lrx" data-x="1">✕</button><b>' + ls.e + ' ' + ls.t + '</b><small>Quiz ' + (step + 1) + ' / ' + qs.length + '</small></div><div class="lrbar"><i style="width:' + Math.round(100 * (words.length + step) / (words.length + qs.length)) + '%"></i></div>' +
+          '<div class="lrcard"><small>How do you say…</small><b>' + q[0] + '</b></div><div class="lropts">' + opts.map(function (o) { return '<button type="button" data-o="' + o + '">' + words[o][1] + '</button>'; }).join('') + '</div></div>';
+      }
+      function finish() {
+        var stars = right >= qs.length ? 3 : right >= qs.length - 1 ? 2 : 1, key = L.lang + li, today = new Date().toDateString(), y = new Date(Date.now() - 864e5).toDateString();
+        L.done[key] = Math.max(L.done[key] || 0, stars);
+        if (L.last !== today) { L.streak = L.last === y ? (L.streak || 0) + 1 : 1; L.last = today; }
+        lset(L); var coins = right * 2 + (stars === 3 ? 4 : 0); if (award) award(coins);
+        home('🎉 ' + right + ' / ' + qs.length + ' right · ' + '⭐'.repeat(stars) + ' · +' + coins + ' coins');
+      }
+      host.onclick = function (e) {
+        var b = e.target.closest('button'); if (!b) return;
+        if (b.dataset.x) return home();
+        if (b.dataset.say) return sayIt(b.dataset.say);
+        if (b.dataset.next) { step++; return card(); }
+        if (b.dataset.o != null) {
+          var ok = +b.dataset.o === qs[step]; if (ok) right++;
+          [].slice.call(host.querySelectorAll('[data-o]')).forEach(function (x) { x.disabled = true; if (+x.dataset.o === qs[step]) x.classList.add('ok'); else if (x === b) x.classList.add('no'); });
+          sayIt(words[qs[step]][1]);
+          setTimeout(function () { if (host.isConnected) { step++; card(); } }, ok ? 700 : 1400);
+        }
+      };
+      card();
+    }
+    home();
+  }
   function quiz(host, award) {
     stop();
     var round = [], n = 0, right = 0, used = {};
@@ -420,12 +495,13 @@
     '.sg{font-family:' + F + ';text-align:center}.sg .sgpen{position:relative;display:inline-block}.sg .sgpen .sgm{position:absolute;right:-18px;bottom:8px;font-size:28px;background:none!important;width:auto!important;height:auto!important}.sg .sgpen.on svg{animation:qyay .5s ease-in-out infinite}' +
     '.sg .sglist{display:flex;flex-direction:column;gap:8px;margin:8px 0}.sg .sglist button{border:0;background:var(--card,#fff);color:inherit;border-radius:18px;padding:12px 14px;text-align:left;font:inherit;cursor:pointer}.sg .sglist b{display:block;font-weight:900}.sg .sglist small{color:var(--muted,#6B7C8A);font-weight:700}' +
     '.sg .sglyr{background:#13324A;color:#9FB4C4;border-radius:22px;padding:14px;margin:10px 0}.sg .sglyr b{display:block;color:#fff;margin-bottom:6px}.sg .sglyr p{margin:6px 0;font:900 20px/1.4 ' + F + '}.sg .sglyr span.now{color:#F2A33A}.sg .sglyr span.sung{color:#fff}.sg .sglyr button{margin-top:10px;border:0;border-radius:99px;padding:10px 22px;font:900 15px ' + F + ';background:#F2A33A;color:#13324A;cursor:pointer}' +
+    '.lrn{font-family:' + F + '}.lrh{display:flex;align-items:center;gap:8px;margin-bottom:8px}.lrh b{font-size:18px;font-weight:900;flex:1}.lrh small{color:var(--muted,#7A8B99);font-weight:800}.lrx{border:0;background:none;font-size:18px;padding:4px}.lrmsg{background:var(--accentSoft,#E3F3EF);border-radius:14px;padding:10px 12px;font-weight:800;margin:6px 0}.lrlang{display:flex;gap:8px;margin:6px 0 10px}.lrlang button{flex:1;border:1.5px solid #237566;background:none;color:#237566;border-radius:99px;padding:8px;font:800 14px ' + F + '}.lrlang button.on{background:#237566;color:#fff}.lrlist{display:grid;grid-template-columns:1fr 1fr;gap:10px}.lrlist button{border:0;background:var(--card,#fff);color:inherit;border-radius:20px;padding:14px 8px;font:inherit;min-height:110px;box-shadow:0 1px 3px rgba(0,0,0,.06)}.lrlist span{display:block;font-size:34px}.lrlist b{display:block;font-weight:900;margin-top:4px}.lrlist small{color:var(--muted,#7A8B99);font-weight:700}.lrtip{font-size:13px;color:var(--muted,#7A8B99);text-align:center;margin-top:10px}.lrbar{height:8px;border-radius:99px;background:var(--line,#E5E9EC);overflow:hidden;margin-bottom:14px}.lrbar i{display:block;height:100%;background:#F2A33A;border-radius:99px;transition:width .3s}.lrcard{background:var(--card,#fff);border-radius:24px;padding:24px 16px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.06)}.lrcard small{display:block;color:var(--muted,#7A8B99);font-weight:800;font-size:15px}.lrcard b{display:block;font-size:28px;font-weight:900;margin:8px 0 14px;color:#237566}.lrcard button{border:1.5px solid var(--line,#E5E9EC);background:none;border-radius:99px;padding:8px 14px;font:800 14px ' + F + ';color:inherit}.lrgo{display:block;width:100%;margin-top:14px;border:0;border-radius:18px;padding:15px;background:#237566;color:#fff;font:900 17px ' + F + '}.lropts{display:flex;flex-direction:column;gap:10px;margin-top:14px}.lropts button{border:1.5px solid var(--line,#E5E9EC);background:var(--card,#fff);color:inherit;border-radius:18px;padding:14px;font:800 17px ' + F + '}.lropts button.ok{background:#DFF3E4;border-color:#3FA55B}.lropts button.no{background:#FBE3E0;border-color:#D9534F}' +
     '.gcards{display:grid;grid-template-columns:1fr 1fr;gap:10px}.gcards button{border:0;background:var(--card,#fff);color:inherit;border-radius:20px;padding:16px 10px;font:inherit;cursor:pointer;min-height:120px}.gcards span{display:block;font-size:40px}.gcards b{display:block;font-weight:900;font-size:16px;margin-top:4px}.gcards small{display:block;color:var(--muted,#6B7C8A);font-weight:700;font-size:12px}';
   var st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
 
   window.ppGames = {
     list: GAMES,
     cards: function (best) { return '<div class="gcards">' + Object.keys(GAMES).map(function (k) { return '<button type="button" data-game="' + k + '"><span>' + GAMES[k].e + '</span><b>' + GAMES[k].t + '</b><small>' + (best && best[k] ? 'Best ' + best[k] : 'Works offline') + '</small></button>'; }).join('') + '</div>'; },
-    open: function (id, host, done) { return shell(host, id, done); }, quiz: quiz, sing: sing, stop: stop, _m: MAKERS
+    open: function (id, host, done) { return shell(host, id, done); }, quiz: quiz, learn: learn, sing: sing, stop: stop, _m: MAKERS
   };
 })();
