@@ -128,13 +128,13 @@
     return pick(['Happy penpen! 🐧', 'Rub my belly! 💕', 'Let’s slide! 🛷', 'I love this trip ✨']);
   }
   function tabs() {
-    return '<div class="tabs">' + [['pet', '🐧', 'penpen'], ['games', '🎮', 'Games'], ['quiz', '🎓', 'Quiz'], ['sing', '🎤', 'Sing'], ['shop', '🛍️', 'Shop']].map(function (t) {
+    return '<div class="tabs">' + [['pet', '🐧', 'penpen'], ['games', '🎮', 'Games'], ['quiz', '🎓', 'Quiz'], ['learn', '📚', 'Learn'], ['sing', '🎤', 'Sing'], ['shop', '🛍️', 'Shop']].map(function (t) {
       return '<button data-tab="' + t[0] + '" class="' + (tab === t[0] ? 'on' : '') + '"><span>' + t[1] + '</span>' + t[2] + '</button>';
     }).join('') + '</div>';
   }
   function paint(msg) {
     var p = load(), wear = WEAR[p.wear] || WEAR.none;
-    var h = '<div class="top"><button class="back" aria-label="Back">‹</button><h2>' + (tab === 'pet' ? 'Play' : { games: 'Games', slide: 'Belly Slide', quiz: 'Professor Pen’s quiz', sing: 'Sing with penpen', shop: 'Shop' }[tab]) + '</h2><span class="coins">' + COIN + ' <b id="pp-coins">' + p.coins + '</b></span></div><div class="wrap">' + tabs();
+    var h = '<div class="top"><button class="back" aria-label="Back">‹</button><h2>' + (tab === 'pet' ? 'Play' : { games: 'Games', slide: 'Belly Slide', quiz: 'Professor Pen’s quiz', learn: 'Learn with penpen', sing: 'Sing with penpen', shop: 'Shop' }[tab]) + '</h2><span class="coins">' + COIN + ' <b id="pp-coins">' + p.coins + '</b></span></div><div class="wrap">' + tabs();
     if (tab === 'pet') {
       h += '<div class="petrow"><div class="bats">' + battery(p.food, '🍽️', 'Full') + battery(p.joy, '💛', 'Happy') + '</div><div class="stage' + (p.asleep ? ' night' : '') + '"><div class="pen' + (p.ghost ? ' ghost' : sick(p) ? ' sick' : p.asleep ? ' zz' : '') + '" id="pp-petpen">' +
         (p.ghost ? ghostSvg() : '<svg viewBox="-7 -14 134 134" width="160" height="160" aria-hidden="true">' + inner() + (p.asleep ? '<path class="shut" d="M45 49 Q51 54 57 49 M63 49 Q69 54 75 49" fill="none" stroke="#1F2A36" stroke-width="3" stroke-linecap="round"/>' : '') + '</svg>' + (wear.e ? '<span class="wear">' + wear.e + '</span>' : '') + (sick(p) ? '<span class="fx">🤒</span>' : p.asleep ? '<span class="fx">💤</span><span class="bed">🛏️</span>' : '')) +
@@ -157,7 +157,7 @@
         '<div class="beat"><i id="pp-beat"></i></div><div class="ghud" id="pp-gcount">Jumping jacks: 0 / 20</div>' +
         '<div class="pad"><button class="go" data-act="gym">▶ Start workout</button><button class="ctl big" id="pp-jj">Jump!</button></div>' +
         '<p class="tip">Workouts make penpen fitter (faster in Slide) but use energy. Too much and he’s exhausted.</p></div>';
-    } else if (tab === 'quiz' || tab === 'games' || tab === 'sing') {
+    } else if (tab === 'quiz' || tab === 'games' || tab === 'sing' || tab === 'learn') {
       h += '<div id="pp-ghost-host"></div>';
     } else {
       h += '<h3>Food & care</h3><div class="shop">' + Object.keys(FOODS).filter(function (k) { return FOODS[k].price; }).map(function (k) { return '<button data-buy="f:' + k + '"><span>' + FOODS[k].e + '</span>' + FOODS[k].n + '<small>' + COIN + ' ' + FOODS[k].price + '</small><em>' + eff(FOODS[k]) + '</em></button>'; }).join('') + '</div>' +
@@ -172,6 +172,7 @@
       if (tab === 'games') gh.innerHTML = window.ppGames.cards(p.bests);
       if (tab === 'quiz') window.ppGames.quiz(gh, function (c) { var q = load(); q.coins += c; q.xp += c; save(q); setCoins(q); });
       if (tab === 'sing') window.ppGames.sing(gh);
+      if (tab === 'learn' && window.ppGames.learn) window.ppGames.learn(gh, function (c) { var q = load(); q.coins += c; q.xp += c; q.joy = clamp(q.joy + 3); save(q); setCoins(q); });
     }
   }
   function say(t) { var s = document.getElementById('pp-say'); if (s) s.textContent = t; }
