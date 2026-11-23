@@ -399,7 +399,7 @@
   }
   function solo() {
     var sc = $('#crew'); if (!sc) return;
-    $$('#crew .kick').forEach(function (k) { if (/^your crew$/i.test(k.textContent.trim())) k.textContent = 'Your travel buddies'; });
+    $$('#crew .kick').forEach(function (k) { if (/^your crew$/i.test(k.textContent.trim())) k.textContent = 'YOUR TRAVEL BUDDIES'; });
     var T = cache('penpenToday') || {}, n = (T.people || []).length, box = $('#pp-solo');
     if (n > 1) { if (box) box.remove(); return; }
     if (box) return;
