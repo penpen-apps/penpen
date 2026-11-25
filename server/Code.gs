@@ -16,7 +16,7 @@ var SRV_FN = {
   read:  ['penpenToday', 'penpenVoice', 'penpenDayExtras', 'penpenSafety', 'penpenProfiles', 'penpenDiaryInfo', 'penpenDiaryVideos',
           'penpenFormData', 'penpenMoneyCats', 'settleWeb', 'penpenReceipt', 'penpenReceiptPdf', 'penpenPlan', 'penpenAudit'],
   write: ['penpenAsk', 'penpenReadBooking', 'penpenFindNumber', 'penpenChat', 'penpenLiveStart', 'penpenLiveAction', 'penpenConfirm', 'addExpenseForm', 'penpenDiaryAdd', 'penpenDiaryRemoveVideo', 'penpenSaveProfile',
-          'penpenSelfie', 'penpenSetHide'],
+          'penpenSelfie', 'penpenSetHide', 'penpenAddStop', 'penpenAddContact'],
   admin: ['penpenLiveModels', 'penpenSetBudget', 'penpenQuickFix', 'penpenSetLiveLink']
 };
 var __PP_EMAIL = '';
@@ -3523,8 +3523,12 @@ function ppGeoFill_(ss, max) {
 
 /* ============================ Plan screen ============================ */
 function penpenPlan() {
-  const ss = ss_(), tz = ppTz_(ss);
+  const ss = ss_();
   try { ppGeoFill_(ss, 6); } catch (e) { console.warn(e); }
+  return ppPlanData_(ss);
+}
+function ppPlanData_(ss) {   // the plan without the map-lookup catch-up (so Add a stop answers quickly)
+  const tz = ppTz_(ss);
   const stops = ppStops_(ss), by = {};
   stops.forEach(s => { (by[s.day] = by[s.day] || []).push(s); });
   const trip = ppTrip_(ss);
@@ -3533,7 +3537,7 @@ function penpenPlan() {
     stops: by[k].sort((a, b) => a.row - b.row)
       .map(s => ({row: s.row, time: s.time, what: s.what, place: s.place, notes: s.notes, lat: s.lat, lng: s.lng}))}));
   const start = days.find(d => d.day >= trip.today);
-  return {days: days, today: trip.today, open: trip.status === 'during' ? trip.today : (start ? start.day : (days[0] && days[0].day)), country: ppPlace_(ss).name, place: ppPlace_(ss)};
+  return {days: days, today: trip.today, start: trip.start, end: trip.end, open: trip.status === 'during' ? trip.today : (start ? start.day : (days[0] && days[0].day)), country: ppPlace_(ss).name, place: ppPlace_(ss)};
 }
 
 /* ============================ write ============================ */
@@ -3554,7 +3558,9 @@ function ppPlanWrite_(ss, rows) {
   const n = Math.max(sh.getLastRow() - 1, 1);
   sh.getRange(2, 1, n, PL_LAST).clearContent();
   if (rows.length) sh.getRange(2, 1, rows.length, PL_LAST).setValues(rows.map(r => {
-    const x = r.slice(0, PL_LAST); while (x.length < PL_LAST) x.push(''); return x;
+    const x = r.slice(0, PL_LAST); while (x.length < PL_LAST) x.push('');
+    for (let i = 2; i <= 4; i++) if (typeof x[i] === 'string') x[i] = ppCellText_(x[i]);   // what, place, notes stay plain text
+    return x;
   }));
   SpreadsheetApp.flush();
 }
@@ -3787,18 +3793,54 @@ function ppContactConfirm_(p) {
   try {
     let c = ppContacts_(ss).find(x => x.name === p.name), row;
     if (c) row = c.row;
-    else { row = Math.max(sh.getLastRow(), 1) + 1; sh.getRange(row, PC.name).setValue(p.name); if (!p.set.type) sh.getRange(row, PC.type).setValue('Other'); }
+    else { row = Math.max(sh.getLastRow(), 1) + 1; sh.getRange(row, PC.name).setValue(ppCellText_(p.name)); if (!p.set.type) sh.getRange(row, PC.type).setValue('Other'); }
     const before = sh.getRange(row, 1, 1, PC_LAST).getValues()[0];
-    Object.keys(p.set).forEach(k => sh.getRange(row, col[k]).setValue(p.set[k]));
+    Object.keys(p.set).forEach(k => sh.getRange(row, col[k]).setValue(ppCellText_(p.set[k])));   // "+63 917…" stays a phone number, "=…" stays text
     ppPushUndo_({t: 'contact', name: p.name, isNew: !c, before: before});
     return {replies: ['📇 Saved: ' + p.name + Object.keys(p.set).map(k => ' · ' + p.set[k]).join('')], mood: 'concierge', changed: true};
   } finally { lock.releaseLock(); }
 }
 
+/* ---- Add a stop / Add a contact buttons: the same code chat uses, without the Yes / No step
+   (the person typed it into a form, so there's nothing to double-check). "Undo" in chat still works. ---- */
+function ppFormText_(v, max) { return String(v == null ? '' : v).replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, max); }
+function penpenAddStop(a) {
+  a = a || {};
+  const day = ppFormText_(a.date, 10), what = ppFormText_(a.what, 80);
+  let time = ppFormText_(a.time, 5);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day) || isNaN(new Date(day + 'T12:00:00Z'))) throw new Error('Pick a day for this stop.');
+  if (!what) throw new Error('Say what the stop is, e.g. Dinner.');
+  const hm = time.match(/^([01]\d|2[0-3]):([0-5]\d)$/);   // the phone's time picker gives 19:30
+  if (time && !hm) throw new Error('That time doesn’t look right.');
+  if (hm) time = ((+hm[1] % 12) || 12) + ':' + hm[2] + (+hm[1] < 12 ? ' am' : ' pm');
+  const ss = ss_(), trip = ppTrip_(ss);
+  if ((trip.start && day < trip.start) || (trip.end && day > trip.end)) throw new Error('Pick a day during the trip.');
+  const r = ppPlanAdd_(ss, {date: day, time: time, what: what, place: ppFormText_(a.place, 120), notes: ppFormText_(a.notes, 300)});
+  return {msg: r.text, plan: ppPlanData_(ss)};
+}
+function penpenAddContact(a) {
+  a = a || {};
+  const name = ppFormText_(a.name, 60);
+  if (!name) throw new Error('Add the contact’s name.');
+  const set = {}, type = CT_TYPES.find(t => t === String(a.type || '')) || 'Other';
+  set.type = type;
+  const phone = ppFormText_(a.phone, 30), messenger = ppFormText_(a.messenger, 200), email = ppFormText_(a.email, 120).toLowerCase();
+  if (phone && !/^[0-9+()\-.\s]{3,30}$/.test(phone)) throw new Error('A phone number can only have digits, spaces, + ( ) - and dots.');
+  if (messenger && !/^https:\/\/[^\s]+$/i.test(messenger)) throw new Error('The Messenger link should start with https://');
+  if (email && !/^[a-z0-9_][^\s@<>()\[\]\\,;:"']*@[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(email)) throw new Error('That doesn’t look like an email address.');
+  if (phone) set.phone = phone; if (messenger) set.messenger = messenger; if (email) set.email = email;
+  ['place', 'notes'].forEach(k => { const v = ppFormText_(a[k], k === 'notes' ? 300 : 120); if (v) set[k] = v; });
+  if (!phone && !messenger && !email) throw new Error('Add a phone number, Messenger link or email.');
+  const ss = ss_(), ex = ppContacts_(ss).find(c => c.name.toLowerCase() === name.toLowerCase());   // exact name only, never a guess
+  if (ex && !a.update) return {exists: ex.name, type: ex.type};
+  const r = ppContactConfirm_({name: ex ? ex.name : name, isNew: !ex, set: set});
+  return {msg: r.replies[0], safety: penpenSafety()};
+}
+
 function ppContactUndo_(u) {
   const ss = ss_(), sh = ss.getSheetByName(CT), c = ppContacts_(ss).find(x => x.name === u.name);
   if (!c) return {replies: ['I couldn’t find that contact to undo.'], mood: 'cloudy'};
-  if (u.isNew) sh.deleteRow(c.row); else sh.getRange(c.row, 1, 1, PC_LAST).setValues([u.before]);
+  if (u.isNew) sh.deleteRow(c.row); else sh.getRange(c.row, 1, 1, PC_LAST).setValues([u.before.map(v => typeof v === 'string' ? ppCellText_(v) : v)]);
   return {replies: ['↩️ ' + (u.isNew ? 'Removed' : 'Changed back') + ': ' + u.name], mood: 'happy', changed: true};
 }
 
