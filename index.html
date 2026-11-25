@@ -975,6 +975,18 @@ th .pp-qt{position:absolute;right:0;top:100%;width:210px;z-index:5;box-shadow:0 
 
   /* ---------- Diary ---------- */
   var DK = 'group', PHOTO = null, dlinks = null;
+  // an entry that isn't saved yet stays on this phone, so closing the app (or no signal) doesn't lose it
+  var DRAFT = 'pp_diary_draft:' + (localStorage.getItem('pp_trip_id') || '');
+  window.ppDiaryDraft = {
+    keep: function () { try { var t = $('d-text').value; if (t.trim()) localStorage.setItem(DRAFT, t); else localStorage.removeItem(DRAFT); } catch (e) {} },
+    clear: function () { try { localStorage.removeItem(DRAFT); } catch (e) {} }
+  };
+  $('d-text').addEventListener('input', ppDiaryDraft.keep);
+  (function () {
+    var t = null; try { t = localStorage.getItem(DRAFT); } catch (e) {}
+    if (!t || $('d-text').value.trim()) return;
+    $('d-text').value = t; $('d-ok').style.display = 'block'; $('d-ok').textContent = 'Your unsaved entry is back. Tap Save when you have signal.';
+  })();
   function dkind(k) { DK = k; $('d-group').setAttribute('aria-pressed', k === 'group'); $('d-me').setAttribute('aria-pressed', k === 'me'); }
   $('d-group').onclick = function () { dkind('group'); }; $('d-me').onclick = function () { dkind('me'); };
   function loadDiaryLinks() {
@@ -1012,7 +1024,7 @@ th .pp-qt{position:absolute;right:0;top:100%;width:210px;z-index:5;box-shadow:0 
     if (drec) { drec.stop(); return; }
     var base = $('d-text').value ? $('d-text').value.trim() + ' ' : '';
     drec = new SR(); drec.lang = 'en-US'; drec.interimResults = true; drec.continuous = true;
-    drec.onresult = function (e) { var s = ''; for (var i = 0; i < e.results.length; i++) s += e.results[i][0].transcript; $('d-text').value = base + s; };
+    drec.onresult = function (e) { var s = ''; for (var i = 0; i < e.results.length; i++) s += e.results[i][0].transcript; $('d-text').value = base + s; ppDiaryDraft.keep(); };
     drec.onend = function () { drec = null; $('d-mic').textContent = '🎤 Talk'; };
     drec.onerror = function () { drec = null; $('d-mic').textContent = '🎤 Talk'; };
     $('d-mic').textContent = '⏹ Stop'; try { drec.start(); } catch (x) { drec = null; $('d-mic').textContent = '🎤 Talk'; }
@@ -1033,7 +1045,7 @@ th .pp-qt{position:absolute;right:0;top:100%;width:210px;z-index:5;box-shadow:0 
     google.script.run.withSuccessHandler(function (r) {
       b.disabled = false; b.textContent = 'Save to the diary';
       $('d-ok').style.display = 'block'; $('d-ok').textContent = r.msg; var a = el('a', 'linkbtn', ' Open it ↗'); a.href = r.url; a.target = '_blank'; a.rel = 'noopener'; $('d-ok').appendChild(a);
-      $('d-text').value = ''; $('d-x').onclick(); clearVideo(); dlinks = null; loadDiaryLinks();
+      $('d-text').value = ''; ppDiaryDraft.clear(); $('d-x').onclick(); clearVideo(); dlinks = null; loadDiaryLinks();
     }).withFailureHandler(function (e) { b.disabled = false; b.textContent = 'Save to the diary'; ppDiaryErr(e); })
       .penpenDiaryAdd({text: t, kind: DK, photo: PHOTO, video: VIDEO, caption: $('d-cap').value.trim()});
   };
