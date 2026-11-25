@@ -1,6 +1,7 @@
 /* penpen's guides: each one is its own penguin with its own look and name.
    window.ppLook.svg(id) returns the inside of an <svg viewBox="-7 -14 134 134">.
-   'bubbly' is the classic penpen, drawn by the app itself. */
+   'bubbly' is the classic penpen, drawn by the app itself.
+   svg() and side() also take a look object instead of an id (the garden's own penpen: { body, eyes, beak, feet }). */
 (function () {
   var INK = '#13324A', CREAM = '#FFF8EE', BEAK = '#F4A62A';
   var G = {
@@ -38,11 +39,11 @@
     return '';
   }
   function svg(id) {
-    var g = G[id]; if (!g || !g.body) return '';
-    var b = g.body, h = [];
+    var g = typeof id === 'object' ? id : G[id]; if (!g || !g.body) return '';
+    var b = g.body, bk = g.beak || BEAK, ft = g.feet || BEAK, h = [];
     h.push('<ellipse cx="60" cy="112" rx="30" ry="4" fill="' + INK + '" opacity=".12"/>');
     if (g.bag) h.push('<rect x="82" y="54" width="20" height="36" rx="8" fill="#C8874A"/><rect x="86" y="70" width="12" height="10" rx="3" fill="#A86B37"/>');
-    h.push('<ellipse cx="48" cy="106" rx="10" ry="5" fill="' + BEAK + '"/><ellipse cx="72" cy="106" rx="10" ry="5" fill="' + BEAK + '"/>');
+    h.push('<ellipse cx="48" cy="106" rx="10" ry="5" fill="' + ft + '"/><ellipse cx="72" cy="106" rx="10" ry="5" fill="' + ft + '"/>');
     h.push('<g class="fl-l"><ellipse cx="25" cy="70" rx="8" ry="20" fill="' + b + '" transform="rotate(22 25 70)"/></g><g class="fl-r"><ellipse cx="95" cy="70" rx="8" ry="20" fill="' + b + '" transform="rotate(-22 95 70)"/></g>');
     h.push('<ellipse cx="60" cy="64" rx="36" ry="44" fill="' + b + '"/><ellipse cx="44" cy="38" rx="9" ry="15" fill="#fff" opacity=".1" transform="rotate(-20 44 38)"/>');
     h.push('<ellipse cx="60" cy="77" rx="25" ry="29" fill="' + CREAM + '"/><ellipse cx="60" cy="51" rx="21" ry="16" fill="' + CREAM + '"/><ellipse cx="66" cy="94" rx="17" ry="8" fill="#E9DAC0" opacity=".6"/>');
@@ -51,7 +52,7 @@
     if (!g.shades) h.push('<g class="pp-eyes">' + eyes(g.eyes) + '</g>');
     else h.push('<path d="M41 44 H79 L77 53 Q72 57 64 53 L62 48 H58 L56 53 Q48 57 43 53 Z" fill="#0E0F12"/><path d="M45 46.5 L50 46.5 M66 46.5 L71 46.5" stroke="#fff" stroke-width="1.5" stroke-linecap="round" opacity=".6"/>');
     if (g.glasses) h.push('<g fill="none" stroke="' + INK + '" stroke-width="2"><circle cx="51" cy="49" r="7"/><circle cx="69" cy="49" r="7"/><path d="M58 48 Q60 46.5 62 48"/></g>');
-    h.push('<path d="M56.5 57.5 Q60 62 63.5 57.5 Q60 56 56.5 57.5 Z" fill="' + BEAK + '"/>');
+    h.push('<path d="M56.5 57.5 Q60 62 63.5 57.5 Q60 56 56.5 57.5 Z" fill="' + bk + '"/>');
     if (g.mustache) h.push('<path d="M60 61 Q55 58 50 61 Q47 63 45 61 Q47 66 52 65 Q57 64 60 62 Q63 64 68 65 Q73 66 75 61 Q73 63 70 61 Q65 58 60 61 Z" fill="' + g.mustache + '"/>');
     if (g.scarf) h.push('<rect x="36" y="64" width="48" height="9" rx="4.5" fill="' + g.scarf + '"/><rect x="67" y="68" width="9" height="20" rx="3.5" fill="' + g.scarf + '"/>');
     if (g.bowtie) h.push('<path d="M60 69 L50 64 L50 74 Z" fill="' + g.bowtie + '"/><path d="M60 69 L70 64 L70 74 Z" fill="' + g.bowtie + '"/><circle cx="60" cy="69" r="2.6" fill="' + g.bowtie + '"/>');
@@ -77,9 +78,9 @@
   }
   // side view, for walking; hairC: hair colour for a penguin whose look isn't in G (your own penpen)
   function side(id, fallback, hairC) {
-    var g = G[id] || {}, b = g.body || fallback || '#1E2B4A', hc = g.hairC || hairC, h = [];
+    var g = (typeof id === 'object' ? id : G[id]) || {}, b = g.body || fallback || '#1E2B4A', hc = g.hairC || hairC, bk = g.beak || BEAK, ft = g.feet || BEAK, h = [];
     h.push('<ellipse cx="60" cy="112" rx="26" ry="4" fill="' + INK + '" opacity=".12"/>');
-    h.push('<g class="ft"><ellipse class="f1" cx="56" cy="107" rx="12" ry="4.5" fill="' + BEAK + '"/><ellipse class="f2" cx="68" cy="107" rx="12" ry="4.5" fill="' + BEAK + '"/></g>');
+    h.push('<g class="ft"><ellipse class="f1" cx="56" cy="107" rx="12" ry="4.5" fill="' + ft + '"/><ellipse class="f2" cx="68" cy="107" rx="12" ry="4.5" fill="' + ft + '"/></g>');
     h.push('<path d="M34 98 L22 106 L38 104 Z" fill="' + b + '"/>');
     h.push('<ellipse cx="58" cy="64" rx="29" ry="44" fill="' + b + '"/>');
     h.push('<ellipse cx="72" cy="74" rx="14" ry="31" fill="' + CREAM + '"/><ellipse cx="70" cy="48" rx="14" ry="14" fill="' + CREAM + '"/>');
@@ -92,7 +93,7 @@
     else h.push('<circle cx="75" cy="46" r="3.6" fill="' + INK + '"/><circle cx="76.3" cy="44.7" r="1.2" fill="#fff"/>');
     if (g.glasses) h.push('<circle cx="75" cy="46" r="6.5" fill="none" stroke="' + INK + '" stroke-width="2"/>');
     h.push('<ellipse cx="72" cy="56" rx="4.5" ry="2.8" fill="#F7A3A0"/>');
-    h.push('<path d="M83 50 Q98 53 83 58 Z" fill="' + BEAK + '"/>');
+    h.push('<path d="M83 50 Q98 53 83 58 Z" fill="' + bk + '"/>');
     if (g.mustache) h.push('<path d="M80 59 Q74 57 70 60 Q75 63 80 61 Z" fill="' + g.mustache + '"/>');
     if (g.hair || hc) h.push('<path d="M32 40 Q34 18 58 17 Q80 18 84 38 Q72 30 58 32 Q44 32 32 40 Z" fill="' + (g.hair === 'bow' ? b : (hc || INK)) + '"/>' + (g.hair === 'bow' ? '<path d="M50 22 L60 16 L60 28 Z M50 22 L40 16 L40 28 Z" fill="#F28AA5"/>' : g.hair === 'bun' ? '<circle cx="44" cy="18" r="8" fill="' + g.hairC + '"/>' : ''));
     if (g.cap) h.push('<path d="M34 36 Q36 18 58 17 Q80 18 82 36 Z" fill="' + g.cap + '"/><path d="M78 34 H96 V38 H78 Z" fill="#1E2B4A"/>');
