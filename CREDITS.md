@@ -6,6 +6,7 @@ Every picture and sound in penpen is listed here with its license.
 
 - Play garden: sky, hills, igloo, pond and flowers are drawn in `play.js` (`gardenArt()`).
 - Garden music and sound effects (chomp, happy chirp, "hi") are made with Web Audio in `play.js`.
+- Garden sound (Nov 2026): the soft echo on the music, running water, birdsong, brook bubbles, penpen's tickle giggle and his walking chirp are all made with Web Audio in `play.js` (`garden()`, `water()`, `bird()`, `giggle()`). No sound files, so nothing to license.
 - Penguins and guides: drawn in `guides.js`.
 
 ## Picked, not added yet
