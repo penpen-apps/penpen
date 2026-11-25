@@ -111,6 +111,34 @@
   var MUSIC_FILE = '';              // set to a music file (e.g. 'audio/garden.m4a') to play it instead of the code-made tune
   var SHUT = '<path class="shut" d="M45 49 Q51 54 57 49 M63 49 Q69 54 75 49" fill="none" stroke="#1F2A36" stroke-width="3" stroke-linecap="round"/>';
   var JOY = '<path class="joy" d="M45 51 Q51 44 57 51 M63 51 Q69 44 75 51" fill="none" stroke="#1F2A36" stroke-width="3.2" stroke-linecap="round"/>';
+  /* ---------- livelier penguins: a side view for walking, blinking eyes, sad brows, an open beak, flappy flippers ---------- */
+  var SKIN = '#FFF9F2';
+  // laid over a front view: eyelids that blink (or droop when sad), sad brows, and an open beak for big smiles; CSS decides which show
+  function faceBits(x1, x2, y, r) {
+    function lid(x) { return '<ellipse cx="' + x + '" cy="' + y + '" rx="' + r + '" ry="' + r + '" fill="' + SKIN + '"/><path d="M' + (x - r + 1) + ' ' + y + ' H' + (x + r - 1) + '" stroke="#1F2A36" stroke-width="2.2" stroke-linecap="round"/>'; }
+    return '<g class="lid">' + lid(x1) + lid(x2) + '</g>' +
+      '<path class="brow" d="M' + (x1 - 6) + ' ' + (y - 8) + ' L' + (x1 + 4) + ' ' + (y - 12) + ' M' + (x2 + 6) + ' ' + (y - 8) + ' L' + (x2 - 4) + ' ' + (y - 12) + '" fill="none" stroke="#1F2A36" stroke-width="2.4" stroke-linecap="round"/>' +
+      '<path class="mouth" d="M55.5 60 Q60 68 64.5 60 Z" fill="#B8502A"/>';
+  }
+  // your penpen's flippers get a class so they can flap (the friends' already have one)
+  function flippers(s) { return s.replace(/(<ellipse[^>]*rotate\(20 24 75\)[^>]*\/>)/, '<g class="fl-l">$1</g>').replace(/(<ellipse[^>]*rotate\(-20 96 75\)[^>]*\/>)/, '<g class="fl-r">$1</g>'); }
+  // your penpen from the side: body colour from his drawing, hair colour from his saved look (only if his drawing uses it)
+  function penSide(front) {
+    var m = /id="ppb([0-9a-fA-F]{3,8})"/.exec(front), hc = null;
+    try {
+      var P = JSON.parse(localStorage.getItem('pp_c_penpenProfiles:[]') || 'null'), me = P && P.people ? P.people.filter(function (x) { return x.isMe; })[0] : null, a = me && me.avatar;
+      if (a && a.hair && a.hair !== 'none' && a.hair !== 'tuft' && a.hairColor && front.indexOf('"' + a.hairColor + '"') > -1) hc = a.hairColor;
+    } catch (e) { hc = null; }   // no saved look: plain side view
+    return window.ppLook && window.ppLook.side ? window.ppLook.side('bubbly', m ? '#' + m[1] : '#1E2B4A', hc) : front;
+  }
+  // front view, plus the side view that shows while walking
+  function views(front, side) {
+    var v = ' viewBox="-7 -14 134 134" width="74" height="74" aria-hidden="true">';
+    return '<svg class="fv"' + v + front + '</svg><svg class="sv"' + v + side + '</svg>';
+  }
+  function sad(p) { return !p.asleep && (sick(p) || p.food < 25 || p.joy < 25); }
+  // a happy moment: open beak and flappy flippers for a bit
+  function cheer(el, ms) { if (!el) return; el.classList.add('yay'); clearTimeout(el.ppYay); el.ppYay = setTimeout(function () { el.classList.remove('yay'); }, ms || 1400); }
   function gardenArt() {
     var fl = [[24, 250, '#F28AA5'], [62, 272, '#FFFFFF'], [150, 258, '#F4A62A'], [200, 276, '#B7A2F0'], [340, 254, '#F28AA5'], [122, 204, '#FFFFFF'], [214, 208, '#F28AA5'], [330, 220, '#F4A62A'],
       [40, 340, '#B7A2F0'], [104, 372, '#F4A62A'], [182, 350, '#FFFFFF'], [268, 380, '#F28AA5'], [326, 344, '#FFFFFF'], [86, 412, '#F28AA5'], [236, 418, '#B7A2F0'], [300, 404, '#F4A62A']].map(function (f) {
@@ -312,9 +340,9 @@
       var face = (p.asleep ? SHUT : '') + JOY;
       h += '<div class="garden' + (p.asleep ? ' night' : '') + '" id="pp-garden">' + gardenArt() +
         '<div class="gtop"><button class="back" aria-label="Back">‹</button><span class="meters">' + meters(p) + '</span>' + coins + '<button type="button" data-act="sound" class="gbtn" aria-pressed="' + soundOn() + '" aria-label="Music and sounds">' + (soundOn() ? '🔊' : '🔇') + '</button>' + menu(p) + '</div>' +
-        (window.ppLook ? PALS.map(function (id, i) { return '<button type="button" class="walker pal" data-pal="' + id + '" aria-label="' + window.ppLook.name(id) + ', penpen’s friend" style="left:' + START[i][0] + '%;bottom:' + START[i][1] + '%;--d:' + (1 - START[i][1] / 160).toFixed(3) + '"><span class="pen' + (p.asleep ? ' zz' : '') + '"><svg viewBox="-7 -14 134 134" width="74" height="74" aria-hidden="true">' + window.ppLook.svg(id) + (p.asleep ? SHUT : '') + '</svg></span></button>'; }).join('') : '') +
-        '<div class="walker" id="pp-walk" style="left:50%;bottom:8%"><div class="pen' + (sick(p) ? ' sick' : p.asleep ? ' zz' : '') + '" id="pp-petpen">' +
-        '<svg viewBox="-7 -14 134 134" width="74" height="74" aria-hidden="true">' + inner() + face + '</svg>' + (wear.e ? '<span class="wear">' + wear.e + '</span>' : '') + (sick(p) ? '<span class="fx">🤒</span>' : p.asleep ? '<span class="fx">💤</span><span class="bed">🛏️</span>' : '') +
+        (window.ppLook ? PALS.map(function (id, i) { return '<button type="button" class="walker pal" data-pal="' + id + '" aria-label="' + window.ppLook.name(id) + ', penpen’s friend" style="left:' + START[i][0] + '%;bottom:' + START[i][1] + '%;--d:' + (1 - START[i][1] / 160).toFixed(3) + '"><span class="pen' + (p.asleep ? ' zz' : '') + '">' + views(window.ppLook.svg(id) + faceBits(51, 69, 49, 6) + (p.asleep ? SHUT : ''), window.ppLook.side(id)) + '</span></button>'; }).join('') : '') +
+        '<div class="walker' + (sad(p) ? ' sad' : '') + '" id="pp-walk" style="left:50%;bottom:8%"><div class="pen' + (sick(p) ? ' sick' : p.asleep ? ' zz' : '') + '" id="pp-petpen">' +
+        views(flippers(inner()) + faceBits(48.5, 71.5, 50, 8) + face, penSide(inner())) + (wear.e ? '<span class="wear">' + wear.e + '</span>' : '') + (sick(p) ? '<span class="fx">🤒</span>' : p.asleep ? '<span class="fx">💤</span><span class="bed">🛏️</span>' : '') +
         '</div></div><div class="say" id="pp-say">' + (msg || mood(p)) + '</div>' +
         (p.asleep ? '<button data-act="wake" class="zbtn">☀️ Wake</button>' : '') +
         // food: just the pictures with a small count; drag one to penpen, or tap it
@@ -358,7 +386,7 @@
   }
   function say(t) { var s = document.getElementById('pp-say'); GD.said = now(); GD.line = ''; if (s) s.textContent = t; }
   function setCoins(p) { var c = document.getElementById('pp-coins'); if (c) c.textContent = p.coins; }
-  function hop(el) { if (el && el.animate) el.animate([{ transform: 'translateY(0)' }, { transform: 'translateY(-16px) scale(1.04)' }, { transform: 'translateY(0)' }], { duration: 420, easing: 'ease-out' }); }
+  function hop(el) { cheer(el && el.closest && el.closest('.walker')); if (el && el.animate) el.animate([{ transform: 'translateY(0)' }, { transform: 'translateY(-16px) scale(1.04)' }, { transform: 'translateY(0)' }], { duration: 420, easing: 'ease-out' }); }
   function hearts(x, y, n, ch) {
     for (var i = 0; i < (n || 1); i++) {
       var hrt = document.createElement('span'); hrt.className = 'pp-heart'; hrt.textContent = ch || pick(['❤️', '💕', '💖', '💗']);
@@ -424,14 +452,14 @@
       var p = load(); freeze(3000);
       if (p.asleep) { say('Zzz… *happy snore* 💤'); return; }
       hearts(e.clientX, e.clientY - 20, n);
-      if (now() - last > 700) { last = now(); p.joy = clamp(p.joy + 3); p.xp += 1; save(p); say(pick(['Aww, love you too 💕', 'More belly rubs! 🥰', 'Best hooman ever 💛', 'Purr… wait, penguins don’t purr 🐧'])); refreshBats(p); }
+      if (now() - last > 700) { last = now(); cheer(document.getElementById('pp-walk')); p.joy = clamp(p.joy + 3); p.xp += 1; save(p); say(pick(['Aww, love you too 💕', 'More belly rubs! 🥰', 'Best hooman ever 💛', 'Purr… wait, penguins don’t purr 🐧'])); refreshBats(p); }
     }
     function tickle(e) {
       var p = load(); freeze(3000);
       if (p.asleep) { say('Zzz… *giggles in his sleep* 💤'); return; }
       hearts(e.clientX, e.clientY - 20, 1, pick(['😂', '🤣', '💕']));
       pen.classList.remove('tk'); void pen.offsetWidth; pen.classList.add('tk'); clearTimeout(pen.ppTk); pen.ppTk = setTimeout(function () { pen.classList.remove('tk'); }, 650);
-      if (now() - last > 700) { last = now(); p.joy = clamp(p.joy + 4); p.xp += 1; save(p); say(pick(['Hahaha stop it!! 🤣', 'Not the flippers! 😂', 'Hehehe… again! 🪶', 'I’m… so… ticklish 🤭'])); sfx('hi'); refreshBats(p); }
+      if (now() - last > 700) { last = now(); cheer(document.getElementById('pp-walk')); p.joy = clamp(p.joy + 4); p.xp += 1; save(p); say(pick(['Hahaha stop it!! 🤣', 'Not the flippers! 😂', 'Hehehe… again! 🪶', 'I’m… so… ticklish 🤭'])); sfx('hi'); refreshBats(p); }
     }
     // drag food onto penpen
     [].slice.call(w.querySelectorAll('[data-feed]')).forEach(function (b) {
@@ -451,7 +479,7 @@
       });
     });
   }
-  function refreshBats(p) { if (!w) return; var m = w.querySelector('.meters'), b = w.querySelector('#pp-sbats'); if (m) m.innerHTML = meters(p); if (b) b.innerHTML = bats4(p); }
+  function refreshBats(p) { if (!w) return; var me = document.getElementById('pp-walk'); if (me) me.classList.toggle('sad', sad(p)); var m = w.querySelector('.meters'), b = w.querySelector('#pp-sbats'); if (m) m.innerHTML = meters(p); if (b) b.innerHTML = bats4(p); }
   function click(e) {
     if (!w) return;
     var gm = w.querySelector('.gmenu[open]'), b = e.target.closest('button');
@@ -690,7 +718,17 @@
     '#pp-play .gbtn{border:0;border-radius:99px;background:rgba(255,255,255,.9);color:#13324A;padding:6px 10px;font:800 13px ' + F + ';cursor:pointer}' +
     '#pp-play .garden .say{position:absolute;left:50%;top:52px;transform:translateX(-50%);z-index:50;max-width:84%;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.1)}#pp-play .garden .zbtn{top:auto;bottom:10px;z-index:50}' +
     '#pp-play .walker{position:absolute;transform:translateX(-50%) scale(var(--d,1));transform-origin:50% 100%;transition-property:left,bottom,transform;transition-timing-function:linear;z-index:30}#pp-play .walker.pal{border:0;background:none;padding:0;cursor:pointer}#pp-play .walker.l svg{transform:scaleX(-1)}' +
-    '#pp-play .walker.walking .pen{animation:ppwd .32s ease-in-out infinite alternate}@keyframes ppwd{from{transform:rotate(-7deg)}to{transform:rotate(7deg) translateY(-3px)}}' +
+    '#pp-play .walker .sv{display:none}#pp-play .walker.walking .sv{display:inline}#pp-play .walker.walking .fv{display:none}' +
+    // a real-penguin waddle: rock side to side on the feet, with a little bob in the middle of each step
+    '#pp-play .walker.walking .pen{animation:ppwd .34s ease-in-out infinite alternate;transform-origin:50% 92%}@keyframes ppwd{0%{transform:rotate(-9deg)}50%{transform:translateY(-3px) rotate(0)}100%{transform:rotate(9deg)}}' +
+    '#pp-play .sv .f1{animation:ppstep .34s ease-in-out infinite alternate}#pp-play .sv .f2{animation:ppstep .34s ease-in-out infinite alternate-reverse}@keyframes ppstep{from{transform:translateX(-4px)}to{transform:translateX(4px)}}' +
+    '#pp-play .sv .fl{transform-box:fill-box;transform-origin:50% 8%;animation:ppswing .34s ease-in-out infinite alternate}@keyframes ppswing{from{transform:rotate(-6deg)}to{transform:rotate(30deg)}}' +
+    '#pp-play .lid{transform-box:fill-box;transform-origin:50% 0;transform:scaleY(0);animation:ppblink 4.3s infinite}#pp-play .walker:nth-child(odd) .lid{animation-duration:5.2s}#pp-play .walker:nth-child(3n) .lid{animation-duration:3.7s}@keyframes ppblink{0%,94%,100%{transform:scaleY(0)}97%{transform:scaleY(1)}}' +
+    '#pp-play .brow,#pp-play .mouth{display:none}#pp-play .walker.sad .brow{display:inline}#pp-play .walker.sad .lid{animation:none;transform:scaleY(.42)}' +
+    '#pp-play .walker.yay .mouth,#pp-play .walker.dance .mouth,#pp-play .pen.eat .mouth{display:inline}#pp-play .pen.eat .mouth{transform-box:fill-box;transform-origin:50% 0;animation:ppchomp .2s infinite alternate}@keyframes ppchomp{to{transform:scaleY(.3)}}' +
+    '#pp-play .fl-l,#pp-play .fl-r{transform-box:fill-box;transform-origin:50% 10%}#pp-play .walker.yay .fl-l,#pp-play .walker.dance .fl-l{animation:ppflapl .28s ease-in-out infinite alternate}#pp-play .walker.yay .fl-r,#pp-play .walker.dance .fl-r{animation:ppflapr .28s ease-in-out infinite alternate}@keyframes ppflapl{to{transform:rotate(28deg)}}@keyframes ppflapr{to{transform:rotate(-28deg)}}' +
+    '#pp-play .pen.zz .lid{animation:none}#pp-play .pen.zz .brow,#pp-play .pen.zz .mouth{display:none}' +
+    '@media(prefers-reduced-motion:reduce){#pp-play .lid,#pp-play .fl-l,#pp-play .fl-r,#pp-play .sv *,#pp-play .mouth{animation:none!important}}' +
     '#pp-play .joy{display:none}#pp-play .walker .pen.eat{animation:ppchew .2s ease-in-out 6 alternate}#pp-play .pen.eat .joy{display:inline}#pp-play .pen.eat .pp-eyes,#pp-play .pen.eat .shut{display:none}@keyframes ppchew{to{transform:scale(1.07,.9)}}' +
     '#pp-play .garden .bed{font-size:52px}' +
     '#pp-play .walker.dance .pen{animation:ppdance .45s ease-in-out infinite alternate}@keyframes ppdance{from{transform:rotate(-12deg) translateY(0)}to{transform:rotate(12deg) translateY(-12px)}}' +

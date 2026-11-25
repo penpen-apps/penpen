@@ -75,9 +75,9 @@
       '<path d="M52 100 Q60 112 68 100 Z" fill="' + b + '" stroke="#000" stroke-opacity=".15"/>' +
       (hairC ? '<path d="M36 40 Q38 18 60 17 Q82 18 84 40 Q72 46 60 46 Q48 46 36 40 Z" fill="' + hairC + '"/>' : '');
   }
-  // side view, for walking
-  function side(id, fallback) {
-    var g = G[id] || {}, b = g.body || fallback || '#1E2B4A', h = [];
+  // side view, for walking; hairC: hair colour for a penguin whose look isn't in G (your own penpen)
+  function side(id, fallback, hairC) {
+    var g = G[id] || {}, b = g.body || fallback || '#1E2B4A', hc = g.hairC || hairC, h = [];
     h.push('<ellipse cx="60" cy="112" rx="26" ry="4" fill="' + INK + '" opacity=".12"/>');
     h.push('<g class="ft"><ellipse class="f1" cx="56" cy="107" rx="12" ry="4.5" fill="' + BEAK + '"/><ellipse class="f2" cx="68" cy="107" rx="12" ry="4.5" fill="' + BEAK + '"/></g>');
     h.push('<path d="M34 98 L22 106 L38 104 Z" fill="' + b + '"/>');
@@ -94,7 +94,7 @@
     h.push('<ellipse cx="72" cy="56" rx="4.5" ry="2.8" fill="#F7A3A0"/>');
     h.push('<path d="M83 50 Q98 53 83 58 Z" fill="' + BEAK + '"/>');
     if (g.mustache) h.push('<path d="M80 59 Q74 57 70 60 Q75 63 80 61 Z" fill="' + g.mustache + '"/>');
-    if (g.hair || g.hairC) h.push('<path d="M32 40 Q34 18 58 17 Q80 18 84 38 Q72 30 58 32 Q44 32 32 40 Z" fill="' + (g.hair === 'bow' ? b : (g.hairC || INK)) + '"/>' + (g.hair === 'bow' ? '<path d="M50 22 L60 16 L60 28 Z M50 22 L40 16 L40 28 Z" fill="#F28AA5"/>' : g.hair === 'bun' ? '<circle cx="44" cy="18" r="8" fill="' + g.hairC + '"/>' : ''));
+    if (g.hair || hc) h.push('<path d="M32 40 Q34 18 58 17 Q80 18 84 38 Q72 30 58 32 Q44 32 32 40 Z" fill="' + (g.hair === 'bow' ? b : (hc || INK)) + '"/>' + (g.hair === 'bow' ? '<path d="M50 22 L60 16 L60 28 Z M50 22 L40 16 L40 28 Z" fill="#F28AA5"/>' : g.hair === 'bun' ? '<circle cx="44" cy="18" r="8" fill="' + g.hairC + '"/>' : ''));
     if (g.cap) h.push('<path d="M34 36 Q36 18 58 17 Q80 18 82 36 Z" fill="' + g.cap + '"/><path d="M78 34 H96 V38 H78 Z" fill="#1E2B4A"/>');
     if (g.detective) h.push('<path d="M32 37 Q58 8 84 37 Z" fill="#8B6B4A"/><path d="M30 36 Q58 30 92 36 Q58 42 30 36 Z" fill="#6E5236"/>');
     if (g.phones) h.push('<path d="M40 30 Q56 10 74 26" fill="none" stroke="' + INK + '" stroke-width="4"/><rect x="50" y="30" width="12" height="17" rx="5" fill="#E46F5A"/>');
