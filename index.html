@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#237566">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="penpen">
@@ -25,6 +25,10 @@
 @media (prefers-color-scheme:dark){:root{--bg:#0B1E2D;--card:#13293B;--ink:#EAF4F7;--muted:#A7BCC9;--line:#21405A;--accent:#11606B;--accentText:#5FD8E2;--accentInk:#FFFFFF;--accentSoft:#123C48;--sun:#FFC93C;--sunInk:#3A2700;--chip:#1A3348;--leaf:#5BD39A;--warn:#FFB25C;--warnSoft:#3A2812;--danger:#FF8A80}}
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:Nunito,system-ui,sans-serif;font-weight:500;-webkit-text-size-adjust:100%}
+/* pinch-zoom is allowed (accessibility); this only stops double-tap from zooming when tapping buttons fast */
+html{touch-action:manipulation}
+/* iPhone zooms into any text box under 16px when you tap it; keep boxes at 16px there so the page doesn't jump */
+@supports (-webkit-touch-callout:none){input,select,textarea{font-size:max(16px,1em)!important}}
 button,input,select,textarea{font-family:inherit;font-size:16px;color:inherit}
 button{cursor:pointer}
 .app{max-width:520px;margin:0 auto;height:100vh;height:100dvh;display:flex;flex-direction:column;overflow:hidden}
