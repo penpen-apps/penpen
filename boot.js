@@ -195,7 +195,7 @@
       var m = document.getElementById('pp-gate-msg'), b = document.createElement('b');
       b.textContent = (TOKEN && TOKEN.email) || 'this Google account';   // text, not HTML
       m.textContent = 'You\u2019re signed in as '; m.appendChild(b); m.appendChild(document.createTextNode(', but you\u2019re not on a penpen trip yet.'));
-      document.getElementById('pp-gate-sub').textContent = 'Ask the trip creator to add this email in Crew, or to send you an invite link.';
+      document.getElementById('pp-gate-sub').textContent = 'Ask the trip creator to add this email in Travel buddies, or to send you an invite link.';
       newcomer(true); document.getElementById('pp-what').hidden = true; document.getElementById('pp-ask-how').hidden = true;   // they know what penpen is; the line above says how
       document.getElementById('pp-gbtn').innerHTML = '<button id="pp-switch">Use a different Google account</button>';
       document.getElementById('pp-switch').onclick = window.ppSignOut;
