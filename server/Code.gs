@@ -124,7 +124,6 @@ function ppNewTrip_(user, a) {
    Returns false when the list is already full (MAXP people). */
 function ppAddPerson_(ss, name, email) {
   var d = ss.getSheetByName(DET); if (!d || !email) return false;
-  name = ppCellText_(name);
   var rows = d.getRange(D_FIRST, 2, MAXP, 4).getValues(), lo = String(email).toLowerCase(), free = -1;
   for (var i = 0; i < rows.length; i++) {
     if (String(rows[i][3]).toLowerCase() === lo) return true;
@@ -132,7 +131,7 @@ function ppAddPerson_(ss, name, email) {
     if (free < 0 && !rows[i][0]) free = i;
   }
   if (free < 0) return false;
-  d.getRange(D_FIRST + free, 2).setValue(name); d.getRange(D_FIRST + free, 5).setValue(email);
+  d.getRange(D_FIRST + free, 2).setValue(ppCellText_(name)); d.getRange(D_FIRST + free, 5).setValue(email);
   return true;
 }
 /* Text typed by people goes into the sheet as plain text: a leading = + - @ would otherwise run as a formula. */
@@ -143,7 +142,7 @@ function ppAddMember_(me, a) {
   var name = String(a.name || '').replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, 40);
   var email = String(a.email || '').trim().toLowerCase(), role = String(a.role || '');
   if (!name) throw new Error('badname');
-  if (email.length > 254 || !/^[^\s@<>()\[\]\\,;:"']+@[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(email)) throw new Error('bademail');
+  if (email.length > 254 || !/^[a-z0-9_][^\s@<>()\[\]\\,;:"']*@[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(email)) throw new Error('bademail');
   if (role !== 'crew' && role !== 'viewer') throw new Error('badrole');
   var lock = LockService.getScriptLock(); lock.waitLock(20000);
   try {

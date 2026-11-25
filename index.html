@@ -1353,7 +1353,10 @@ th .pp-qt{position:absolute;right:0;top:100%;width:210px;z-index:5;box-shadow:0 
     h += '<div class="card pp-list">' + ps.map(function (p, i) { return '<button type="button" class="pp-li" data-who="' + i + '" aria-expanded="' + (CREW_SEL === i) + '">' + avatar(p.avatar, 48, 'face') + '<span><b>' + esc(p.name) + (p.isMe ? ' \u00b7 you' : '') + '</b><small>' + esc(subLine(p.role, p.job) || (p.saved ? 'Traveler' : 'Hasn\u2019t made a penguin yet')) + '</small></span></button>'; }).join('') + '</div>';
     if (CREW_SEL > -1 && ps[CREW_SEL]) h += profileCard(ps[CREW_SEL]);
     h += inviteCard() + addCard();
+    var f0 = $('pp-add'), keep = f0 && f0.elements && f0.elements.email ? { name: f0.elements.name.value, email: f0.elements.email.value, role: f0.elements.role.value, busy: f0.querySelector('[type=submit]').disabled } : null;
     box.innerHTML = h;
+    var f1 = keep && $('pp-add');   // a redraw mustn't wipe what the creator is typing
+    if (f1 && f1.elements.email) { f1.elements.name.value = keep.name; f1.elements.email.value = keep.email; f1.elements.role.value = keep.role; if (keep.busy) { var sb0 = f1.querySelector('[type=submit]'); sb0.disabled = true; sb0.textContent = 'Adding\u2026'; } }
     paintQR();
   }
   function profileCard(p) {
@@ -1652,7 +1655,7 @@ th .pp-qt{position:absolute;right:0;top:100%;width:210px;z-index:5;box-shadow:0 
       var who = esc(ADDED.added.name);
       return '<div class="card pp-add pp-added" id="pp-add"><div class="kick">ADD A FRIEND</div><div class="fred" role="status">' + who + ' is on the trip</div>'
         + '<p class="pp-sub">Send them the app link. They sign in with <b>' + esc(ADDED.added.email) + '</b> and they\u2019re in.</p>'
-        + (ADDED.full ? '<p class="pp-note">Who\u2019s coming is full (6 people), so ' + who + ' can use penpen but won\u2019t be in the cost split. Free a spot on the Trip Details tab if they should be.</p>' : '')
+        + (ADDED.full ? '<p class="pp-note">Who\u2019s coming is full, so ' + who + ' can use penpen but won\u2019t be in the cost split. Free a spot on the Trip Details tab if they should be.</p>' : '')
         + (ADDED.added.role === 'viewer' ? '<p class="pp-note">' + who + ' can look but not change anything, and isn\u2019t in the cost split.</p>' : '')
         + '<button type="button" class="btn p" data-addshare="1">Send them the app link</button><button type="button" class="btn" data-addmore="1">Add someone else</button></div>';
     }
@@ -1683,8 +1686,9 @@ th .pp-qt{position:absolute;right:0;top:100%;width:210px;z-index:5;box-shadow:0 
       ADDED = r; crewStale = true; loadCrew();
       setTimeout(function () { var c = $('pp-add'); if (c) { c.scrollIntoView({block: 'nearest', behavior: 'smooth'}); var sb = c.querySelector('[data-addshare]'); if (sb) sb.focus({preventScroll: true}); } }, 60);
     }, function (er) {
-      btn.disabled = false; btn.textContent = 'Add to trip';
-      msg.textContent = ADD_ERR[er.message] || (navigator.onLine ? 'Couldn\u2019t add them just now. Try again in a minute.' : 'You\u2019re offline. Adding a friend needs a connection.');
+      var f2 = $('pp-add'); btn = f2 && f2.querySelector('[type=submit]'); msg = $('pp-addmsg');
+      if (btn) { btn.disabled = false; btn.textContent = 'Add to trip'; }
+      if (msg) msg.textContent = ADD_ERR[er.message] || (navigator.onLine ? 'Couldn\u2019t add them just now. Try again in a minute.' : 'You\u2019re offline. Adding a friend needs a connection.');
     });
   });
   $('crew').addEventListener('click', function (e) {
@@ -1692,9 +1696,9 @@ th .pp-qt{position:absolute;right:0;top:100%;width:210px;z-index:5;box-shadow:0 
     if (b.dataset.addmore) { ADDED = null; renderCrew(); var n = $('pp-add-name'); if (n) n.focus(); return; }
     var url = window.ppTrips.appLink(), text = 'I added you to our trip on penpen. Open this and sign in with Google (' + ADDED.added.email + '):';
     var copied = function () { b.textContent = 'Link copied. Paste it in a text'; setTimeout(function () { b.textContent = 'Send them the app link'; }, 3000); };
-    if (navigator.share) navigator.share({ title: 'penpen', text: text, url: url }).catch(function () {});
-    else if (navigator.clipboard) navigator.clipboard.writeText(text + ' ' + url).then(copied, function () { b.textContent = url; });
-    else b.textContent = url;
+    var copy = function () { if (navigator.clipboard) navigator.clipboard.writeText(text + ' ' + url).then(copied, function () { b.textContent = url; }); else b.textContent = url; };
+    if (navigator.share) navigator.share({ title: 'penpen', text: text, url: url }).catch(function (er) { if (!er || er.name !== 'AbortError') copy(); });
+    else copy();
   });
   function paintQR() {
     var box = $('pp-qr'); if (!box || !PROFS || !PROFS.url) return;
