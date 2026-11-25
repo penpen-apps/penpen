@@ -51,7 +51,7 @@
     '#pp-me .pol .ph{height:110px;border-radius:3px;background:linear-gradient(160deg,var(--accentSoft),var(--chip));display:grid;place-items:center;overflow:hidden;margin-bottom:8px}' +
     '#pp-me .pol .cr{display:flex;align-items:flex-end;justify-content:center}#pp-me .pol .cr svg{width:54px;height:54px;margin:0 -6px}#pp-me .pol .big{font-size:40px}' +
     '#pp-me .pol b{display:block;font:800 14px ' + F + '}#pp-me .pol small{display:block;color:#4F6475;font-size:12px;margin-top:2px}#pp-me .pol.here .ph{box-shadow:inset 0 0 0 3px var(--accent)}#pp-me .pol.add{background:var(--card);color:var(--ink)}' +
-    '#pp-me .stats.one{grid-template-columns:repeat(3,1fr);gap:0;background:var(--card);border-radius:20px;overflow:hidden}#pp-me .stats.one > div{border-radius:0;border-left:1px solid var(--line);background:none;padding:16px 6px}#pp-me .stats.one > div:first-child{border-left:0}' +
+    '#pp-me .stats.one{grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:1fr;gap:0;background:var(--card);border-radius:20px;overflow:hidden}#pp-me .stats.one > div{border-radius:0;border-left:1px solid var(--line);background:none;padding:16px 6px}#pp-me .stats.one > div:first-child{border-left:0}' +
     '#pp-me .rows details.howto{border-top:1px solid var(--line);padding:0 16px}#pp-me .rows details.howto summary{display:flex;align-items:center;gap:12px;padding:15px 0;cursor:pointer;list-style:none;font:16px ' + F + '}#pp-me .rows details.howto summary::-webkit-details-marker{display:none}#pp-me details.howto[open] .chev{transform:rotate(180deg)}#pp-me .rows details.howto .hw{padding-bottom:12px}#pp-me .rows > button small{display:block;color:var(--muted);font-size:13px}' +
     '#pp-me .who{color:var(--muted);font-size:14px;text-align:center;margin:16px 0 4px}' +
     /* the profile card on Crew: flight, guide, scene and appearance now live elsewhere */
@@ -181,6 +181,13 @@
     days.forEach(function (d) { (d.stops || []).forEach(function (st) { var c = String(st.place || '').split(',').pop().trim(); if (c && !/airport|terminal/i.test(c)) places[c] = 1; }); });
     return { start: days.length ? isoD(days[0].day) : null, end: days.length ? isoD(days[days.length - 1].day) : null, places: Object.keys(places) };
   }
+  // "now" while a trip is on, "in 46 days" before it starts, nothing after it
+  function when(t) {
+    if (!t.s) return '';
+    var d = new Date(), today = new Date(d.getFullYear(), d.getMonth(), d.getDate()), n = Math.round((t.s - today) / 864e5);
+    if (n > 0) return ' · ' + new Intl.RelativeTimeFormat('en', { numeric: 'auto' }).format(n, 'day');
+    return today <= (t.e || t.s) ? ' · now' : '';
+  }
   // My profile: a little travel album
   function summary() {
     var T = cache('penpenToday') || {}, f = tripFacts(), yr = new Date().getFullYear();
@@ -188,24 +195,25 @@
     var cur = localStorage.getItem('pp_trip_id') || '';
     if (!list.length) list = [{ id: cur, name: localStorage.getItem('pp_trip_name') || (T.hello && T.hello.trip) || 'This trip' }];
     var trips = list.map(function (t) {
-      var here = (t.id || '') === cur, s = here && f.start ? f.start : isoD(t.start), e = here && f.end ? f.end : isoD(t.end);
+      var here = (t.id || '') === cur, s = isoD(t.start) || (here ? f.start : null), e = isoD(t.end) || (here ? f.end : null);
       return { id: t.id || '', name: t.name, s: s, e: e, here: here, where: t.where || '' };
     });
-    var thisYear = trips.filter(function (t) { return !t.s || t.s.getFullYear() === yr; });
+    var open = trips.filter(function (t) { return t.here && t.s; })[0]; if (open) yr = open.s.getFullYear();
+    var thisYear = trips.filter(function (t) { return t.s ? t.s.getFullYear() === yr : t.here; });   // a trip with no dates yet only counts if it's the open one
     var days = thisYear.reduce(function (n, t) { return n + (t.s && t.e ? Math.round((t.e - t.s) / 864e5) + 1 : 0); }, 0);
     var places = {}; f.places.forEach(function (p) { places[p] = 1; }); trips.forEach(function (t) { if (!t.here && t.where) t.where.split(/[-–,·]/).forEach(function (p) { if (p.trim()) places[p.trim()] = 1; }); });
     var mine = T.budget && T.budget.mine ? Math.round(T.budget.mine.spent || 0) : 0;
     var X = null; try { X = JSON.parse(localStorage.getItem('pp_trip') || 'null'); } catch (e) {}
-    var nExp = X && X.tabs && X.tabs.Expenses ? X.tabs.Expenses.rows.slice(1).filter(function (r) { return r[1]; }).length : 0;
+    var nExp = X && X.tabs && X.tabs.Expenses ? X.tabs.Expenses.rows.slice(1).filter(function (r) { return r[1]; }).length : null;
     var whos = [].slice.call(document.querySelectorAll('#pp-scene .pp-who:not(.pp-me)'));
     var buddies = whos.map(function (w) { var sv = w.querySelector('svg'), nm = (w.textContent || '').trim(); return sv ? '<div class="bd">' + sv.outerHTML + '<b>' + esc(nm) + '</b><small>1 trip together</small></div>' : ''; }).join('');
     var crew = whos.concat([document.querySelector('#pp-scene .pp-me')]).filter(Boolean).map(function (w) { var sv = w.querySelector('svg'); return sv ? sv.outerHTML : ''; }).join('');
-    var stat = function (n, l) { return '<div><b>' + n + '</b><span>' + l + '</span></div>'; };
+    var stat = function (n, l) { return n == null ? '' : '<div><b>' + n + '</b><span>' + l + '</span></div>'; };
     return '<h3>' + yr + ' in travel</h3><div class="stats one">' + stat(thisYear.length, thisYear.length === 1 ? 'Trip' : 'Trips') + stat(Object.keys(places).length, Object.keys(places).length === 1 ? 'Place' : 'Places') + stat(nExp, 'Expenses') + '</div>' +
       (buddies ? '<h3>Crew</h3><div class="buds">' + buddies + '</div>' : '') +
       '<h3>My trips</h3><div class="album">' + trips.map(function (t) {
         return '<button type="button" class="pol' + (t.here ? ' here' : '') + '" data-trip="' + esc(t.id) + '" data-name="' + esc(t.name) + '"><div class="ph">' + (t.here && crew ? '<div class="cr">' + crew + '</div>' : '<span class="big">🧳</span>') + '</div>' +
-          '<b>' + esc(t.name) + '</b><small>' + (t.s ? fmtD(t.s) + (t.e ? ' – ' + fmtD(t.e) : '') + ', ' + t.s.getFullYear() : (t.where || '')) + (t.here ? ' · now' : '') + '</small></button>';
+          '<b>' + esc(t.name) + '</b><small>' + (t.s ? fmtD(t.s) + (t.e ? ' – ' + fmtD(t.e) : '') + ', ' + t.s.getFullYear() : (t.where || '')) + when(t) + '</small></button>';
       }).join('') + '<button type="button" class="pol add" data-a="newtrip"><div class="ph"><span class="big">＋</span></div><b>New trip</b><small>start planning</small></button></div>';
   }
   function openMe(mode) {
