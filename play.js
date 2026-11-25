@@ -111,44 +111,111 @@
   var SHUT = '<path class="shut" d="M45 49 Q51 54 57 49 M63 49 Q69 54 75 49" fill="none" stroke="#1F2A36" stroke-width="3" stroke-linecap="round"/>';
   var JOY = '<path class="joy" d="M45 51 Q51 44 57 51 M63 51 Q69 44 75 51" fill="none" stroke="#1F2A36" stroke-width="3.2" stroke-linecap="round"/>';
   function gardenArt() {
-    var fl = [[24, 204, '#F28AA5'], [62, 226, '#FFFFFF'], [150, 214, '#F4A62A'], [200, 230, '#B7A2F0'], [340, 212, '#F28AA5'], [122, 156, '#FFFFFF'], [214, 160, '#F28AA5'], [330, 172, '#F4A62A']].map(function (f) {
+    var fl = [[24, 250, '#F28AA5'], [62, 272, '#FFFFFF'], [150, 258, '#F4A62A'], [200, 276, '#B7A2F0'], [340, 254, '#F28AA5'], [122, 204, '#FFFFFF'], [214, 208, '#F28AA5'], [330, 220, '#F4A62A'],
+      [40, 340, '#B7A2F0'], [104, 372, '#F4A62A'], [182, 350, '#FFFFFF'], [268, 380, '#F28AA5'], [326, 344, '#FFFFFF'], [86, 412, '#F28AA5'], [236, 418, '#B7A2F0'], [300, 404, '#F4A62A']].map(function (f) {
       return '<g><path d="M' + f[0] + ' ' + (f[1] + 4) + ' v10" stroke="#4E9A48" stroke-width="2"/><circle cx="' + f[0] + '" cy="' + f[1] + '" r="5" fill="' + f[2] + '"/><circle cx="' + f[0] + '" cy="' + f[1] + '" r="2" fill="#F4C542"/></g>';
     }).join('');
-    return '<svg class="gart" viewBox="0 0 360 240" preserveAspectRatio="xMidYMid slice" aria-hidden="true">' +
-      '<rect width="360" height="240" fill="#CDEBFA"/><circle cx="306" cy="38" r="17" fill="#FFE58A"/>' +
-      '<ellipse cx="70" cy="44" rx="30" ry="9" fill="#fff" opacity=".85"/><ellipse cx="200" cy="30" rx="22" ry="7" fill="#fff" opacity=".7"/>' +
-      '<path d="M0 112 Q90 88 180 108 T360 100 V240 H0Z" fill="#A6DA92"/><path d="M0 140 Q120 120 220 138 T360 130 V240 H0Z" fill="#86C977"/>' +
-      '<ellipse cx="282" cy="150" rx="54" ry="13" fill="#7FC8E8"/><ellipse cx="270" cy="147" rx="24" ry="4" fill="#BFE6F5" opacity=".75"/>' +
-      '<path d="M22 132 A36 36 0 0 1 94 132 Z" fill="#F4FAFF" stroke="#C9DCEA" stroke-width="2"/><path d="M50 132 A8 11 0 0 1 66 132Z" fill="#5B7A99"/><path d="M30 120 H86 M40 108 H76" stroke="#C9DCEA" stroke-width="2"/>' +
+    return '<svg class="gart" viewBox="0 0 360 440" preserveAspectRatio="xMidYMax slice" aria-hidden="true">' +
+      '<rect width="360" height="440" fill="#CDEBFA"/><circle cx="306" cy="66" r="17" fill="#FFE58A"/>' +
+      '<ellipse cx="70" cy="74" rx="30" ry="9" fill="#fff" opacity=".85"/><ellipse cx="200" cy="56" rx="22" ry="7" fill="#fff" opacity=".7"/>' +
+      '<path d="M0 156 Q90 132 180 152 T360 144 V440 H0Z" fill="#A6DA92"/><path d="M0 184 Q120 164 220 182 T360 174 V440 H0Z" fill="#86C977"/><path d="M0 300 Q140 284 250 298 T360 292 V440 H0Z" fill="#7BBF6C"/>' +
+      '<ellipse cx="282" cy="194" rx="54" ry="13" fill="#7FC8E8"/><ellipse cx="270" cy="191" rx="24" ry="4" fill="#BFE6F5" opacity=".75"/>' +
+      '<path d="M22 176 A36 36 0 0 1 94 176 Z" fill="#F4FAFF" stroke="#C9DCEA" stroke-width="2"/><path d="M50 176 A8 11 0 0 1 66 176Z" fill="#5B7A99"/><path d="M30 164 H86 M40 152 H76" stroke="#C9DCEA" stroke-width="2"/>' +
       fl + '</svg>';
   }
-  var GD = { t: {}, hold: 0 };
+  var GD = { t: {}, hold: 0, s: [] }, Y = 37;   // Y: how far back (in % of the garden) the penguins can walk
   function still() { return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); }
   function later(el, key, ms) { clearTimeout(GD.t[key]); GD.t[key] = setTimeout(function () { stroll(el, key); }, ms); }
-  // walk to a random spot, then rest a bit
+  // walk el to x% across, y% up; returns the seconds it takes (pace: % per second)
+  function go(el, x, y, pace) {
+    var x0 = parseFloat(el.style.left) || 50, secs = Math.max(pace ? 0.5 : 1.2, Math.abs(x - x0) / (pace || 14));
+    el.style.transitionDuration = secs + 's'; if (x !== x0) el.classList.toggle('l', x < x0); el.classList.add('go');
+    el.style.left = x + '%'; el.style.bottom = y + '%'; el.style.zIndex = String(40 - Math.round(y));
+    clearTimeout(el.ppStop); el.ppStop = setTimeout(function () { el.classList.remove('go'); }, secs * 1000);
+    return secs;
+  }
+  // walk to a random spot, then rest a bit (unless he's busy playing)
   function stroll(el, key) {
     if (!el.isConnected) return;
-    if (key === 'me' && GD.hold > now()) return later(el, key, 1200);
-    var x0 = parseFloat(el.style.left) || 50, x = 10 + Math.random() * 80, y = 3 + Math.random() * 24, secs = Math.max(1.2, Math.abs(x - x0) / 14);
-    el.style.transitionDuration = secs + 's'; el.classList.toggle('l', x < x0); el.classList.add('go');
-    el.style.left = x + '%'; el.style.bottom = y + '%'; el.style.zIndex = String(40 - Math.round(y));
-    clearTimeout(GD.t['g' + key]); GD.t['g' + key] = setTimeout(function () { el.classList.remove('go'); }, secs * 1000);
-    later(el, key, secs * 1000 + 1500 + Math.random() * 3500);
+    if ((key === 'me' && GD.hold > now()) || el.ppBusy) return later(el, key, 1200);
+    later(el, key, go(el, 10 + Math.random() * 80, 3 + Math.random() * Y) * 1000 + 1500 + Math.random() * 3500);
   }
   // stop penpen where he is (while you drag food or rub his belly)
   function freeze(ms) {
-    var el = document.getElementById('pp-walk'), g = document.getElementById('pp-garden'); GD.hold = now() + ms;
+    var el = document.getElementById('pp-walk'), g = document.getElementById('pp-garden'); GD.hold = now() + ms; endPlay();
     if (!el || !g || !el.classList.contains('go')) return;
     var r = el.getBoundingClientRect(), b = g.getBoundingClientRect();
     if (b.width) { el.style.transitionDuration = '0s'; el.style.left = ((r.left + r.width / 2 - b.left) / b.width * 100) + '%'; el.style.bottom = ((b.bottom - r.bottom) / b.height * 100) + '%'; }
     el.classList.remove('go');
   }
+
+  /* ---------- penpen plays with his friends: meet and high-five, tag, dance, catch ---------- */
+  function step(ms, f) { GD.s.push(setTimeout(f, ms)); }
+  function pos(el) { return [parseFloat(el.style.left) || 50, parseFloat(el.style.bottom) || 8]; }
+  function face(a, b) { var r = pos(a)[0] < pos(b)[0]; a.classList.toggle('l', !r); b.classList.toggle('l', r); }
+  function pop(el, ch) { var r = el.getBoundingClientRect(); if (r.width) hearts(r.left + r.width / 2, r.top + r.height * 0.15, 1, ch); }
+  function endPlay() {
+    GD.s.forEach(clearTimeout); GD.s = [];
+    if (w) { [].slice.call(w.querySelectorAll('#pp-garden .walker')).forEach(function (el) { el.ppBusy = false; el.classList.remove('dance'); }); [].slice.call(w.querySelectorAll('#pp-garden .ball')).forEach(function (b) { b.remove(); }); }
+    if (GD.line) { var s = document.getElementById('pp-say'); if (s && s.textContent === GD.line) s.textContent = mood(load()); GD.line = ''; }
+  }
+  function tell(t) { var s = document.getElementById('pp-say'); if (s && now() - (GD.said || 0) > 6000) { s.textContent = t; GD.line = t; } }
+  function playSoon() { clearTimeout(GD.t.play); GD.t.play = setTimeout(playTime, 7000 + Math.random() * 7000); }
+  function playTime() {
+    var me = document.getElementById('pp-walk'), pals = w ? [].slice.call(w.querySelectorAll('#pp-garden .walker.pal')) : [];
+    if (!me || !me.isConnected) return;
+    if (load().asleep || still() || document.hidden || GD.hold > now() || !pals.length) return playSoon();
+    var f = pick(pals), nm = window.ppLook ? window.ppLook.name(f.dataset.pal) : 'his friend', who = [me].concat(pals), game = pick(['meet', 'tag', 'dance', 'ball']);
+    function done(ms) { step(ms, function () { endPlay(); playSoon(); }); }
+    (game === 'dance' ? who : [me, f]).forEach(function (el) { el.ppBusy = true; });
+    if (game === 'meet') {
+      var mx = 25 + Math.random() * 50, my = 4 + Math.random() * Y * 0.6;
+      var walk = Math.max(go(me, mx - 11, my), go(f, mx + 11, my)) * 1000;
+      step(walk + 100, function () {
+        face(me, f); hop(me.querySelector('.pen')); hop(f.querySelector('.pen')); pop(me, pick(['✋', '💛', '🤗'])); sfx('hi');
+        tell('penpen and ' + nm + ' ' + pick(['high-five! ✋', 'share a hug 🤗', 'are best buds 💛']));
+      });
+      return done(walk + 1800);
+    }
+    if (game === 'tag') {
+      tell(nm + ' is it! Tag! 🏃');
+      (function leg(n) {
+        var at = pos(f), nx = at[0] < 50 ? 60 + Math.random() * 30 : 10 + Math.random() * 30;
+        if (!n) { var t = go(me, at[0] + (pos(me)[0] < at[0] ? -9 : 9), at[1], 30); step(t * 1000 + 50, function () { face(me, f); hop(f.querySelector('.pen')); pop(f, '😆'); sfx('hi'); tell('Tagged! penpen got ' + nm + ' 😆'); }); return done(t * 1000 + 1600); }
+        step(Math.max(go(f, nx, 3 + Math.random() * Y, 32), go(me, at[0], at[1], 26)) * 1000 + 150, function () { leg(n - 1); });
+      })(2);
+      return;
+    }
+    if (game === 'dance') {
+      var dy = 6 + Math.random() * 10, arrive = 0;
+      who.forEach(function (el, i) { arrive = Math.max(arrive, go(el, [50, 28, 72][i] || 50, dy)); });
+      step(arrive * 1000 + 100, function () {
+        tell('Dance party! 🎶'); sfx('la');
+        who.forEach(function (el) { el.classList.add('dance'); });
+        [0, 900, 1800].forEach(function (ms) { step(ms, function () { pop(pick(who), pick(['🎵', '🎶', '✨'])); }); });
+      });
+      return done(arrive * 1000 + 3400);
+    }
+    // catch: toss a ball back and forth
+    var x1 = 18 + Math.random() * 12, x2 = 66 + Math.random() * 14, by = 4 + Math.random() * Y * 0.5, g = document.getElementById('pp-garden');
+    var reach = Math.max(go(me, x1, by), go(f, x2, by)) * 1000;
+    step(reach + 100, function () {
+      face(me, f); tell('penpen and ' + nm + ' play catch 🏐');
+      var ball = document.createElement('span'), i = document.createElement('i'); ball.className = 'ball'; i.textContent = '🏐'; ball.appendChild(i);
+      ball.style.left = (x1 + 6) + '%'; ball.style.bottom = (by + 9) + '%'; g.appendChild(ball);
+      [0, 1, 2, 3].forEach(function (k) {
+        step(k * 950 + 50, function () { ball.style.left = (k % 2 ? x1 + 6 : x2 - 6) + '%'; i.classList.remove('up'); void i.offsetWidth; i.classList.add('up'); });
+        step(k * 950 + 850, function () { hop((k % 2 ? me : f).querySelector('.pen')); sfx('hi'); });
+      });
+    });
+    done(reach + 4200);
+  }
   function startGarden() {
     stopGarden();
-    if (!load().asleep && !still()) [].slice.call(w.querySelectorAll('#pp-garden .walker')).forEach(function (el, i) { later(el, el.id === 'pp-walk' ? 'me' : 'p' + i, 700 + i * 900); });
+    if (!load().asleep && !still()) { [].slice.call(w.querySelectorAll('#pp-garden .walker')).forEach(function (el, i) { later(el, el.id === 'pp-walk' ? 'me' : 'p' + i, 700 + i * 900); }); playSoon(); }
     music(true);
   }
-  function stopGarden() { Object.keys(GD.t).forEach(function (k) { clearTimeout(GD.t[k]); }); GD.t = {}; music(false); }
+  function stopGarden() { Object.keys(GD.t).forEach(function (k) { clearTimeout(GD.t[k]); }); GD.t = {}; endPlay(); music(false); }
 
   /* ---------- sounds and music, made in code (no files) ---------- */
   var AC = null, MU = null;
@@ -162,6 +229,7 @@
   function sfx(kind) {
     if (!soundOn()) return; var c = ac(); if (!c) return; var t = c.currentTime;
     if (kind === 'chomp') { [0, 0.17, 0.34].forEach(function (d) { tone(c, 230, 110, t + d, 0.09, 0.22, 'triangle'); }); tone(c, 880, 1320, t + 0.58, 0.16, 0.1); tone(c, 1175, 1760, t + 0.76, 0.2, 0.09); }
+    else if (kind === 'la') [784, 988, 1175].forEach(function (f, i) { tone(c, f, 0, t + i * 0.22, 0.25, 0.09); });
     else tone(c, 660, 990, t, 0.15, 0.08);
   }
   var NOTES = [523.25, 587.33, 659.25, 783.99, 880, 1046.5], PADS = [[130.81, 196, 329.63], [110, 164.81, 261.63], [174.61, 220, 349.23], [146.83, 220, 293.66]];
@@ -270,7 +338,7 @@
     w.appendChild(d); d.addEventListener('close', function () { d.remove(); });
     if (d.showModal) d.showModal(); else d.setAttribute('open', '');
   }
-  function say(t) { var s = document.getElementById('pp-say'); if (s) s.textContent = t; }
+  function say(t) { var s = document.getElementById('pp-say'); GD.said = now(); GD.line = ''; if (s) s.textContent = t; }
   function setCoins(p) { var c = document.getElementById('pp-coins'); if (c) c.textContent = p.coins; }
   function hop(el) { if (el && el.animate) el.animate([{ transform: 'translateY(0)' }, { transform: 'translateY(-16px) scale(1.04)' }, { transform: 'translateY(0)' }], { duration: 420, easing: 'ease-out' }); }
   function hearts(x, y, n, ch) {
@@ -581,7 +649,7 @@
     '#pp-play .zz .pp-eyes{display:none}#pp-play .gym .stage{min-height:200px}#pp-play .beat{height:70px;display:grid;place-items:center}#pp-play .beat i{display:block;width:60px;height:60px;border-radius:50%;background:#9AA7B4;opacity:.85}' +
     '#pp-play .qcard{background:var(--card);border-radius:22px;padding:18px;text-align:center}#pp-play .qq{font:900 19px/1.3 ' + F + ';margin:6px 0 14px}' +
     '#pp-play .qa{display:block;width:100%;margin:8px 0;border:1.5px solid var(--line);background:var(--bg);color:var(--ink);border-radius:14px;padding:13px;font:800 15px ' + F + ';cursor:pointer}#pp-play .qa.ok{background:#DFF3E6;border-color:#3FAF6B}#pp-play .qa.no{background:#FBE1DE;border-color:#D9534F}' +
-    '#pp-play .garden{position:relative;height:320px;border-radius:24px;overflow:hidden;background:#CDEBFA}#pp-play .gart{position:absolute;inset:0;width:100%;height:100%;transition:filter .4s}#pp-play .garden.night .gart{filter:brightness(.5) saturate(.6)}' +
+    '#pp-play .garden{position:relative;aspect-ratio:9/11;min-height:340px;max-height:500px;border-radius:24px;overflow:hidden;background:#CDEBFA}#pp-play .gart{position:absolute;inset:0;width:100%;height:100%;transition:filter .4s}#pp-play .garden.night .gart{filter:brightness(.5) saturate(.6)}' +
     '#pp-play .gtop{position:absolute;left:10px;right:10px;top:10px;display:flex;gap:6px;align-items:center;z-index:50}#pp-play .meters{flex:1;display:flex;gap:6px}' +
     '#pp-play .mtr{flex:1;max-width:120px;border:0;background:rgba(255,255,255,.88);border-radius:99px;padding:5px 8px;display:flex;align-items:center;gap:5px;cursor:pointer}#pp-play .mtr b{font-size:14px}#pp-play .mtr i{flex:1;height:8px;border-radius:9px;background:#DDE6EE;overflow:hidden}#pp-play .mtr u{display:block;height:100%;border-radius:9px;transition:width .4s}' +
     '#pp-play .gbtn{border:0;border-radius:99px;background:rgba(255,255,255,.9);color:#13324A;padding:6px 10px;font:800 13px ' + F + ';cursor:pointer}' +
@@ -590,6 +658,8 @@
     '#pp-play .walker.go .pen{animation:ppwd .32s ease-in-out infinite alternate}@keyframes ppwd{from{transform:rotate(-7deg)}to{transform:rotate(7deg) translateY(-3px)}}' +
     '#pp-play .joy{display:none}#pp-play .walker .pen.eat{animation:ppchew .2s ease-in-out 6 alternate}#pp-play .pen.eat .joy{display:inline}#pp-play .pen.eat .pp-eyes,#pp-play .pen.eat .shut{display:none}@keyframes ppchew{to{transform:scale(1.07,.9)}}' +
     '#pp-play .garden .bed{font-size:52px}' +
+    '#pp-play .walker.dance .pen{animation:ppdance .45s ease-in-out infinite alternate}@keyframes ppdance{from{transform:rotate(-12deg) translateY(0)}to{transform:rotate(12deg) translateY(-12px)}}' +
+    '#pp-play .ball{position:absolute;transform:translateX(-50%);transition:left .8s linear;z-index:45;font-size:24px;pointer-events:none}#pp-play .ball i{display:block;font-style:normal}#pp-play .ball i.up{animation:pparc .8s ease-in-out}@keyframes pparc{50%{transform:translateY(-56px) rotate(180deg)}}' +
     '.pp-stats{border:0;border-radius:24px;padding:16px;width:min(92vw,420px);background:var(--card,#fff);color:var(--ink,#13324A);font-family:' + F + ';box-shadow:0 12px 40px rgba(0,0,0,.25)}.pp-stats:not([open]){display:none}.pp-stats[open]:not(:modal){position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:99980;margin:0}.pp-stats::backdrop{background:rgba(10,20,30,.45)}' +
     '.pp-stats .st-top{display:flex;justify-content:space-between;align-items:center;font-size:18px;margin-bottom:12px}.pp-stats .st-top button{border:0;background:none;font-size:20px;color:inherit;cursor:pointer}' +
     '#pp-play .pp-stats .bats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;width:auto}.pp-stats .st-tip{color:var(--muted,#7A8B99);font-size:13.5px;font-weight:700;text-align:center;margin:10px 0}' +
