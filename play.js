@@ -109,6 +109,19 @@
   function esc(t) { return String(t).replace(/[&<>"']/g, function (c) { return '&#' + c.charCodeAt(0) + ';'; }); }
   function nameOf(p) { return p.name || 'penpen'; }
 
+  /* ---------- his stats: Swim, Run, Power, Stamina, Charm (0 to 99). Each grows from sea glass won in its game ---------- */
+  var STATS = [['swim', '🌊', 'Swim', '#3B8FD9', 'Dive'], ['run', '👟', 'Run', '#3FAF6B', 'Chase'], ['power', '💪', 'Power', '#D9534F', 'Honk!'], ['stamina', '🔋', 'Stamina', '#E39B1E', 'Belly Slide'], ['charm', '💖', 'Charm', '#D9649A', 'Quiz and Learn']];
+  var GLASS_FOR = { dive: 'swim', chase: 'run', honk: 'power', slide: 'stamina', quiz: 'charm', learn: 'charm' };
+  function stat(p, k) { return (p.st && p.st[k]) || 0; }
+  // a finished game drops 1 to 3 pieces of sea glass (more for a better game); each piece is +1 to the matching stat
+  function winGlass(p, game, coins) {
+    var k = GLASS_FOR[game]; if (!k || !(coins > 0)) return 0;
+    var n = Math.min(3, 1 + Math.floor(coins / 10)), was = stat(p, k);
+    p.st = p.st || {}; p.st[k] = Math.min(99, was + n);
+    return p.st[k] - was;
+  }
+  function glassLine(game, n) { var s = STATS.filter(function (x) { return x[0] === GLASS_FOR[game]; })[0]; return n && s ? '+' + n + ' sea glass <i class="sg" style="--c:' + s[3] + '"></i> ' + s[2] + ' +' + n : ''; }
+
   /* ---------- garden: drawn in code. To use a picture instead, swap gardenArt() for an <img> ---------- */
   var PALS = ['sweet', 'surfer', 'sunny', 'buddy', 'goofydad', 'grandma'];   // penguin friends who wander the garden (ids from guides.js)
   var START = [[20, 22], [80, 16], [32, 30], [68, 28], [12, 8], [88, 6]];   // where each friend stands when the garden opens (% across, % up)
@@ -367,9 +380,9 @@
     var gh = document.getElementById('pp-ghost-host');
     if (gh && window.ppGames) {
       if (tab === 'games') gh.innerHTML = window.ppGames.cards(p.bests);
-      if (tab === 'quiz') window.ppGames.quiz(gh, function (c) { var q = load(); q.coins += c; q.xp += c; save(q); setCoins(q); });
+      if (tab === 'quiz') window.ppGames.quiz(gh, function (c) { var q = load(), gl = winGlass(q, 'quiz', c); q.coins += c; q.xp += c; save(q); setCoins(q); if (gl) toast('+' + gl + ' sea glass 💖 Charm +' + gl); });
       if (tab === 'sing') window.ppGames.sing(gh);
-      if (tab === 'learn' && window.ppGames.learn) window.ppGames.learn(gh, function (c) { var q = load(); q.coins += c; q.xp += c; q.joy = clamp(q.joy + 3); save(q); setCoins(q); });
+      if (tab === 'learn' && window.ppGames.learn) window.ppGames.learn(gh, function (c) { var q = load(), gl = winGlass(q, 'learn', c); q.coins += c; q.xp += c; q.joy = clamp(q.joy + 3); save(q); setCoins(q); if (gl) toast('+' + gl + ' sea glass 💖 Charm +' + gl); });
     }
   }
   function showStats() {
@@ -377,7 +390,8 @@
     d.className = 'pp-stats'; d.setAttribute('aria-label', nameOf(p) + '’s stats');
     d.innerHTML = '<div class="st-top"><b>📊 ' + esc(nameOf(p)) + '’s stats</b><button type="button" data-act="stats-x" aria-label="Close stats">✕</button></div>' +
       '<div class="bats" id="pp-sbats">' + bats4(p) + '</div><p class="st-tip" id="pp-stip">Tap a battery to see what it does.</p>' +
-      '<div class="st-grid"><span>Level<b>' + level(p) + '</b></span><span>Fitness<b>' + (p.fit || 0) + '</b></span><span>Coins<b>' + p.coins + '</b></span></div>' +
+      '<ul class="st-st" aria-label="Stats">' + STATS.map(function (s) { var v = stat(p, s[0]); return '<li><button type="button" data-stat="' + s[0] + '"><b aria-hidden="true">' + s[1] + '</b><span>' + s[2] + '</span><i aria-hidden="true"><u style="width:' + v + '%;background:' + s[3] + '"></u></i><em>' + v + '</em></button></li>'; }).join('') + '</ul><p class="st-tip" id="pp-sttip">Win sea glass in games to grow these. Tap one to see which game.</p>' +
+      '<div class="st-grid"><span>Level<b>' + level(p) + '</b></span><span>Coins<b>' + p.coins + '</b></span></div>' +
       (Object.keys(b).length ? '<p class="st-tip">Best scores: ' + Object.keys(b).map(function (k) { return (names[k] || k) + ' ' + b[k]; }).join(' · ') + '</p>' : '');
     w.appendChild(d); d.addEventListener('close', function () { d.remove(); });
     if (d.showModal) d.showModal(); else d.setAttribute('open', '');
@@ -545,10 +559,12 @@
       return window.ppGames.open(id, host, function (score, coins, ended) {
         if (score === null) return paint();
         if (!ended) return;
-        var q = load(); q.coins += coins; q.xp += Math.ceil(coins / 2); q.joy = clamp(q.joy + 8); q.bests = q.bests || {}; if (score > (q.bests[id] || 0)) q.bests[id] = score; if (id === 'slide' && score > q.best) q.best = score; save(q); setCoins(q);
+        var q = load(), gl = winGlass(q, id, coins); q.coins += coins; q.xp += Math.ceil(coins / 2); q.joy = clamp(q.joy + 8); q.bests = q.bests || {}; if (score > (q.bests[id] || 0)) q.bests[id] = score; if (id === 'slide' && score > q.best) q.best = score; save(q); setCoins(q);
+        var res = host && host.querySelector('.gres'); if (res && gl) res.insertAdjacentHTML('beforeend', '<span class="gl">' + glassLine(id, gl) + '</span>');
       });
     }
     if (b.dataset.act === 'stats') return showStats();
+    if (b.dataset.stat) { var ss = STATS.filter(function (x) { return x[0] === b.dataset.stat; })[0], st = document.getElementById('pp-sttip'); if (ss && st) st.textContent = ss[1] + ' ' + ss[2] + ' grows from sea glass you win in ' + ss[4] + '.'; return; }
     if (b.dataset.act === 'stats-x') { var sd = w.querySelector('.pp-stats'); if (sd && sd.close && sd.open) sd.close(); else if (sd) sd.remove(); return; }
     if (b.dataset.act === 'sound') {
       var on = !soundOn(); try { localStorage.setItem('pp_sound', on ? 'on' : 'off'); } catch (e2) {}
@@ -796,7 +812,10 @@
     '.pp-make input[type=radio]{position:absolute;opacity:0;width:1px;height:1px}.pp-make .mk-sw{position:relative;cursor:pointer}.pp-make .mk-sw i{display:block;width:34px;height:34px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 2px var(--line,#DCE6EE)}.pp-make .mk-sw input:checked+i{box-shadow:0 0 0 3px var(--accent,#2E86DE)}' +
     '.pp-make .mk-txt{position:relative;cursor:pointer}.pp-make .mk-txt span{display:block;padding:8px 12px;border-radius:999px;background:var(--bg,#F5F8FA);font-weight:800;font-size:14px;border:2px solid transparent}.pp-make .mk-txt input:checked+span{border-color:var(--accent,#2E86DE)}' +
     '.pp-make input:focus-visible+i,.pp-make input:focus-visible+span{outline:3px solid var(--accent,#2E86DE);outline-offset:2px}.pp-make .mk-go{width:100%;margin-top:6px}' +
-    '.pp-stats .st-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.pp-stats .st-grid span{background:var(--bg,#F5F8FA);border-radius:14px;padding:8px;text-align:center;font-size:12.5px;font-weight:800;color:var(--muted,#7A8B99)}.pp-stats .st-grid b{display:block;font-size:20px;color:var(--ink,#13324A)}' +
+    '.pp-stats .st-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.pp-stats .st-grid span{background:var(--bg,#F5F8FA);border-radius:14px;padding:8px;text-align:center;font-size:12.5px;font-weight:800;color:var(--muted,#7A8B99)}.pp-stats .st-grid b{display:block;font-size:20px;color:var(--ink,#13324A)}' +
+    '.pp-stats .st-st{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:6px}.pp-stats .st-st button{display:grid;grid-template-columns:22px 64px 1fr 26px;align-items:center;gap:8px;width:100%;border:0;border-radius:12px;padding:6px 8px;background:var(--bg,#F5F8FA);font:inherit;font-size:14px;font-weight:800;color:inherit;cursor:pointer;text-align:left}' +
+    '.pp-stats .st-st button:focus-visible{outline:3px solid #3B8FD9;outline-offset:2px}.pp-stats .st-st i{height:10px;border-radius:6px;background:var(--line,#DDE6EE);overflow:hidden}.pp-stats .st-st u{display:block;height:100%;border-radius:6px;min-width:4px}.pp-stats .st-st em{font-style:normal;text-align:right}' +
+    '.sg{display:inline-block;width:11px;height:13px;vertical-align:-1px;background:var(--c);opacity:.85;clip-path:polygon(30% 0,85% 12%,100% 60%,62% 100%,8% 82%,0 30%);border-radius:2px}.gres .gl{display:block;font-weight:800}' +
     '@media (prefers-reduced-motion: reduce){#pp-play .walker{transition:none}#pp-play .pen,#pp-play .walker .pen.eat,#pp-play .walker .pen.tk{animation:none}}' +
     '.pp-heart{position:fixed;z-index:99990;font-size:24px;pointer-events:none;animation:pphrt 1.2s ease-out forwards}@keyframes pphrt{to{transform:translateY(-70px) scale(1.4);opacity:0}}' +
     '.pp-drag{position:fixed;z-index:99990;font-size:40px;pointer-events:none;transform:translate(-50%,-60%)}' +
