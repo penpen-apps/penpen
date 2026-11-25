@@ -5,17 +5,17 @@
   var F = 'Nunito,-apple-system,BlinkMacSystemFont,sans-serif';
   var GAMES = {
     slide: { t: 'Belly Slide', e: '🛷', how: 'Slide down the mountain! Tap ◀ ▶ (or swipe) to dodge rocks and trees. Grab the fish.', pad: 'lr' },
-    dive:  { t: 'Dive', e: '🌊', how: 'Hold ▼ to dive for fish, ▲ to swim up. When a sea lion comes, get up onto the ice!', pad: 'ud' },
-    chase: { t: 'Chase', e: '🐻‍❄️', how: 'Eat every fish in the maze. Don’t let the polar bear catch you! ❄️ freezes him.', pad: 'dpad' },
-    honk:  { t: 'Honk!', e: '📣', how: 'Sneak up on tourists, HONK to make them drop things, and carry the loot to your igloo. Don’t get caught!', pad: 'honk' }
+    dive:  { t: 'Dive', e: '🌊', how: 'Drag the joystick down to dive for fish, up to swim up. When a sea lion comes, get up onto the ice!', pad: 'ud' },
+    chase: { t: 'Chase', e: '🐻‍❄️', how: 'Steer with the joystick and eat every fish in the maze. Don’t let the polar bear catch you! ❄️ freezes him.', pad: 'dpad' },
+    honk:  { t: 'Honk!', e: '📣', how: 'Walk with the joystick, sneak up on tourists, HONK to make them drop things, and carry the loot to your igloo. Don’t get caught!', pad: 'honk' }
   };
   var cur = null;
   // "How to play": the ? button in every game opens this and pauses the game until you close it
   var HELP = {
     slide: ['Slide down the mountain as far as you can.', ['Tap <b>◀</b> or <b>▶</b> (or swipe) to move one lane left or right.', 'Grab 🐟 fish for 10 points. You also score as you go.', 'Don’t hit a rock, tree or snowman. One bump ends the run.', 'It gets faster the longer you last.']],
-    dive: ['Catch fish, and hide from the sea lion.', ['Hold <b>▼</b> to dive down, hold <b>▲</b> to swim up. Let go and you float up slowly.', 'Swim into 🐟 for 1 point, 🦐 for 3.', 'When “Sea lion! Swim up!” shows, get up onto the ice at the top and stay there until it swims past (+5).', 'If the sea lion reaches you underwater, the game is over.']],
-    chase: ['Eat every fish in the maze before the polar bear gets you.', ['Tap <b>▲ ▼ ◀ ▶</b> (or swipe) to turn. You keep moving that way until a wall.', 'Each 🐟 is 1 point. Clear the maze for +20 and the next level, with a faster bear.', 'Grab a ❄️ for 5 points: it freezes the bear for 5 seconds.', 'You have 3 hearts ❤️. The bear takes one each time he catches you.']],
-    honk: ['Steal the tourists’ stuff and bring it home to your igloo (bottom left).', ['Walk with <b>▲ ▼ ◀ ▶</b> until you’re right next to a tourist holding something.', 'Tap <b>HONK</b>. They drop it (+2), then get angry 💢 and chase you for a few seconds.', 'Walk over the dropped thing to pick it up, then carry it to the igloo (+10). You’re slower while carrying.', 'If an angry tourist catches you, you lose a heart ❤️ and drop what you’re carrying.', 'Reach the goal score at the top before the clock hits 0 to go up a level. Tip: honk, then run!']]
+    dive: ['Catch fish, and hide from the sea lion.', ['Drag the <b>joystick</b> down to dive, up to swim up. Let go and you float up slowly.', 'Swim into 🐟 for 1 point, 🦐 for 3.', 'When “Sea lion! Swim up!” shows, get up onto the ice at the top and stay there until it swims past (+5).', 'If the sea lion reaches you underwater, the game is over.']],
+    chase: ['Eat every fish in the maze before the polar bear gets you.', ['Push the <b>joystick</b> (or swipe) to turn. You keep moving that way until a wall.', 'Each 🐟 is 1 point. Clear the maze for +20 and the next level, with a faster bear.', 'Grab a ❄️ for 5 points: it freezes the bear for 5 seconds.', 'You have 3 hearts ❤️. The bear takes one each time he catches you.']],
+    honk: ['Steal the tourists’ stuff and bring it home to your igloo (bottom left).', ['Walk with the <b>joystick</b>, in any direction, until you’re right next to a tourist holding something.', 'Tap <b>HONK</b>. They drop it (+2), then get angry 💢 and chase you for a few seconds.', 'Walk over the dropped thing to pick it up, then carry it to the igloo (+10). You’re slower while carrying.', 'If an angry tourist catches you, you lose a heart ❤️ and drop what you’re carrying.', 'Reach the goal score at the top before the clock hits 0 to go up a level. Tip: honk, then run!']]
   };
   // difficulty (all games) and Honk!'s scene, remembered on this phone
   var DIFF = { easy: ['Easy', 0.75], normal: ['Normal', 1], hard: ['Hard', 1.3] };
@@ -95,7 +95,7 @@
     $('.gstart', over).onclick = begin;
     var hd = $('.ghd', host);
     function help() {
-      S.paused = true; S.keys = {}; [].slice.call(ctl.querySelectorAll('.on')).forEach(function (b) { b.classList.remove('on'); });
+      S.paused = true; S.keys = {}; S.stick = null; [].slice.call(ctl.querySelectorAll('.on')).forEach(function (b) { b.classList.remove('on'); }); var kb = $('.gjoy i', ctl); if (kb) kb.style.transform = '';
       if (hd.showModal) hd.showModal(); else hd.setAttribute('open', '');
     }
     hd.addEventListener('close', function () { S.paused = false; });
@@ -113,15 +113,39 @@
     swipe(cv, S);
     return S;
   }
+  // Belly Slide keeps its ◀ ▶ buttons; Dive, Chase and Honk! get the joystick (Honk! also keeps its HONK button)
   function pad(S, kind, el) {
-    var B = { lr: [['left', '◀'], ['right', '▶']], ud: [['up', '▲'], ['down', '▼']], dpad: [['left', '◀'], ['up', '▲'], ['down', '▼'], ['right', '▶']], honk: [['left', '◀'], ['up', '▲'], ['down', '▼'], ['right', '▶'], ['honk', 'HONK']] }[kind];
-    el.className = 'gctl ' + kind;
-    el.innerHTML = B.map(function (b) { return '<button type="button" data-k="' + b[0] + '" aria-label="' + b[0] + '">' + b[1] + '</button>'; }).join('');
+    var B = kind === 'lr' ? [['left', '◀'], ['right', '▶']] : kind === 'honk' ? [['honk', 'HONK']] : [];
+    el.className = 'gctl ' + (kind === 'lr' ? 'lr' : 'stk');
+    el.innerHTML = (kind === 'lr' ? '' : '<div class="gjoy" role="img" aria-label="Joystick: drag to move (arrow keys work too)"><i></i></div>') +
+      B.map(function (b) { return '<button type="button" data-k="' + b[0] + '" aria-label="' + b[0] + '">' + b[1] + '</button>'; }).join('');
+    if (kind !== 'lr') joy(S, kind, $('.gjoy', el));
     [].slice.call(el.querySelectorAll('button')).forEach(function (b) {
       var k = b.dataset.k;
       b.addEventListener('pointerdown', function (e) { e.preventDefault(); S.keys[k] = true; b.classList.add('on'); if (S.game && S.game.press) S.game.press(k); });
       ['pointerup', 'pointerleave', 'pointercancel'].forEach(function (ev) { b.addEventListener(ev, function () { S.keys[k] = false; b.classList.remove('on'); }); });
     });
+  }
+  // On-screen joystick: put a thumb on it and drag any way. It presses the same keys as the arrow keys
+  // (Dive: up/down only, Chase: one way at a time), and S.stick ({x, y} from -1 to 1) lets Honk! walk smoothly.
+  function joy(S, kind, base) {
+    var knob = base.firstChild, id = null;
+    function set(x, y) {
+      var on = {}, far = Math.max(Math.abs(x), Math.abs(y)) > 0.35;
+      S.stick = id === null ? null : { x: x, y: y };
+      knob.style.transform = id === null ? '' : 'translate(' + Math.round(x * 36) + 'px,' + Math.round(y * 36) + 'px)';
+      if (kind === 'ud') { if (y < -0.35) on.up = 1; if (y > 0.35) on.down = 1; }
+      else if (kind === 'dpad') { if (far) on[Math.abs(x) > Math.abs(y) ? (x > 0 ? 'right' : 'left') : (y > 0 ? 'down' : 'up')] = 1; }
+      else { if (x < -0.35) on.left = 1; if (x > 0.35) on.right = 1; if (y < -0.35) on.up = 1; if (y > 0.35) on.down = 1; }
+      ['up', 'down', 'left', 'right'].forEach(function (k) { if (on[k] && !S.keys[k] && S.game && S.game.press) S.game.press(k); S.keys[k] = !!on[k]; });
+    }
+    function move(e) {
+      var r = base.getBoundingClientRect(), R = r.width / 2 || 1, x = (e.clientX - r.left - R) / R, y = (e.clientY - r.top - R) / R, m = Math.hypot(x, y);
+      if (m > 1) { x /= m; y /= m; } set(x, y);
+    }
+    base.addEventListener('pointerdown', function (e) { if (S.paused) return; e.preventDefault(); id = e.pointerId; if (base.setPointerCapture) base.setPointerCapture(id); base.classList.add('on'); move(e); });
+    base.addEventListener('pointermove', function (e) { if (e.pointerId === id && !S.paused) move(e); });
+    ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(function (ev) { base.addEventListener(ev, function (e) { if (e.pointerId !== id) return; id = null; base.classList.remove('on'); set(0, 0); }); });
   }
   function swipe(cv, S) {
     var sx, sy;
@@ -300,7 +324,8 @@
       },
       step: function (dt) {
         var k = S.keys, sp = P.carry ? 120 : 150;
-        P.x = clamp(P.x + ((k.right ? 1 : 0) - (k.left ? 1 : 0)) * sp * dt, 16, W - 16); P.y = clamp(P.y + ((k.down ? 1 : 0) - (k.up ? 1 : 0)) * sp * dt, 16, H - 16);
+        var j = S.stick && Math.hypot(S.stick.x, S.stick.y) > 0.2 ? S.stick : null, mx = j ? j.x : (k.right ? 1 : 0) - (k.left ? 1 : 0), my = j ? j.y : (k.down ? 1 : 0) - (k.up ? 1 : 0);
+        P.x = clamp(P.x + mx * sp * dt, 16, W - 16); P.y = clamp(P.y + my * sp * dt, 16, H - 16);
         time -= dt; honkT -= dt; saidT -= dt;
         if (!P.carry) for (var i = items.length - 1; i >= 0; i--) if (Math.hypot(items[i].x - P.x, items[i].y - P.y) < 26) { P.carry = items[i].k; items.splice(i, 1); break; }
         if (P.carry && Math.hypot(nest.x - P.x, nest.y - P.y) < 48) { S.add(10); P.carry = null; said = 'Mine now! 😈'; saidT = 1; }
@@ -531,7 +556,7 @@
     '.gx .gclose{border:0;background:rgba(255,255,255,.92);color:#13324A;border-radius:99px;padding:10px 18px;font:900 15px ' + F + ';cursor:pointer}.gx .gres{background:#fff;border-radius:18px;padding:12px 16px}.gx .gres b{display:block;font-size:20px;font-weight:900;color:#13324A}.gx .gres span{font-weight:800;color:#3B5568}' +
     '.gcd{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:900 110px ' + F + ';color:#fff;text-shadow:0 6px 24px rgba(19,50,74,.45);pointer-events:none}.gcd.pop{animation:gcd .7s ease-out}.gcd.go{font-size:80px;color:#F2A33A}@keyframes gcd{from{transform:scale(1.8);opacity:0}30%{opacity:1}to{transform:scale(1)}}' +
     '.gctl{display:flex;gap:10px;justify-content:center;margin-top:12px;min-height:74px;flex-wrap:wrap}.gctl button{width:74px;height:74px;border-radius:50%;border:0;background:#13324A;color:#fff;font:900 26px ' + F + ';touch-action:none;user-select:none;-webkit-user-select:none;cursor:pointer}.gctl button.on{background:#237566;transform:scale(.94)}' +
-    '.gctl.lr button,.gctl.ud button{width:120px;border-radius:40px}.gctl.dpad button,.gctl.honk button{width:58px;height:58px;font-size:22px}.gctl.dpad,.gctl.honk{display:grid;grid-template-columns:58px 58px 58px;grid-template-rows:58px 58px;gap:6px 8px;justify-content:center;grid-template-areas:". up ." "left down right"}.gctl.honk{grid-template-columns:58px 58px 58px 110px;grid-template-areas:". up . honk" "left down right honk"}.gctl button[data-k=up]{grid-area:up}.gctl button[data-k=down]{grid-area:down}.gctl button[data-k=left]{grid-area:left}.gctl button[data-k=right]{grid-area:right}.gctl button[data-k=honk]{grid-area:honk;align-self:center;height:72px!important}.gctl,.gctl button,.gx{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}.gctl button[data-k="honk"]{width:96px;border-radius:40px;background:#F2A33A;color:#13324A;font-size:18px}' +
+    '.gctl.lr button{width:120px;border-radius:40px}.gctl.stk{align-items:center;gap:22px}.gjoy{width:128px;height:128px;border-radius:50%;background:var(--chip,#E3EDF3);box-shadow:inset 0 0 0 2px rgba(19,50,74,.18);display:flex;align-items:center;justify-content:center;touch-action:none;cursor:grab}.gjoy i{width:56px;height:56px;border-radius:50%;background:#13324A;box-shadow:0 4px 10px rgba(19,50,74,.3);pointer-events:none}.gjoy.on i{background:#237566}.gctl button[data-k=honk]{height:72px!important}.gctl,.gctl button,.gx{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}.gctl button[data-k="honk"]{width:96px;border-radius:40px;background:#F2A33A;color:#13324A;font-size:18px}' +
     '.qz{font-family:' + F + ';text-align:center}.qz .prof{display:inline-block;animation:pphop 2s ease-in-out infinite}.qz .prof.yay{animation:qyay .6s ease-out 2}.qz .prof.hmm{animation:qhmm .5s ease-in-out 2}@keyframes qyay{50%{transform:translateY(-14px) rotate(-5deg)}}@keyframes qhmm{25%{transform:rotate(-8deg)}75%{transform:rotate(8deg)}}' +
     '.qz .qb{background:var(--card,#fff);border-radius:22px;padding:14px 16px;margin:6px 0 12px;position:relative}.qz .qb:before{content:"";position:absolute;top:-9px;left:50%;margin-left:-9px;border:9px solid transparent;border-top:0;border-bottom-color:var(--card,#fff)}' +
     '.qz .qb small{display:block;font-weight:800;color:var(--muted,#6B7C8A);font-size:12.5px}.qz .qb b{display:block;font-size:19px;font-weight:900;margin-top:4px;line-height:1.3}.qz .qb u{text-decoration:none;border-bottom:3px solid #237566;padding:0 6px}.qz .qmsg{margin:8px 0 0;font-weight:800;color:#237566}.qz .qb p{margin:6px 0 0;font-weight:800}' +
