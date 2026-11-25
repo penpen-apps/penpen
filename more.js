@@ -258,7 +258,7 @@
     var keys = Object.keys(cats).sort(function (a, b) { return cats[b].spent - cats[a].spent || cats[b].items.length - cats[a].items.length; });
     var h = keys.map(function (k) {
       var c = cats[k], pct = total ? Math.round(c.spent / total * 100) : 0, col = colors[k] || colors[k.replace(' · ', ' & ')] || 'var(--accent)';
-      var row = '<button type="button" class="dc' + (openCat === k ? ' open' : '') + '" data-c="' + esc(k) + '"><i>' + icon(k) + '</i><span class="nm"><b>' + esc(k) + '</b><small>' + c.items.length + ' item' + (c.items.length === 1 ? '' : 's') + (c.later ? ' · ' + cash(c.later) + ' still to pay' : '') + '</small><em class="bar"><u style="width:' + Math.max(pct, c.spent ? 3 : 0) + '%;background:' + col + '"></u></em></span><span class="amt">' + cash(c.spent) + '<small>' + pct + '%</small></span></button>';
+      var row = '<button type="button" class="dc' + (openCat === k ? ' open' : '') + '" data-c="' + esc(k) + '"><i>' + icon(k) + '</i><span class="nm"><b>' + esc(k) + '</b><small>' + c.items.length + ' item' + (c.items.length === 1 ? '' : 's') + (c.later ? ' · ' + esc(cash(c.later)) + ' still to pay' : '') + '</small><em class="bar"><u style="width:' + Math.max(pct, c.spent ? 3 : 0) + '%;background:' + col + '"></u></em></span><span class="amt">' + esc(cash(c.spent)) + '<small>' + pct + '%</small></span></button>';
       if (openCat === k) row += '<div class="items">' + c.items.map(function (x) {
         var tag = x.later ? '<em class="t later">not paid yet</em>' : x.personal ? '<em class="t">personal</em>' : '';
         var amt = x.cur === window.ppPlace().cur ? window.ppPlace().sym + x.amt : x.amt + ' ' + x.cur;

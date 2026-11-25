@@ -41,7 +41,7 @@
     ['What do you call a group of penguins on land?', ['A waddle', 'A flock of ducks', 'A pod'], 0]
   ];
   // the coin shows the trip's money sign (¥, ₱, €…); for longer ones like "NT$" or "RM", one character
-  var COIN_SIGN = (function (y) { var m = y.match(/\p{Sc}/u); return (m ? m[0] : y.charAt(0)) || '$'; })(window.ppPlace().sym || '');
+  var COIN_SIGN = (function (y) { var m = y.match(/\p{Sc}/u), c = m ? m[0] : y.charAt(0); return /^[\p{L}\p{Sc}]$/u.test(c) ? c : '$'; })(window.ppPlace().sym || '');
   function now() { return Date.now(); }
   function fresh() { return { food: 80, joy: 75, energy: 80, hp: 100, xp: 0, fit: 0, coins: 20, best: 0, bag: { fish: 3, meds: 1 }, own: { none: 1, hat: 1 }, wear: 'none', t: now(), exp: -1, asleep: false, ghost: false, born: now() }; }
   function load() {
