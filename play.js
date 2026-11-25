@@ -121,7 +121,7 @@
     p.st = p.st || {}; p.st[k] = Math.min(99, was + n);
     return p.st[k] - was;
   }
-  function glassLine(game, n) { var s = STATS.filter(function (x) { return x[0] === GLASS_FOR[game]; })[0]; return n && s ? '+' + n + ' sea glass <i class="sg" style="--c:' + s[3] + '"></i> ' + s[2] + ' +' + n : ''; }
+  function glassLine(game, n) { var s = STATS.filter(function (x) { return x[0] === GLASS_FOR[game]; })[0]; return n && s ? '+' + n + ' sea glass <i class="sglass" style="--c:' + s[3] + '"></i> ' + s[2] + ' +' + n : ''; }
 
   /* ---------- garden: drawn in code. To use a picture instead, swap gardenArt() for an <img> ---------- */
   var PALS = ['sweet', 'surfer', 'sunny', 'buddy', 'goofydad', 'grandma'];   // penguin friends who wander the garden (ids from guides.js)
@@ -1075,7 +1075,7 @@
     '.pp-stats .st-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.pp-stats .st-grid span{background:var(--bg,#F5F8FA);border-radius:14px;padding:8px;text-align:center;font-size:12.5px;font-weight:800;color:var(--muted,#7A8B99)}.pp-stats .st-grid b{display:block;font-size:20px;color:var(--ink,#13324A)}' +
     '.pp-stats .st-st{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:6px}.pp-stats .st-st button{display:grid;grid-template-columns:22px 64px 1fr 26px;align-items:center;gap:8px;width:100%;border:0;border-radius:12px;padding:6px 8px;background:var(--bg,#F5F8FA);font:inherit;font-size:14px;font-weight:800;color:inherit;cursor:pointer;text-align:left}' +
     '.pp-stats .st-st button:focus-visible{outline:3px solid #3B8FD9;outline-offset:2px}.pp-stats .st-st i{height:10px;border-radius:6px;background:var(--line,#DDE6EE);overflow:hidden}.pp-stats .st-st u{display:block;height:100%;border-radius:6px;min-width:4px}.pp-stats .st-st em{font-style:normal;text-align:right}' +
-    '.sg{display:inline-block;width:11px;height:13px;vertical-align:-1px;background:var(--c);opacity:.85;clip-path:polygon(30% 0,85% 12%,100% 60%,62% 100%,8% 82%,0 30%);border-radius:2px}.gres .gl{display:block;font-weight:800}' +
+    '.sglass{display:inline-block;width:11px;height:13px;vertical-align:-1px;background:var(--c);opacity:.85;clip-path:polygon(30% 0,85% 12%,100% 60%,62% 100%,8% 82%,0 30%);border-radius:2px}.gres .gl{display:block;font-weight:800}' +
     // the door into the igloo, and the cozy games room inside
     '#pp-play .gdoor{pointer-events:none}#pp-play .gdoor .door{pointer-events:auto;cursor:pointer;outline:none}#pp-play .gdoor .door:focus-visible .hit{stroke:#fff;stroke-width:3}#pp-play .gdoor .glow{animation:ppglow 2.2s ease-in-out infinite alternate}@keyframes ppglow{from{opacity:.55}to{opacity:1}}' +
     '#pp-play.imm .garden.igl{--fb:0px;background:#C8875A}#pp-play .igl .gtop .ititle{flex:1;min-width:0;background:rgba(255,255,255,.9);color:#13324A;border-radius:99px;padding:6px 12px;font:900 14px ' + F + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
