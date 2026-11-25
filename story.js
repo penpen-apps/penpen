@@ -68,7 +68,8 @@
   /* ---------- reading the trip ---------- */
   function info() {
     var T = load('penpenToday') || {}, P = load('penpenPlan') || {};
-    var h = T.hello || {}, label = String(h.label || ''), m;
+    // a label saved on an earlier day ("46 days to go") is out of date: work it out from the plan's dates instead
+    var h = T.hello || {}, label = !window.ppFromToday || window.ppFromToday('penpenToday') ? String(h.label || '') : '', m;
     var me = T.me || h.name || '', people = (T.people || []).filter(Boolean);
     var days = (P.days || []).map(function (d) { return { day: d.day, label: d.label, short: d.short, stops: d.stops || [] }; });
     var phase = 'before', left = null, dayNo = null;
@@ -146,7 +147,9 @@
     put(t, 'pp-story-hero', 'div', hero, t.firstChild);
     document.querySelector('#pp-story-hero .trip').onclick = openTrips;
     // who's coming
-    var o = others(I), crew = !o.length ? '🧳 Solo trip · just you & penpen' : o.length === 1 ? '👫 You & ' + esc(o[0]) + ' · travel buddies' : '🐧 Your crew · ' + (o.length + 1) + ' travel buddies';
+    // nobody else yet: use the trip type picked in setup, so a Friends trip isn't called solo
+    var kind = (cached('penpenProfiles') || {}).tripType, WAIT = { couple: '💑 Couple trip · invite your partner', family: '👨‍👩‍👧 Family trip · invite your family', friends: '🐧 Friends trip · invite your friends' };
+    var o = others(I), crew = !o.length ? (WAIT[kind] || '🧳 Solo trip · just you & penpen') : o.length === 1 ? '👫 You & ' + esc(o[0]) + ' · your crew' : '🐧 Your crew of ' + (o.length + 1);
     put(t, 'pp-story-crew', 'div', crew, sc);
     // penpen's line now pops up over his head when you tap him (me.js)
     var old = document.getElementById('pp-story-say'); if (old) old.remove();
@@ -331,7 +334,7 @@
       '<label for="pp-nt-where">Where to?</label><input id="pp-nt-where" placeholder="e.g. Bohol" maxlength="80">' +
       placeFields('pp-nt', '') +
       '<div class="two"><div><label for="pp-nt-start">From</label><input id="pp-nt-start" type="date"></div><div><label for="pp-nt-end">To</label><input id="pp-nt-end" type="date"></div></div>' +
-      '<button type="button" class="go" id="pp-nt-go">Start this trip 🐧</button><div class="note">You\'ll be the trip creator — invite your travel buddies right after.</div>';
+      '<button type="button" class="go" id="pp-nt-go">Start this trip 🐧</button><div class="note">You\'ll be the trip creator — invite your crew right after.</div>';
     bd.onclick = null;
     var pf = wirePlace('pp-nt');
     // "Where to?" picks the country for you ("Tokyo" → Japan) until you choose one yourself

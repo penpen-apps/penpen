@@ -11,7 +11,8 @@
   function today() { var d = new Date(); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
   function say(text) { try { if (window.speechSynthesis) { speechSynthesis.cancel(); speechSynthesis.speak(new SpeechSynthesisUtterance(text)); } } catch (e) {} }
   function penSvg(size) {
-    var n = $('#navpen svg'), inner = window.ppLook && window.ppGuideNow ? window.ppLook.svg(window.ppGuideNow()) : (n ? n.innerHTML : '');
+    // the classic penpen has no ppLook drawing (svg() gives ''), so fall back to the front-facing penguin
+    var n = $('#navpen svg'), inner = (window.ppLook && window.ppGuideNow ? window.ppLook.svg(window.ppGuideNow()) : '') || (window.ppFrontPen ? window.ppFrontPen() : (n ? n.innerHTML : ''));
     return '<svg viewBox="-7 -14 134 134" width="' + size + '" height="' + size + '" aria-hidden="true">' + (inner || '') + '</svg>';
   }
 
@@ -397,11 +398,11 @@
     var c = $('.card.pp-tour'); if (!c || c.getAttribute('data-pp')) return;
     c.setAttribute('data-pp', '1');
     var h = c.previousElementSibling; if (h && /quick tour/i.test(h.textContent)) h.textContent = 'You’re all set! 🎉';
-    c.innerHTML = '<button type="button" class="stbtn pri" data-st="invite">📲 Invite your travel buddies<small>Send a link or show a QR code</small></button><button type="button" class="stbtn" data-st="tour">▶ Quick tour<small>penpen shows you around in 30 seconds</small></button><button type="button" class="stbtn" data-st="solo">🧳 I’m travelling solo<small>Skip inviting for now</small></button>';
+    // two optional extras; "Start the trip" below is the one main button (travelling solo = just tap Start)
+    c.innerHTML = '<button type="button" class="stbtn" data-st="invite">📲 Invite your crew<small>Send a link or show a QR code</small></button><button type="button" class="stbtn" data-st="tour">▶ Quick tour<small>penpen shows you around in 30 seconds</small></button>';
     c.onclick = function (e) {
       var b = e.target.closest('[data-st]'); if (!b) return;
       if (b.dataset.st === 'tour') return window.ppTour();
-      if (b.dataset.st === 'solo') { var t = document.querySelector('nav button[data-p="p-today"]'); if (t) t.click(); return; }
       if (window.ppGoTab) window.ppGoTab('Crew');
       setTimeout(function () { var x = [].slice.call(document.querySelectorAll('#p-safety button')).filter(function (y) { return /invite/i.test(y.textContent) && y.offsetParent; })[0]; if (x) x.click(); }, 500);
     };
@@ -443,7 +444,7 @@
         sv.textContent = 'Saving photo ' + (i + 1) + ' of ' + n + '…';
         window.ppCall('penpenDiaryAdd', [{ text: i === 0 && !hasVid ? t : '', kind: kind, photo: list[i], video: null, caption: i === 0 ? cap.trim() : '' }])
           .then(function (r) { if (r) { url = r.url || url; msg = msg || r.msg; } i++; next(); },
-            function (e) { sv.disabled = false; DPH = list.slice(i); dStrip(); alert((e && e.message) || 'Couldn’t save that photo — try again.'); });
+            function (e) { sv.disabled = false; DPH = list.slice(i); dStrip(); if (window.ppDiaryErr) ppDiaryErr(e); else alert((e && e.message) || 'Couldn’t save that photo — try again.'); });
       };
       next();
     };
@@ -508,12 +509,14 @@
   }
   function solo() {
     var sc = $('#crew'); if (!sc) return;
-    $$('#crew .kick').forEach(function (k) { if (/^your crew$/i.test(k.textContent.trim())) k.textContent = 'YOUR TRAVEL BUDDIES'; });
     var T = cache('penpenToday') || {}, n = (T.people || []).length, box = $('#pp-solo');
     if (n > 1) { if (box) box.remove(); return; }
     if (box) return;
     box = document.createElement('div'); box.id = 'pp-solo';
-    box.innerHTML = '<b>🧳 Travelling solo? Love that.</b><p>It’s just you and penpen for now. If a friend ever wants to tag along, you can share your invite. No pressure!</p><button type="button">📲 Share my invite</button>';
+    // trip type from setup: only call it solo when it is (or when no type was picked)
+    var kind = (cache('penpenProfiles') || {}).tripType, who = { couple: 'your partner', family: 'your family', friends: 'your friends' }[kind];
+    box.innerHTML = who ? '<b>🐧 Waiting for ' + who + '</b><p>It’s just you on this trip so far. Share your invite so they can join and make their penguins.</p><button type="button">📲 Share my invite</button>'
+      : '<b>🧳 Travelling solo? Love that.</b><p>It’s just you and penpen for now. If a friend ever wants to tag along, you can share your invite. No pressure!</p><button type="button">📲 Share my invite</button>';
     sc.insertBefore(box, sc.firstChild);
     $('button', box).onclick = function () { var x = $$('#crew .kick').filter(function (k) { return /^invite to this trip$/i.test(k.textContent.trim()); })[0]; if (x) (x.parentElement || x).scrollIntoView({ behavior: 'smooth', block: 'start' }); };
   }

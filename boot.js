@@ -13,6 +13,11 @@
   var FAST = ['penpenToday', 'penpenMoneyCats', 'settleWeb', 'penpenProfiles', 'penpenSafety', 'penpenPlan', 'penpenDayExtras'];
   function get(k, d) { try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } }
   function set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+  // remember which day each saved answer came from, so yesterday's "46 days to go" isn't shown as today's
+  function day() { var d = new Date(); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); }
+  function stamp(k) { var m = get('pp_c__day', {}); m[k] = day(); set('pp_c__day', m); }
+  function fromToday(k) { return get('pp_c__day', {})[k] === day(); }
+  window.ppFromToday = function (fn) { return fromToday('pp_c_' + fn + ':[]'); };
 
   var TOKEN = get('pp_tok', null), ROLE = get('pp_role', ''), waiting = [], joinCode = new URLSearchParams(location.search).get('join');
   var SESS = localStorage.getItem('pp_sess') || '';   // 30-day penpen session after one Google sign-in
@@ -41,8 +46,8 @@
     return ready().then(function () { return post('call', { fn: fn, args: args }); })
       .then(function (r) {
         if (r && r.place && window.ppPlace) window.ppPlace.save(r.place);   // the trip's country, currency and time zone
-        if (fn === 'penpenProfiles' && r) return fixInvite(r).then(function (x) { set(key, x); return x; });
-        if (isRead) set(key, r);
+        if (fn === 'penpenProfiles' && r) return fixInvite(r).then(function (x) { set(key, x); stamp(key); return x; });
+        if (isRead) { set(key, r); stamp(key); }
         return r;
       })
       .catch(function (e) {
@@ -67,10 +72,11 @@
       if (k === 'withUserObject') return function (u) { return runner(Object.assign({}, o, { u: u })); };
       return function () {
         var args = Array.prototype.slice.call(arguments);
-        // instant screens: show the last saved answer right away, then refresh quietly
+        // instant screens: show today's saved answer right away, then refresh quietly
+        // (an answer saved on an earlier day waits for the fresh one, so the screen shows "Loading…" instead of old numbers)
         if (FAST.indexOf(String(k)) >= 0 && navigator.onLine && o.ok) {
-          var c = get('pp_c_' + k + ':' + JSON.stringify(args).slice(0, 200), undefined);
-          if (c !== undefined) {
+          var ck = 'pp_c_' + k + ':' + JSON.stringify(args).slice(0, 200), c = get(ck, undefined);
+          if (c !== undefined && fromToday(ck)) {
             try { o.ok(c, o.u); } catch (e) {}
             call(String(k), args).then(function (r) { o.ok(r, o.u); }, function () {});   // always redraw with fresh data (the scene etc. need it)
             return;

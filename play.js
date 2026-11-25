@@ -91,6 +91,7 @@
 
   function inner() {
     var g = 'bubbly', L = window.ppLook, s = L && L.svg(g);
+    if (!s && window.ppFrontPen) s = window.ppFrontPen();
     if (!s) { var n = document.querySelector('#navpen svg'); s = n ? (n.getAttribute('data-orig') || n.innerHTML) : ''; }
     return s;
   }

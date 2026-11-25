@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#237566">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="penpen">
@@ -26,6 +26,10 @@
 @media (prefers-color-scheme:dark){:root{--bg:#0B1E2D;--card:#13293B;--ink:#EAF4F7;--muted:#A7BCC9;--line:#21405A;--accent:#11606B;--accentText:#5FD8E2;--accentInk:#FFFFFF;--accentSoft:#123C48;--sun:#FFC93C;--sunInk:#3A2700;--chip:#1A3348;--leaf:#5BD39A;--warn:#FFB25C;--warnSoft:#3A2812;--danger:#FF8A80}}
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:Nunito,system-ui,sans-serif;font-weight:500;-webkit-text-size-adjust:100%}
+/* pinch-zoom is allowed (accessibility); this only stops double-tap from zooming when tapping buttons fast */
+html{touch-action:manipulation}
+/* iPhone zooms into any text box under 16px when you tap it; keep boxes at 16px there so the page doesn't jump */
+@supports (-webkit-touch-callout:none){input,select,textarea{font-size:max(16px,1em)!important}}
 button,input,select,textarea{font-family:inherit;font-size:16px;color:inherit}
 button{cursor:pointer}
 .app{max-width:520px;margin:0 auto;height:100vh;height:100dvh;display:flex;flex-direction:column;overflow:hidden}
@@ -1011,6 +1015,15 @@ th .pp-qt{position:absolute;right:0;top:100%;width:210px;z-index:5;box-shadow:0 
     drec.onerror = function () { drec = null; $('d-mic').textContent = '🎤 Talk'; };
     $('d-mic').textContent = '⏹ Stop'; try { drec.start(); } catch (x) { drec = null; $('d-mic').textContent = '🎤 Talk'; }
   };
+  // a failed save shows a friendly note under the button (not a browser pop-up); the words stay in the box
+  window.ppDiaryErr = function (e) {
+    var m = (e && e.message) || '', ok = $('d-ok');
+    var say = /offline|view this trip|private diary/i.test(m) ? m
+      : /DriveApp|DocumentApp|getFileById|permission|authori[sz]|pahintulot/i.test(m) ? 'The diary needs a one-time Google Drive OK from the trip creator before it can save.'
+      : 'Couldn\u2019t save to the diary just now.';
+    ok.style.display = 'block'; ok.textContent = '\u26A0\uFE0F ' + say + ' Your entry is still here, so nothing is lost.';
+    if (m && m !== say) { var d = el('small', 'muted', ' (' + m + ')'); d.style.display = 'block'; ok.appendChild(d); }   // the raw reason, small, so whoever fixes it can see it
+  };
   $('d-save').onclick = function () {
     var t = $('d-text').value.trim();
     if (!t && !PHOTO && !VIDEO) { $('d-text').focus(); return; }
@@ -1019,7 +1032,7 @@ th .pp-qt{position:absolute;right:0;top:100%;width:210px;z-index:5;box-shadow:0 
       b.disabled = false; b.textContent = 'Save to the diary';
       $('d-ok').style.display = 'block'; $('d-ok').textContent = r.msg; var a = el('a', 'linkbtn', ' Open it ↗'); a.href = r.url; a.target = '_blank'; a.rel = 'noopener'; $('d-ok').appendChild(a);
       $('d-text').value = ''; $('d-x').onclick(); clearVideo(); dlinks = null; loadDiaryLinks();
-    }).withFailureHandler(function (e) { b.disabled = false; b.textContent = 'Save to the diary'; alert(e.message); })
+    }).withFailureHandler(function (e) { b.disabled = false; b.textContent = 'Save to the diary'; ppDiaryErr(e); })
       .penpenDiaryAdd({text: t, kind: DK, photo: PHOTO, video: VIDEO, caption: $('d-cap').value.trim()});
   };
 
@@ -1416,7 +1429,11 @@ th .pp-qt{position:absolute;right:0;top:100%;width:210px;z-index:5;box-shadow:0 
   var PREFS = {guide: '', scene: 'auto', mode: 'light'};
   try { var _pp = JSON.parse(localStorage.getItem('pp_prefs') || '{}'); Object.keys(_pp).forEach(function (k) { PREFS[k] = _pp[k]; }); } catch (x) {}
   function guideMine() { var me = meProf(); return !!(me && me.saved && me.avatar) && PREFS.guide !== 'penpen'; }
-  function paintNav() { var me = meProf(), n = $('navpen'); if (!n) return; n.innerHTML = guideMine() ? avatar(me.avatar, 62, 'full', 'idle') : avatar(AV_DEF, 62, 'full', 'idle'); }
+  function navSvg() { var me = meProf(); return guideMine() ? avatar(me.avatar, 62, 'full', 'idle') : avatar(AV_DEF, 62, 'full', 'idle'); }
+  function paintNav() { var n = $('navpen'); if (!n) return; n.innerHTML = navSvg(); }
+  // the front-facing penguin, for screens that copy him (tour, Talk, pet). Copying the middle button itself
+  // could catch him mid-animation (turned around, walking sideways, hiding), which showed a faceless blob.
+  window.ppFrontPen = function () { return navSvg().replace(/^<svg[^>]*>|<\/svg>$/g, ''); };
   function setPref(k, val) { PREFS[k] = val; try { localStorage.setItem('pp_prefs', JSON.stringify(PREFS)); } catch (x) {} applyPrefs(); paintScene(); }
   function applyPrefs() { var dark = PREFS.mode === 'dark' || (PREFS.mode === 'auto' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches); document.body.classList.toggle('pp-dark', !!dark); }
   applyPrefs();
@@ -1435,7 +1452,7 @@ th .pp-qt{position:absolute;right:0;top:100%;width:210px;z-index:5;box-shadow:0 
       [guideMine() ? 'Your penguin (middle button)' : 'penpen (middle button)', 'Talk or type: add an expense, change the plan, ask anything.'],
       ['Money', 'Who paid what, and what still needs paying.'], ['Crew', 'Everyone\u2019s profiles and numbers, plus a one-tap SOS call.'],
       ['\uD83D\uDCD4 Diary (top)', 'Write about the day and add photos.'], ['\uD83D\uDD0A Speaker (top)', 'Turns the spoken replies on or off.']];
-    return '<div class="fred pp-h1">Quick tour</div><div class="card pp-tour">' + rows.map(function (x) { return '<div class="pp-trow"><b>' + x[0] + '</b><span>' + x[1] + '</span></div>'; }).join('') + '</div><p class="pp-sub" style="margin-bottom:6px">Tip: tap your penguin on Today any time to change how you look. Themes and dark mode are in Crew \u2192 your profile.</p>';
+    return '<div class="fred pp-h1">Quick tour</div><div class="card pp-tour">' + rows.map(function (x) { return '<div class="pp-trow"><b>' + x[0] + '</b><span>' + x[1] + '</span></div>'; }).join('') + '</div><p class="pp-sub" style="margin-bottom:6px">Tip: tap your penguin on Today any time to change how you look. Scenes and dark mode are in More \u2192 Settings.</p>';
   }
   function sceneKind() { var s = PREFS.scene || 'auto'; if (s !== 'auto') return s; return CUR_MOOD === 'cold' ? 'mountain' : 'beach'; }
   function sceneBg() {
@@ -1525,7 +1542,7 @@ th .pp-qt{position:absolute;right:0;top:100%;width:210px;z-index:5;box-shadow:0 
         if (v > 0) { rows.push([k, v]); tot += v; }
       });
       var old = $('pp-cats'); if (old) old.remove();
-      if (!rows.length || !tot) return;
+      if (!rows.length || !tot) return oddCurrencies(c, rate, LOCAL, HOME);
       rows.sort(function (x, y) { return y[1] - x[1]; });
       var C = {'Accommodation': '#237566', 'Activities & Tours': '#F4A62A', 'Transportation': '#2E6F84', 'Food & Drinks': '#E46F5A', 'Shopping & Other': '#8A79C2'};
       var card = el('div', 'card pp-cats'); card.id = 'pp-cats';
@@ -1535,7 +1552,26 @@ th .pp-qt{position:absolute;right:0;top:100%;width:210px;z-index:5;box-shadow:0 
       }).join('');
       var box = $('money'), stats = box.querySelector('.stats');
       if (stats && stats.parentNode) stats.parentNode.insertBefore(card, stats.nextSibling); else box.insertBefore(card, box.firstChild);
+      oddCurrencies(c, rate, LOCAL, HOME);   // goes right under the totals, above this card
     }).withFailureHandler(function () {}).penpenMoneyCats();
+  }
+
+  // money in a currency the totals can't count (only the trip's currency, and home money once there's a rate) used to vanish as $0: say so and offer a fix
+  function oddCurrencies(c, rate, LOCAL, HOME) {
+    var odd = {}, old = $('pp-odd'); if (old) old.remove();
+    Object.keys(c).forEach(function (k) { Object.keys(c[k]).forEach(function (cur) { if (cur !== LOCAL && !(cur === HOME && rate) && c[k][cur]) odd[cur] = (odd[cur] || 0) + c[k][cur]; }); });
+    var curs = Object.keys(odd); if (!curs.length) return;
+    var card = el('div', 'card'); card.id = 'pp-odd'; card.setAttribute('role', 'status');
+    card.appendChild(el('div', 'kick', '\u26A0\uFE0F NOT IN THE TOTALS YET'));
+    card.appendChild(el('div', '', curs.map(function (k) { return k + ' ' + Math.round(odd[k]).toLocaleString('en-US'); }).join(' \u00b7 ') + ' ' + (curs.length > 1 ? 'aren\u2019t' : 'isn\u2019t') + ' counted, because penpen only adds up ' + window.ppPlace().word + (rate ? ' and ' + HOME : '') + ' for now.'));
+    var f = el('div', 'fixes'); f.style.marginTop = '10px';
+    curs.forEach(function (k) {
+      var b = el('button', 'fix p', 'Convert ' + k + ' to ' + LOCAL); b.type = 'button'; b.onclick = function () { askPenpen('Convert my ' + k + ' expenses to ' + LOCAL + ' so they count in the totals'); }; f.appendChild(b);
+    });
+    var a = el('button', 'fix', 'Fix it in chat'); a.type = 'button'; a.onclick = function () { askPenpen('Change the currency of my ' + curs[0] + ' expense: '); }; f.appendChild(a);
+    card.appendChild(f);
+    var box = $('money'), stats = box.querySelector('.stats');
+    if (stats && stats.parentNode) stats.parentNode.insertBefore(card, stats.nextSibling); else box.insertBefore(card, box.firstChild);
   }
 
   /* ---------- Stage 5: money tidy + help, diary remove, QR invite, selfie ---------- */
