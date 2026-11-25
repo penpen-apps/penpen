@@ -1470,7 +1470,11 @@ th .pp-qt{position:absolute;right:0;top:100%;width:210px;z-index:5;box-shadow:0 
   var PREFS = {guide: '', scene: 'auto', mode: 'light'};
   try { var _pp = JSON.parse(localStorage.getItem('pp_prefs') || '{}'); Object.keys(_pp).forEach(function (k) { PREFS[k] = _pp[k]; }); } catch (x) {}
   function guideMine() { var me = meProf(); return !!(me && me.saved && me.avatar) && PREFS.guide !== 'penpen'; }
-  function paintNav() { var me = meProf(), n = $('navpen'); if (!n) return; n.innerHTML = guideMine() ? avatar(me.avatar, 62, 'full', 'idle') : avatar(AV_DEF, 62, 'full', 'idle'); }
+  function navSvg() { var me = meProf(); return guideMine() ? avatar(me.avatar, 62, 'full', 'idle') : avatar(AV_DEF, 62, 'full', 'idle'); }
+  function paintNav() { var n = $('navpen'); if (!n) return; n.innerHTML = navSvg(); }
+  // the front-facing penguin, for screens that copy him (tour, Talk, pet). Copying the middle button itself
+  // could catch him mid-animation (turned around, walking sideways, hiding), which showed a faceless blob.
+  window.ppFrontPen = function () { return navSvg().replace(/^<svg[^>]*>|<\/svg>$/g, ''); };
   function setPref(k, val) { PREFS[k] = val; try { localStorage.setItem('pp_prefs', JSON.stringify(PREFS)); } catch (x) {} applyPrefs(); paintScene(); }
   function applyPrefs() { var dark = PREFS.mode === 'dark' || (PREFS.mode === 'auto' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches); document.body.classList.toggle('pp-dark', !!dark); }
   applyPrefs();
