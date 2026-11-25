@@ -610,7 +610,8 @@
   function menu(p) {
     var n = album().length;
     return '<details class="gmenu"><summary class="gbtn" aria-label="Menu: games, quiz, learn, sing, shop and more">☰</summary><div class="gm"><b class="gm-lv">Level ' + level(p) + '</b>' +
-      [['games', '🎮', 'Games'], ['quiz', '🎓', 'Quiz'], ['learn', '📚', 'Learn'], ['sing', '🎤', 'Sing'], ['shop', '🛍️', 'Shop']].map(function (t) { return '<button data-tab="' + t[0] + '"><span>' + t[1] + '</span>' + t[2] + '</button>'; }).join('') +
+      (p.egg ? '' : '<button data-act="igloo"><span>🎮</span>Games</button>') +   // games are picked in the igloo (it opens once he hatches)
+      [['quiz', '🎓', 'Quiz'], ['learn', '📚', 'Learn'], ['sing', '🎤', 'Sing'], ['shop', '🛍️', 'Shop']].map(function (t) { return '<button data-tab="' + t[0] + '"><span>' + t[1] + '</span>' + t[2] + '</button>'; }).join('') +
       (p.egg ? '' : '<button data-act="make" aria-haspopup="dialog"><span>🎨</span>Wardrobe</button>') + '<button data-act="stats" aria-haspopup="dialog"><span>📊</span>Stats</button>' + (p.asleep ? '' : '<button data-act="sleep"><span>💤</span>Sleep</button>') +
       '<button data-act="selfie"><span>📸</span>Selfie</button><button data-act="album"><span>🖼</span>Album' + (n ? ' (' + n + ')' : '') + '</button></div></details>';
   }
@@ -658,7 +659,6 @@
     if (tab === 'slide') { drawIdle(); slideHooks(); }
     var gh = document.getElementById('pp-ghost-host');
     if (gh && window.ppGames) {
-      if (tab === 'games') gh.innerHTML = window.ppGames.cards(p.bests);
       if (tab === 'quiz') window.ppGames.quiz(gh, function (c) { var q = load(), gl = winGlass(q, 'quiz', c); q.coins += c; q.xp += c; save(q); setCoins(q); if (gl) toast('+' + gl + ' sea glass 💖 Charm +' + gl); });
       if (tab === 'sing') window.ppGames.sing(gh);
       if (tab === 'learn' && window.ppGames.learn) window.ppGames.learn(gh, function (c) { var q = load(), gl = winGlass(q, 'learn', c); q.coins += c; q.xp += c; q.joy = clamp(q.joy + 3); save(q); setCoins(q); if (gl) toast('+' + gl + ' sea glass 💖 Charm +' + gl); });
@@ -833,7 +833,6 @@
     var p = load();
     if (b.classList.contains('back')) return back();
     if (b.dataset.tab) { stopAll(); tab = b.dataset.tab; return paint(); }
-    if (b.dataset.game) return playGame(b.dataset.game);
     if (b.dataset.item) return walkTo(b.dataset.item);
     if (b.dataset.play) return playFromIgloo(b.dataset.play);
     if (b.dataset.act === 'stats') return showStats();
@@ -870,7 +869,7 @@
     var p = load(); wakeToPlay(p); p.energy = clamp(p.energy - 10); save(p);
     var host = document.getElementById('pp-ghost-host');
     window.ppGames.open(id, host, function (score, coins, ended) {
-      if (score === null) { if (ret) tab = ret; return paint(); }
+      if (score === null) { tab = ret || 'igloo'; return paint(); }   // leaving a game goes back to the igloo, where games are picked
       if (!ended) return;
       var q = load(), gl = winGlass(q, id, coins); q.coins += coins; q.xp += Math.ceil(coins / 2); q.joy = clamp(q.joy + 8); q.bests = q.bests || {}; if (score > (q.bests[id] || 0)) q.bests[id] = score; if (id === 'slide' && score > q.best) q.best = score; save(q); setCoins(q);
       var res = host && host.querySelector('.gres'); if (res && gl) res.insertAdjacentHTML('beforeend', '<span class="gl">' + glassLine(id, gl) + '</span>');
@@ -1022,8 +1021,6 @@
     '#pp-play{position:fixed;inset:0;z-index:99965;background:var(--bg);color:var(--ink);overflow:auto;padding:calc(14px + env(safe-area-inset-top)) 16px calc(30px + env(safe-area-inset-bottom));font:16px/1.4 ' + F + ';user-select:none;-webkit-user-select:none}' +
     // the floating back arrow and coins on every screen but the garden and igloo; the page scrolls under them
     '#pp-play.pg{padding-top:calc(60px + env(safe-area-inset-top))}#pp-play .ptop{position:fixed;top:calc(8px + env(safe-area-inset-top));left:8px;right:8px;z-index:60;display:flex;justify-content:space-between;align-items:center;pointer-events:none}#pp-play .ptop>*{pointer-events:auto;box-shadow:0 2px 8px rgba(19,50,74,.18)}' +
-    // the games list: four big tiles fill the phone
-    '#pp-play.pg .gcards{grid-auto-rows:1fr;min-height:calc(100vh - 90px - env(safe-area-inset-top) - env(safe-area-inset-bottom));min-height:calc(100dvh - 90px - env(safe-area-inset-top) - env(safe-area-inset-bottom))}#pp-play.pg .gcards button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}#pp-play.pg .gcards span{font-size:64px}#pp-play.pg .gcards b{font-size:20px}' +
     '#pp-play .back{border:0;background:var(--card);color:var(--ink);border-radius:50%;width:40px;height:40px;font-size:24px;line-height:1;padding:0 0 3px;cursor:pointer}' +
     '#pp-play .coins{background:var(--card);border-radius:99px;padding:6px 12px;font-weight:900;display:flex;align-items:center;gap:6px}' +
     '.cn{display:inline-block;width:1.05em;height:1.05em;border-radius:50%;background:radial-gradient(circle at 35% 30%,#FFE58A,#F4C542 55%,#C9962B);box-shadow:inset 0 0 0 2px #E0AE36;vertical-align:-0.15em;position:relative}.cn::after{content:"' + COIN_SIGN + '";position:absolute;inset:0;display:grid;place-items:center;font:900 .62em/1 ' + F + ';color:#8A6516;font-style:normal}' +

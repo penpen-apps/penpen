@@ -254,11 +254,13 @@
   };
 
   /* ---------- Chase: a little maze, a hungry polar bear ---------- */
+  // a tall phone gets a taller level (17 rows, same width), so the maze fills the screen; shorter screens keep the 13-row one
+  var TALL = ['###########', '#.........#', '#.##.#.##.#', '#*#..#..#*#', '#.#.###.#.#', '#.........#', '###.#.#.###', '#...#.#...#', '#.###.###.#', '#.........#', '#.#.###.#.#', '#.#.....#.#', '#.##.#.##.#', '#.........#', '#.##.#.##.#', '#*...#...*#', '###########'];
   var MAZE = ['###########', '#.........#', '#.##.#.##.#', '#*#..#..#*#', '#.#.###.#.#', '#.........#', '###.#.#.###', '#...#.#...#', '#.###.###.#', '#.........#', '#.##.#.##.#', '#*...#...*#', '###########'];
   MAKERS.chase = function (S) {
-    var c = S.c, W = S.W, H = S.H, R = MAZE.length, C = MAZE[0].length, T = S.top ? S.top + 20 : 0, cs = Math.floor(Math.min(W / C, (H - T) / R)), ox = (W - cs * C) / 2, oy = T + (H - T - cs * R) / 2;   // the maze sits below the floating bar, room for the hearts line above it
-    var grid = MAZE.map(function (r) { return r.split(''); }), lives = 3, lvl = 1;
-    var P = { r: 9, c: 5, fr: 9, fc: 5, d: null, want: null, p: 1 }, B = { r: 5, c: 5, fr: 5, fc: 5, p: 1 }, frozen = 0;
+    var c = S.c, W = S.W, H = S.H, T = S.top ? S.top + 20 : 0, M = (H - T) * MAZE[0].length / W >= 16 ? TALL : MAZE, R = M.length, C = M[0].length, cs = Math.floor(Math.min(W / C, (H - T) / R)), ox = (W - cs * C) / 2, oy = T + (H - T - cs * R) / 2;   // the maze sits below the floating bar, room for the hearts line above it
+    var grid = M.map(function (r) { return r.split(''); }), lives = 3, lvl = 1, PR = R - 4;   // penpen starts 4 rows up from the bottom, the bear in row 5
+    var P = { r: PR, c: 5, fr: PR, fc: 5, d: null, want: null, p: 1 }, B = { r: 5, c: 5, fr: 5, fc: 5, p: 1 }, frozen = 0;
     function left() { var n = 0; grid.forEach(function (r) { r.forEach(function (x) { if (x === '.' || x === '*') n++; }); }); return n; }
     function open(r, cc) { return grid[r] && grid[r][cc] && grid[r][cc] !== '#'; }
     var D = { up: [-1, 0], down: [1, 0], left: [0, -1], right: [0, 1] };
@@ -269,7 +271,7 @@
       while (p && !(p[0] === fr && p[1] === fc)) { cur2 = p; p = prev[p[0] + ',' + p[1]]; }
       return cur2;
     }
-    function reset() { P.r = P.fr = 9; P.c = P.fc = 5; P.p = 1; P.d = P.want = null; B.r = B.fr = 5; B.c = B.fc = 5; B.p = 1; frozen = 1.5; }
+    function reset() { P.r = P.fr = PR; P.c = P.fc = 5; P.p = 1; P.d = P.want = null; B.r = B.fr = 5; B.c = B.fc = 5; B.p = 1; frozen = 1.5; }
     return {
       press: function (k) { if (D[k]) P.want = k; },
       step: function (dt) {
@@ -280,7 +282,7 @@
           var e = grid[P.r][P.c]; if (e === '.') { grid[P.r][P.c] = ' '; S.add(1); } if (e === '*') { grid[P.r][P.c] = ' '; S.add(5); frozen = 5; }
           if (P.want && open(P.r + D[P.want][0], P.c + D[P.want][1])) P.d = P.want;
           if (P.d && open(P.r + D[P.d][0], P.c + D[P.d][1])) { P.r += D[P.d][0]; P.c += D[P.d][1]; } else P.p = 1;
-          if (!left()) { lvl++; grid = MAZE.map(function (r) { return r.split(''); }); reset(); S.add(20); }
+          if (!left()) { lvl++; grid = M.map(function (r) { return r.split(''); }); reset(); S.add(20); }
         }
         if (frozen > 0) frozen -= dt; else {
           B.p += dt * bs;
@@ -573,8 +575,7 @@
     '.sg{font-family:' + F + ';text-align:center}.sg .sgpen{position:relative;display:inline-block}.sg .sgpen .sgm{position:absolute;right:-18px;bottom:8px;font-size:28px;background:none!important;width:auto!important;height:auto!important}.sg .sgpen.on svg{animation:qyay .5s ease-in-out infinite}' +
     '.sg .sglist{display:flex;flex-direction:column;gap:8px;margin:8px 0}.sg .sglist button{border:0;background:var(--card,#fff);color:inherit;border-radius:18px;padding:12px 14px;text-align:left;font:inherit;cursor:pointer}.sg .sglist b{display:block;font-weight:900}.sg .sglist small{color:var(--muted,#6B7C8A);font-weight:700}' +
     '.sg .sglyr{background:#13324A;color:#9FB4C4;border-radius:22px;padding:14px;margin:10px 0}.sg .sglyr b{display:block;color:#fff;margin-bottom:6px}.sg .sglyr p{margin:6px 0;font:900 20px/1.4 ' + F + '}.sg .sglyr span.now{color:#F2A33A}.sg .sglyr span.sung{color:#fff}.sg .sglyr button{margin-top:10px;border:0;border-radius:99px;padding:10px 22px;font:900 15px ' + F + ';background:#F2A33A;color:#13324A;cursor:pointer}' +
-    '.lrn{font-family:' + F + '}.lrh{display:flex;align-items:center;gap:8px;margin-bottom:8px}.lrh b{font-size:18px;font-weight:900;flex:1}.lrh small{color:var(--muted,#7A8B99);font-weight:800}.lrx{border:0;background:none;font-size:18px;padding:4px}.lrmsg{background:var(--accentSoft,#E3F3EF);border-radius:14px;padding:10px 12px;font-weight:800;margin:6px 0}.lrlang{display:flex;gap:8px;margin:6px 0 10px}.lrlang button{flex:1;border:1.5px solid #237566;background:none;color:#237566;border-radius:99px;padding:8px;font:800 14px ' + F + '}.lrlang button.on{background:#237566;color:#fff}.lrlist{display:grid;grid-template-columns:1fr 1fr;gap:10px}.lrlist button{border:0;background:var(--card,#fff);color:inherit;border-radius:20px;padding:14px 8px;font:inherit;min-height:110px;box-shadow:0 1px 3px rgba(0,0,0,.06)}.lrlist span{display:block;font-size:34px}.lrlist b{display:block;font-weight:900;margin-top:4px}.lrlist small{color:var(--muted,#7A8B99);font-weight:700}.lrtip{font-size:13px;color:var(--muted,#7A8B99);text-align:center;margin-top:10px}.lrbar{height:8px;border-radius:99px;background:var(--line,#E5E9EC);overflow:hidden;margin-bottom:14px}.lrbar i{display:block;height:100%;background:#F2A33A;border-radius:99px;transition:width .3s}.lrcard{background:var(--card,#fff);border-radius:24px;padding:24px 16px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.06)}.lrcard small{display:block;color:var(--muted,#7A8B99);font-weight:800;font-size:15px}.lrcard b{display:block;font-size:28px;font-weight:900;margin:8px 0 14px;color:#237566}.lrcard button{border:1.5px solid var(--line,#E5E9EC);background:none;border-radius:99px;padding:8px 14px;font:800 14px ' + F + ';color:inherit}.lrgo{display:block;width:100%;margin-top:14px;border:0;border-radius:18px;padding:15px;background:#237566;color:#fff;font:900 17px ' + F + '}.lropts{display:flex;flex-direction:column;gap:10px;margin-top:14px}.lropts button{border:1.5px solid var(--line,#E5E9EC);background:var(--card,#fff);color:inherit;border-radius:18px;padding:14px;font:800 17px ' + F + '}.lropts button.ok{background:#DFF3E4;border-color:#3FA55B}.lropts button.no{background:#FBE3E0;border-color:#D9534F}' +
-    '.gcards{display:grid;grid-template-columns:1fr 1fr;gap:10px}.gcards button{border:0;background:var(--card,#fff);color:inherit;border-radius:20px;padding:16px 10px;font:inherit;cursor:pointer;min-height:120px}.gcards span{display:block;font-size:40px}.gcards b{display:block;font-weight:900;font-size:16px;margin-top:4px}.gcards small{display:block;color:var(--muted,#6B7C8A);font-weight:700;font-size:12px}';
+    '.lrn{font-family:' + F + '}.lrh{display:flex;align-items:center;gap:8px;margin-bottom:8px}.lrh b{font-size:18px;font-weight:900;flex:1}.lrh small{color:var(--muted,#7A8B99);font-weight:800}.lrx{border:0;background:none;font-size:18px;padding:4px}.lrmsg{background:var(--accentSoft,#E3F3EF);border-radius:14px;padding:10px 12px;font-weight:800;margin:6px 0}.lrlang{display:flex;gap:8px;margin:6px 0 10px}.lrlang button{flex:1;border:1.5px solid #237566;background:none;color:#237566;border-radius:99px;padding:8px;font:800 14px ' + F + '}.lrlang button.on{background:#237566;color:#fff}.lrlist{display:grid;grid-template-columns:1fr 1fr;gap:10px}.lrlist button{border:0;background:var(--card,#fff);color:inherit;border-radius:20px;padding:14px 8px;font:inherit;min-height:110px;box-shadow:0 1px 3px rgba(0,0,0,.06)}.lrlist span{display:block;font-size:34px}.lrlist b{display:block;font-weight:900;margin-top:4px}.lrlist small{color:var(--muted,#7A8B99);font-weight:700}.lrtip{font-size:13px;color:var(--muted,#7A8B99);text-align:center;margin-top:10px}.lrbar{height:8px;border-radius:99px;background:var(--line,#E5E9EC);overflow:hidden;margin-bottom:14px}.lrbar i{display:block;height:100%;background:#F2A33A;border-radius:99px;transition:width .3s}.lrcard{background:var(--card,#fff);border-radius:24px;padding:24px 16px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.06)}.lrcard small{display:block;color:var(--muted,#7A8B99);font-weight:800;font-size:15px}.lrcard b{display:block;font-size:28px;font-weight:900;margin:8px 0 14px;color:#237566}.lrcard button{border:1.5px solid var(--line,#E5E9EC);background:none;border-radius:99px;padding:8px 14px;font:800 14px ' + F + ';color:inherit}.lrgo{display:block;width:100%;margin-top:14px;border:0;border-radius:18px;padding:15px;background:#237566;color:#fff;font:900 17px ' + F + '}.lropts{display:flex;flex-direction:column;gap:10px;margin-top:14px}.lropts button{border:1.5px solid var(--line,#E5E9EC);background:var(--card,#fff);color:inherit;border-radius:18px;padding:14px;font:800 17px ' + F + '}.lropts button.ok{background:#DFF3E4;border-color:#3FA55B}.lropts button.no{background:#FBE3E0;border-color:#D9534F}';
   css += '.gx .gopt{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}.gx .gopt button{border:0;background:rgba(255,255,255,.88);color:#13324A;border-radius:99px;padding:8px 12px;min-height:36px;font:800 14px ' + F + ';cursor:pointer}.gx .gopt button[aria-pressed="true"]{background:#13324A;color:#fff}';
   css += '.gx .ghelp{width:40px;height:40px;flex:none;border-radius:50%;border:0;background:rgba(255,255,255,.9);color:#13324A;font:900 18px ' + F + ';cursor:pointer}' +
     '.gx .ghow{border:0;background:rgba(255,255,255,.88);color:#13324A;border-radius:99px;padding:8px 14px;min-height:36px;font:800 14px ' + F + ';text-decoration:underline;cursor:pointer}' +
@@ -584,7 +585,6 @@
 
   window.ppGames = {
     list: GAMES,
-    cards: function (best) { return '<div class="gcards">' + Object.keys(GAMES).map(function (k) { return '<button type="button" data-game="' + k + '"><span>' + GAMES[k].e + '</span><b>' + GAMES[k].t + '</b><small>' + (best && best[k] ? 'Best ' + best[k] : 'Works offline') + '</small></button>'; }).join('') + '</div>'; },
     open: function (id, host, done) { return shell(host, id, done); }, quiz: quiz, learn: learn, sing: sing, stop: stop, _m: MAKERS
   };
 })();
