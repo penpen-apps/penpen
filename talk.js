@@ -26,6 +26,7 @@
     '@keyframes ppbob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}' +
     '@media (prefers-reduced-motion:reduce){#pp-talk.speaking .pen{animation:none}}' +
     '#pp-talk .cap{max-width:420px;text-align:center;font-size:19px;min-height:54px;opacity:.85}' +
+    '#pp-talk .cap .alt{display:block;margin-top:6px;font-size:16px;opacity:.8}' +
     '#pp-talk .bar{display:flex;gap:28px}' +
     '#pp-talk .bar button{width:68px;height:68px;border-radius:50%;border:0;display:grid;place-items:center;font-size:26px;box-shadow:0 4px 14px rgba(0,0,0,.12)}' +
     '#pp-talk .mute{background:#fff;color:#2B2A28}#pp-talk .mute.on{background:#2B2A28;color:#fff}' +
@@ -33,7 +34,7 @@
     '#pp-talk .ptt{display:flex;gap:12px;width:100%;max-width:440px}#pp-talk .ptt button{flex:1;min-height:96px;border-radius:24px;border:0;font:800 17px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#13324A;box-shadow:0 4px 14px rgba(0,0,0,.1);touch-action:none;user-select:none;-webkit-user-select:none}' +
     '#pp-talk .st:empty{display:none}' +
     '#pp-talk .langs{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;align-items:center;margin-bottom:12px;max-width:440px}#pp-talk .langs span{font-weight:800;opacity:.7;font-size:15px}' +
-    '#pp-talk .langs button{border:1.5px solid #237566;background:rgba(255,255,255,.7);color:#13324A;border-radius:99px;padding:7px 13px;font:800 14px Nunito,-apple-system,sans-serif}#pp-talk .langs button.on{background:#237566;color:#fff}#pp-talk .langs button.me{background:#13324A;color:#fff;border-color:#13324A}#pp-talk .langs button.sw{width:38px;height:38px;padding:0;font-size:18px;transition:transform .3s}#pp-talk .langs button.sw.spin{transform:rotate(180deg)}#pp-talk .ptt.swapped{flex-direction:row-reverse}' +
+    '#pp-talk .langs button{border:1.5px solid #237566;background:rgba(255,255,255,.7);color:#13324A;border-radius:99px;padding:7px 13px;font:800 14px Nunito,-apple-system,sans-serif}#pp-talk .langs button.on{background:#237566;color:#fff}#pp-talk .langs button.me{background:#13324A;color:#fff;border-color:#13324A}#pp-talk .langs button.swap{width:38px;height:38px;padding:0;font-size:18px;transition:transform .3s}#pp-talk .langs button.swap.spin{transform:rotate(180deg)}#pp-talk .ptt.swapped{flex-direction:row-reverse}' +
     '#pp-talk .ptt button.solo{min-height:120px;font-size:21px}#pp-talk .ptt button.on{background:#C8553D;color:#fff;transform:scale(.97)}#pp-talk .ptt small{display:block;font-weight:700;font-size:13px;opacity:.75;margin-top:4px}' +
     '@media (max-height:720px){#pp-talk{padding-top:calc(16px + env(safe-area-inset-top));padding-bottom:calc(18px + env(safe-area-inset-bottom))}#pp-talk .orb{width:170px;height:170px}#pp-talk .pen{width:118px;height:118px}#pp-talk .cap{font-size:17px}}';
   var PEN = '<svg class="pen" viewBox="0 0 120 120" aria-hidden="true"><ellipse cx="60" cy="112" rx="30" ry="5" fill="#000" opacity=".08"/><path d="M60 14c-26 0-40 22-40 50 0 26 16 44 40 44s40-18 40-44c0-28-14-50-40-50z" fill="#2E3A4A"/><ellipse cx="60" cy="76" rx="25" ry="28" fill="#FFF8EE"/><circle cx="48.5" cy="50" r="13" fill="#FFF8EE"/><circle cx="71.5" cy="50" r="13" fill="#FFF8EE"/><circle cx="48.5" cy="51" r="5.2" fill="#1E1E1E"/><circle cx="71.5" cy="51" r="5.2" fill="#1E1E1E"/><circle cx="50.3" cy="49" r="1.8" fill="#fff"/><circle cx="73.3" cy="49" r="1.8" fill="#fff"/><path d="M54 60q6 7 12 0q-6 4-12 0z" fill="#F4A62A"/><ellipse cx="40" cy="62" rx="5" ry="3" fill="#F7A9A0" opacity=".6"/><ellipse cx="80" cy="62" rx="5" ry="3" fill="#F7A9A0" opacity=".6"/><ellipse cx="48" cy="106" rx="9" ry="4" fill="#F4A62A"/><ellipse cx="72" cy="106" rx="9" ry="4" fill="#F4A62A"/></svg>';
@@ -49,21 +50,10 @@
   }
 
   var LANGS = ['Bisaya (Cebuano)', 'Tagalog', 'Thai', 'Vietnamese', 'Mandarin', 'Cantonese', 'Japanese', 'Korean', 'Bahasa Indonesia', 'Malay', 'Hindi', 'Arabic', 'Spanish', 'French', 'Italian', 'German', 'Portuguese', 'Turkish'];
-  // the phone's time zone follows you abroad, so it tells us the local language without asking for location
-  var TZ_LANG = { 'Asia/Manila': ['Bisaya (Cebuano)', 'Tagalog'], 'Asia/Bangkok': ['Thai'], 'Asia/Ho_Chi_Minh': ['Vietnamese'], 'Asia/Saigon': ['Vietnamese'],
-    'Asia/Shanghai': ['Mandarin'], 'Asia/Taipei': ['Mandarin'], 'Asia/Hong_Kong': ['Cantonese'], 'Asia/Macau': ['Cantonese'], 'Asia/Tokyo': ['Japanese'],
-    'Asia/Seoul': ['Korean'], 'Asia/Jakarta': ['Bahasa Indonesia'], 'Asia/Makassar': ['Bahasa Indonesia'], 'Asia/Kuala_Lumpur': ['Malay'], 'Asia/Singapore': ['Mandarin', 'Malay'],
-    'Asia/Kolkata': ['Hindi'], 'Asia/Dubai': ['Arabic'], 'Asia/Phnom_Penh': ['Khmer'], 'Asia/Vientiane': ['Lao'], 'Asia/Yangon': ['Burmese'], 'Asia/Kathmandu': ['Nepali'],
-    'Europe/Madrid': ['Spanish'], 'Europe/Paris': ['French'], 'Europe/Rome': ['Italian'], 'Europe/Berlin': ['German'], 'Europe/Lisbon': ['Portuguese'], 'Europe/Istanbul': ['Turkish'],
-    'Europe/Athens': ['Greek'], 'America/Mexico_City': ['Spanish'], 'America/Sao_Paulo': ['Portuguese'], 'America/Bogota': ['Spanish'], 'America/Lima': ['Spanish'], 'America/Argentina/Buenos_Aires': ['Spanish'] };
   // languages of where the trip goes (falls back to the phone's time zone)
   function myLang() { return localStorage.getItem('pp_tr_me') || 'English'; }
   function short(l) { return String(l).replace(/ \(.*\)/, ''); }
-  function suggested() {
-    var txt = ''; try { var c = window.ppTrips && window.ppTrips.current && window.ppTrips.current(); txt = JSON.stringify(c || '') + (localStorage.getItem('pp_c_penpenToday:[]') || '').slice(0, 4000); } catch (e) {}
-    if (/philippines|cebu|dipolog|manila|bohol|davao|palawan|siargao|dumaguete|iloilo|boracay/i.test(txt)) return TZ_LANG['Asia/Manila'];
-    try { return TZ_LANG[Intl.DateTimeFormat().resolvedOptions().timeZone] || []; } catch (e) { return []; }
-  }
+  function suggested() { return window.ppPlace().langs.slice(); }   // place.js works out the trip's country
   function open(opts) {
     opts = opts || {};
     if (S) return;
@@ -77,7 +67,8 @@
     S = { el: w, turns: [], inT: '', outT: '', muted: false, model: 0, nextAt: 0, sources: [], mode: opts.mode || 'talk', lang: opts.lang || '' };
     document.getElementById('pp-t-end').onclick = close;
     try { S.ctx = new (window.AudioContext || window.webkitAudioContext)(); S.ctx.resume(); } catch (e) {}
-    if (S.mode === 'translate' && !S.lang) S.lang = (Date.now() - (+localStorage.getItem('pp_tr_lang_t') || 0) < 6 * 36e5 && localStorage.getItem('pp_tr_lang')) || suggested()[0] || 'Tagalog';
+    if (S.mode === 'translate' && !S.lang) S.lang = (Date.now() - (+localStorage.getItem('pp_tr_lang_t') || 0) < 6 * 36e5 && localStorage.getItem('pp_tr_lang')) || suggested()[0] || '';
+    if (S.mode === 'translate' && !S.lang) return pickLang();   // no local language we know of (e.g. an English-speaking country): let them choose
     begin();
   }
   function pickLang(forMe) {
@@ -101,7 +92,8 @@
       var l = go ? (document.getElementById('pp-t-ol').value || '').trim() : b && b.dataset.l;
       if (!l) return;
       cap.onclick = null; cap.textContent = '';
-      if (forMe) { localStorage.setItem('pp_tr_me', l); if (l === S.lang) S.lang = l === 'English' ? (suggested()[0] || 'Tagalog') : 'English'; switchLang(S.lang, true); }
+      if (forMe) { localStorage.setItem('pp_tr_me', l); if (l === S.lang) S.lang = l === 'English' ? (suggested()[0] || localStorage.getItem('pp_tr_lang') || 'Spanish') : 'English'; switchLang(S.lang, true); }
+      else if (l === myLang()) { pickLang(); status('Pick the language of the person you\'re talking to.'); }   // switching to your own language would do nothing
       else switchLang(l);
     };
   }
@@ -113,6 +105,20 @@
   }
   function status(t) { var s = document.getElementById('pp-t-st'); if (s) s.textContent = t; }
   function caption(t) { var c = document.getElementById('pp-t-cap'); if (c) c.textContent = t; }
+  // languages not written in English letters: their captions get a second line in the other writing
+  var NON_LATIN = /japanese|korean|mandarin|cantonese|chinese|thai|khmer|lao|burmese|hindi|nepali|arabic|greek|russian|hebrew/i;
+  function twin(turn, lang) {
+    if (!turn || !window.ppCall) return;
+    window.ppCall('penpenScript', [turn.t, lang]).then(function (r) {
+      if (!r) return;
+      var latin = !/[^\u0000-\u024F\u1E00-\u1EFF\s\d.,!?¡¿'"()\-–—…:;]/.test(turn.t);   // the caption is already in English letters?
+      var alt = latin ? r.script : r.roman;
+      if (!alt || alt === turn.t) return;
+      turn.alt = alt;
+      var c = document.getElementById('pp-t-cap');   // still showing this sentence: add the twin under it
+      if (c && c.textContent.trim() === turn.t) { var d = document.createElement('span'); d.className = 'alt'; d.textContent = alt; c.appendChild(d); }
+    }, function () {});   // no twin is fine: the translation itself already worked
+  }
 
 
   /* ---------- hold-to-talk: press, speak, let go (Talk has one button, Translate has Me / Them) ---------- */
@@ -131,7 +137,7 @@
     var here = suggested().filter(function (l) { return l !== myLang(); }), cur = S.lang, list = here.slice();
     if (list.indexOf(cur) < 0) list.unshift(cur);
     var row = document.createElement('div'); row.className = 'langs';
-    row.innerHTML = '<button type="button" class="me" data-me="1" title="Change your language">🙋 ' + short(myLang()) + ' ▾</button><button type="button" class="sw" data-swap="1" aria-label="Swap sides">⇄</button>' + list.map(function (l) { return '<button type="button" data-l="' + l + '" class="' + (l === cur ? 'on' : '') + '">' + l.replace(/ \(.*\)/, '') + '</button>'; }).join('') + '<button type="button" data-more="1">More…</button>';
+    row.innerHTML = '<button type="button" class="me" data-me="1" title="Change your language">🙋 ' + short(myLang()) + ' ▾</button><button type="button" class="swap" data-swap="1" aria-label="Swap sides">⇄</button>' + list.map(function (l) { return '<button type="button" data-l="' + l + '" class="' + (l === cur ? 'on' : '') + '">' + l.replace(/ \(.*\)/, '') + '</button>'; }).join('') + '<button type="button" data-more="1">More…</button>';
     row.onclick = function (e) {
       var b = e.target.closest('button'); if (!b) return;
       if (b.dataset.swap) { S.swap = !S.swap; b.classList.toggle('spin'); var bx = S.el.querySelector('.ptt'); if (bx) bx.classList.toggle('swapped', !!S.swap); return; }
@@ -162,7 +168,7 @@
       };
       var up = function (e) {
         if (!S || S.ptt !== b.dataset.who) return; e.preventDefault();
-        S.ptt = null; b.classList.remove('on'); S.el.classList.remove('holding'); b.innerHTML = label;
+        S.ptt = null; S.turnWho = b.dataset.who; b.classList.remove('on'); S.el.classList.remove('holding'); b.innerHTML = label;
         status(S.mode === 'translate' ? '🌐 Translating…' : '💭 penpen is thinking…');
         try { S.ws.send(JSON.stringify({ realtimeInput: { activityEnd: {} } })); } catch (x) {}
       };
@@ -190,7 +196,7 @@
           inputAudioTranscription: {}, outputAudioTranscription: {},
           tools: S.mode === 'translate' ? [] : [{ functionDeclarations: [{ name: 'penpen_action',
             description: 'Record or change something on the trip, or calculate money: log an expense or payment, split, settle up, undo, who owes who, totals.',
-            parameters: { type: 'OBJECT', properties: { request: { type: 'STRING', description: 'The request in plain words, e.g. "Lunch 450 pesos, Kate paid, split with Brad"' } }, required: ['request'] } }] }]
+            parameters: { type: 'OBJECT', properties: { request: { type: 'STRING', description: 'The request in plain words, e.g. "Lunch 450, Kate paid, split with Brad"' } }, required: ['request'] } }] }]
         } }));
       };
       ws.onmessage = function (e) {
@@ -222,8 +228,11 @@
     if (sc.modelTurn) sc.modelTurn.parts.forEach(function (p) { if (p.inlineData && p.inlineData.data) play(p.inlineData.data, p.inlineData.mimeType); });
     if (sc.outputTranscription && sc.outputTranscription.text) { S.outT += sc.outputTranscription.text; caption(S.outT); }
     if (sc.turnComplete) {
-      if (S.inT.trim() && S.inT.indexOf('(The user just opened') < 0) S.turns.push({ who: 'me', t: S.inT.trim() });
-      if (S.outT.trim()) S.turns.push({ who: 'pp', t: S.outT.trim() });
+      var tIn = null, tOut = null;
+      if (S.inT.trim() && S.inT.indexOf('(The user just opened') < 0) S.turns.push(tIn = { who: 'me', t: S.inT.trim() });
+      if (S.outT.trim()) S.turns.push(tOut = { who: 'pp', t: S.outT.trim() });
+      // Translate: the local-language half also gets its script / English-letters twin (ありがとう + arigatou)
+      if (S.mode === 'translate' && NON_LATIN.test(S.lang)) twin(S.turnWho === 'them' ? tIn : tOut, S.lang);   // who spoke this turn (set when they let go)
       S.inT = ''; S.outT = '';
       setTimeout(function () { if (S && !S.sources.length) { S.el.classList.remove('speaking'); status(idle()); } }, 300);
     }
@@ -300,7 +309,7 @@
     var log = document.getElementById('log');
     if (log && s.turns.length) {
       if (s.mode === 'translate') { var hd = document.createElement('div'); hd.className = 'msg pp'; hd.textContent = '🌐 Translation (' + myLang() + ' ⇄ ' + s.lang + ')'; log.appendChild(hd); }
-      s.turns.forEach(function (t) { var d = document.createElement('div'); d.className = 'msg ' + t.who; d.textContent = t.t; log.appendChild(d); });
+      s.turns.forEach(function (t) { var d = document.createElement('div'); d.className = 'msg ' + t.who; d.textContent = t.t + (t.alt ? '\n' + t.alt : ''); if (t.alt) d.style.whiteSpace = 'pre-line'; log.appendChild(d); });
       log.scrollTop = log.scrollHeight;
     }
     if (s.mode !== 'translate') try {

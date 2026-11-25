@@ -42,6 +42,7 @@
       })
       .then(function (j) { if (!j.ok) throw new Error(j.error); return j.data; });
   }
+  var inflight = {};   // reads waiting on the server right now, by the same key as the saved copy
   function ready() { return new Promise(function (res) { if (valid() && ROLE) res(); else waiting.push(res); }); }
 
   function call(fn, args) {
@@ -54,12 +55,23 @@
       if (isRead && c !== undefined) return Promise.resolve(c);
       return Promise.reject(new Error("You're offline — this needs a connection."));
     }
-    return ready().then(function () { return post('call', { fn: fn, args: args }); })
-      .then(function (r) {
-        if (fn === 'penpenProfiles' && r) return fixInvite(r).then(function (x) { set(key, x); stamp(key); return x; });
-        if (isRead) { set(key, r); stamp(key); }
-        return r;
-      })
+    // speed: if the same read is already on its way (two screens asking at once on start-up), share that one answer
+    var p = isRead && inflight[key], shared = !!p;
+    if (!p) {
+      p = ready().then(function () {
+        // the trip creator's invite link is fetched alongside the profiles, not after them
+        var inv = fn === 'penpenProfiles' && ROLE === 'creator' ? post('invite', {}).catch(function () { return null; }) : null;
+        return post('call', { fn: fn, args: args }).then(function (r) {
+          if (r && r.place && window.ppPlace) window.ppPlace.save(r.place);   // the trip's country, currency and time zone
+          if (fn === 'penpenProfiles' && r) return fixInvite(r, inv).then(function (x) { set(key, x); stamp(key); return x; });
+          if (isRead) { set(key, r); stamp(key); }
+          return r;
+        });
+      });
+      if (isRead) { inflight[key] = p; var done = function () { if (inflight[key] === p) delete inflight[key]; }; p.then(done, done); }
+    }
+    if (shared) p = p.then(function (r) { return r === undefined ? r : JSON.parse(JSON.stringify(r)); });   // own copy, so one screen can't change another's
+    return p
       .catch(function (e) {
         if (e.message === 'signin') { TOKEN = null; SESS = ''; set('pp_tok', null); localStorage.removeItem('pp_sess'); showSignin('Please sign in again.'); return call(fn, args); }
         var c = get(key, undefined);
@@ -71,9 +83,9 @@
       });
   }
   // invite QR should open this app with a join code, not the server address
-  function fixInvite(r) {
-    if (ROLE !== 'creator') { r.url = BASE; return Promise.resolve(r); }
-    return post('invite', {}).then(function (i) { r.url = BASE + '?join=' + i.code; return r; }, function () { r.url = BASE; return r; });
+  function fixInvite(r, inv) {
+    if (ROLE !== 'creator' || !inv) { r.url = BASE; return Promise.resolve(r); }
+    return inv.then(function (i) { r.url = i && i.code ? BASE + '?join=' + i.code : BASE; return r; });
   }
 
   function runner(o) {
@@ -136,8 +148,11 @@
 
 
   /* ---------- sign in ---------- */
-  var css = '#pp-gate{position:fixed;inset:0;z-index:99999;background:#F6EEDF;display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;font:16px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#2B2A28}' +
-    '#pp-gate h1{font-size:28px;margin:10px 0 4px}#pp-gate p{color:#7A7468;max-width:320px;margin:6px auto}#pp-gate .b{margin:20px 0}' +
+  var css = '#pp-gate{position:fixed;inset:0;z-index:99999;background:#F6EEDF;display:none;flex-direction:column;align-items:center;justify-content:center;justify-content:safe center;overflow-y:auto;text-align:center;padding:24px;font:16px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#2B2A28}' +
+    '#pp-gate h1{font-size:28px;margin:10px 0 4px}#pp-gate p{color:#5C574C;max-width:320px;margin:6px auto}#pp-gate .b{margin:20px 0}' +
+    '#pp-gate ul{list-style:none;margin:14px auto 0;padding:0;max-width:300px;text-align:left}#pp-gate li{display:flex;gap:12px;align-items:center;padding:7px 0;color:#2B2A28;font-weight:600;font-size:15px}#pp-gate li span{font-size:22px;width:28px;text-align:center;flex:none}' +
+    '#pp-ask{max-width:320px;margin:6px auto 0;padding-top:14px;border-top:1.5px dashed #E3D6BE}#pp-ask p{margin:0}#pp-ask b{color:#2B2A28}#pp-ask-ok{font-size:14px;margin-top:8px!important;color:#1D5E52!important}#pp-ask-ok:empty{display:none}' +
+    '#pp-gate button:focus-visible{outline:3px solid #F4A62A;outline-offset:2px}' +
     '#pp-gate button{font:inherit;border:1.5px solid #237566;color:#237566;background:none;border-radius:14px;padding:10px 16px;margin-top:14px}' +
     '#pp-off{position:fixed;top:0;left:0;right:0;z-index:99998;background:#F4A62A;color:#3a2a00;text-align:center;font:13px -apple-system,sans-serif;padding:5px;display:none}';
   var PEN = '<svg width="120" height="120" viewBox="0 0 120 120"><ellipse cx="60" cy="112" rx="30" ry="5" fill="#000" opacity=".08"/><path d="M60 14c-26 0-40 22-40 50 0 26 16 44 40 44s40-18 40-44c0-28-14-50-40-50z" fill="#2E3A4A"/><ellipse cx="60" cy="76" rx="25" ry="28" fill="#FFF8EE"/><circle cx="48.5" cy="50" r="13" fill="#FFF8EE"/><circle cx="71.5" cy="50" r="13" fill="#FFF8EE"/><circle cx="48.5" cy="51" r="5.2" fill="#1E1E1E"/><circle cx="71.5" cy="51" r="5.2" fill="#1E1E1E"/><circle cx="50.3" cy="49" r="1.8" fill="#fff"/><circle cx="73.3" cy="49" r="1.8" fill="#fff"/><path d="M54 60q6 7 12 0q-6 4-12 0z" fill="#F4A62A"/><ellipse cx="48" cy="106" rx="9" ry="4" fill="#F4A62A"/><ellipse cx="72" cy="106" rx="9" ry="4" fill="#F4A62A"/></svg>';
@@ -147,17 +162,37 @@
     if (g) return g;
     var st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
     g = document.createElement('div'); g.id = 'pp-gate';
-    g.innerHTML = PEN + '<h1>penpen</h1><p id="pp-gate-msg">Your trip, your travel buddies, your money — in one place.</p><div class="b" id="pp-gbtn"></div><p id="pp-gate-sub">Sign in with the Google account you were invited with.</p>';
+    g.innerHTML = PEN + '<h1>penpen</h1><p id="pp-gate-msg">Your trip, your travel buddies, your money — in one place.</p>' +
+      '<ul id="pp-what"><li><span aria-hidden="true">🗺️</span>Your trip\u2019s plan and map, day by day</li><li><span aria-hidden="true">💸</span>Who paid what, and who owes who</li><li><span aria-hidden="true">📔</span>A shared diary. Just tell penpen.</li></ul>' +
+      '<div class="b" id="pp-gbtn"></div><p id="pp-gate-sub">Sign in with the Google account you were invited with.</p>' +
+      '<div id="pp-ask"><p id="pp-ask-how"><b>How do I get in?</b> penpen is invite-only. The trip creator adds your Google email, or sends you an invite link.</p>' +
+      '<button type="button" id="pp-askbtn">Ask for an invite</button><p id="pp-ask-ok" role="status"></p></div>';
+    g.querySelector('#pp-askbtn').onclick = askInvite;
     document.body.appendChild(g);
     var off = document.createElement('div'); off.id = 'pp-off'; off.textContent = "You're offline — showing your last saved copy."; document.body.appendChild(off);
     return g;
   }
   function onBody(f) { if (document.body) f(); else document.addEventListener('DOMContentLoaded', f); }
 
+  // first visit: say what penpen is and how to get in; people coming back, or holding an invite link, just sign in
+  function newcomer(on) { document.getElementById('pp-what').hidden = !on; document.getElementById('pp-ask').hidden = !on; document.getElementById('pp-ask-how').hidden = false; }
+  // "Ask for an invite": a ready message they send to whoever's planning the trip (no form, nothing stored)
+  function askInvite() {
+    var email = TOKEN && TOKEN.email, ok = document.getElementById('pp-ask-ok');
+    var text = 'Hi! Can you add me to our trip on penpen? ' + (email ? 'My Google email is ' + email + '.' : 'I\u2019ll sign in with my Google account.');
+    var copy = function () {
+      var done = function () { ok.textContent = 'Message copied. Paste it to whoever\u2019s planning the trip.'; };
+      if (navigator.clipboard) navigator.clipboard.writeText(text + ' ' + BASE).then(done, function () { ok.textContent = text + ' ' + BASE; });
+      else ok.textContent = text + ' ' + BASE;
+    };
+    if (navigator.share) navigator.share({ title: 'penpen', text: text + ' ' + BASE }).catch(function (e) { if (!e || e.name !== 'AbortError') copy(); });
+    else copy();
+  }
   function showSignin(msg) {
     onBody(function () {
       var g = gate(); g.style.display = 'flex';
       if (msg) document.getElementById('pp-gate-msg').textContent = msg;
+      newcomer(!ROLE && !joinCode);
       document.getElementById('pp-gate-sub').style.display = '';
       gis(function () {
         google.accounts.id.renderButton(document.getElementById('pp-gbtn'), { theme: 'filled_black', size: 'large', shape: 'pill', text: 'continue_with' });
@@ -168,8 +203,11 @@
   function showNotMember() {
     onBody(function () {
       var g = gate(); g.style.display = 'flex';
-      document.getElementById('pp-gate-msg').innerHTML = "You're signed in as <b>" + (TOKEN.email || '') + "</b>, but you're not on this trip yet.";
-      document.getElementById('pp-gate-sub').textContent = 'Ask the trip creator for the invite QR code or link, then open it on this phone.';
+      var m = document.getElementById('pp-gate-msg'), b = document.createElement('b');
+      b.textContent = (TOKEN && TOKEN.email) || 'this Google account';   // text, not HTML
+      m.textContent = 'You\u2019re signed in as '; m.appendChild(b); m.appendChild(document.createTextNode(', but you\u2019re not on a penpen trip yet.'));
+      document.getElementById('pp-gate-sub').textContent = 'Ask the trip creator to add this email in Travel buddies, or to send you an invite link.';
+      newcomer(true); document.getElementById('pp-what').hidden = true; document.getElementById('pp-ask-how').hidden = true;   // they know what penpen is; the line above says how
       document.getElementById('pp-gbtn').innerHTML = '<button id="pp-switch">Use a different Google account</button>';
       document.getElementById('pp-switch').onclick = window.ppSignOut;
     });
@@ -208,7 +246,7 @@
       var q = waiting; waiting = []; q.forEach(function (f) { f(); });
       if (window.ppRefreshTheme) setTimeout(window.ppRefreshTheme, 1500);
     }).catch(function (e) {
-      if (e.message === 'badinvite') return showSignin('That invite link has expired — ask for a new one.');
+      if (e.message === 'badinvite') { joinCode = null; history.replaceState(null, '', location.pathname); return showSignin('That invite link has expired — ask for a new one.'); }
       if (e.message === 'signin') { SESS = ''; localStorage.removeItem('pp_sess'); return showSignin('Please sign in again.'); }
       if (!navigator.onLine) return;
       if (e.weak && ROLE) return;   // weak signal on a phone that's already signed in: keep showing the saved copy, don't lock the app
@@ -227,7 +265,17 @@
     list: function () { return post('trips', {}).then(function (r) { return (r && r.trips) || []; }); },
     open: function (id, name) { setTrip(id, name); location.reload(); },
     create: function (o) { return post('newTrip', o).then(function (r) { return r.trip; }); },
-    remove: function (id) { return post('removeTrip', { id: id }).then(function (r) { return (r && r.trips) || []; }); }
+    setPlace: function (o) { return post('setPlace', o).then(function (r) { if (window.ppPlace) window.ppPlace.save(r.place); clearCache(); return r.place; }); },
+    remove: function (id) { return post('removeTrip', { id: id }).then(function (r) { return (r && r.trips) || []; }); },
+    role: function () { return ROLE; },
+    // creator only: add a friend by their Google email; the crew list and Today reload with them on it
+    addMember: function (o) {
+      return ready().then(function () { return post('addMember', o); }).then(function (r) {
+        Object.keys(localStorage).forEach(function (k) { if (/^pp_c_penpen(Profiles|Today):/.test(k)) localStorage.removeItem(k); });
+        return r;
+      });
+    },
+    appLink: function () { return BASE; }   // the plain app address: an added friend needs no invite code
   };
 
   window.ppSignOut = function () {

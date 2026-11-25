@@ -117,18 +117,20 @@
   }, true);
 
   /* ---------- How to use penpen (ready for the final version) ---------- */
+  // example phrases use a real crew member's name, or a version without a name
+  function ex(x) { var b = window.ppBuddy(); return b ? x.replace('{buddy}', b) : x.replace('Call {buddy}', 'Call the hotel').replace('{buddy} paid', 'I paid'); }
   var HELP = [
-    ['🐧', 'Talk to penpen', 'Tap the middle penpen and just talk or type, like texting a friend. He knows your whole trip.', ['“What’s the plan today?”', '“Where can we eat lechon near our hotel?”', '“Give me the top 5 stops for Dec 7 along the way”', '“Call Brad”']],
-    ['💸', 'Log expenses', 'Say what you paid — penpen writes it down and splits it.', ['“Lunch 450, I paid”', '“Brad paid 1,200 for the van, shared”', '“Dinner 3,200, my treat”', '“Who owes who?”', '“Undo”']],
-    ['🌐', 'Translate', 'On penpen’s chat, tap the big Translate bar. Hold your button to speak English, hold theirs for Bisaya or Tagalog.', []],
-    ['🗺️', 'Itinerary', 'Every day of the trip with times, places and directions. Tell penpen to change it.', ['“Move canyoneering to 9 am”', '“Add dinner at Larsian on Dec 5 at 7 pm”']],
+    ['🐧', 'Talk to penpen', 'Tap the middle penpen and just talk or type, like texting a friend. He knows your whole trip.', ['“What’s the plan today?”', '“Where can we eat near our hotel?”', '“Give me the top 5 stops for Dec 7 along the way”', '“Call {buddy}”']],
+    ['💸', 'Log expenses', 'Say what you paid — penpen writes it down and splits it.', ['“Lunch 450, I paid”', '“{buddy} paid 1,200 for the van, shared”', '“Dinner 3,200, my treat”', '“Who owes who?”', '“Undo”']],
+    ['🌐', 'Translate', 'On penpen’s chat, tap the big Translate bar. Hold your button to speak English, hold theirs for the local language.', []],
+    ['🗺️', 'Itinerary', 'Every day of the trip with times, places and directions. Tell penpen to change it.', ['“Move canyoneering to 9 am”', '“Add dinner on Dec 5 at 7 pm”']],
     ['👥', 'Travel buddies, Safety & Bookings', 'In More: who’s on the trip and the invite QR, SOS and nearby help, and your hotels, tours and transport.', []],
-    ['📔', 'Diary', 'Write, talk or add photos. Group diary is shared with everyone; Just me is only for you.', ['“Dear diary, today we swam with whale sharks…”']],
+    ['📔', 'Diary', 'Write, talk or add photos. Group diary is shared with everyone; Just me is only for you.', ['“Dear diary, today we…”']],
     ['🎮', 'Play', 'Look after penpen and play Belly Slide — even with no signal. Every expense you log earns a 🐟.', []],
     ['⚙️', 'Settings', 'Pick your guide, voice, scene and light/dark, and open the trip’s Google Sheet.', []]
   ];
   window.ppHelpHtml = function () {
-    return HELP.map(function (h) { return '<details class="hc"><summary><i>' + h[0] + '</i><b>' + h[1] + '</b></summary><p>' + h[2] + '</p>' + (h[3].length ? '<div class="ex">' + h[3].map(function (x) { return '<span>' + esc(x) + '</span>'; }).join('') + '</div>' : '') + '</details>'; }).join('');
+    return HELP.map(function (h) { return '<details class="hc"><summary><i>' + h[0] + '</i><b>' + h[1] + '</b></summary><p>' + h[2] + '</p>' + (h[3].length ? '<div class="ex">' + h[3].map(function (x) { return '<span>' + esc(ex(x)) + '</span>'; }).join('') + '</div>' : '') + '</details>'; }).join('');
   };
 
   /* ---------- 🔔 feed: app updates + what the crew logged (kept for a week) ---------- */
@@ -148,7 +150,7 @@
       E.rows.slice(1).forEach(function (r, i) {
         var who = String(r[cb] || '').trim(), at = Date.parse(r[cl]);
         if (!r[cw] || !who || (meName && who.toLowerCase().indexOf(meName.toLowerCase()) === 0) || !(at > nowT - WEEK)) return;
-        out.push({ id: 'x:' + i + ':' + r[cw], ic: '💸', t: who + ' logged ' + r[cw], s: (r[cc] === 'PHP' ? '₱' + r[ca] : r[ca] + ' ' + r[cc]) + ' · ' + new Date(at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), go: 'Money' });
+        out.push({ id: 'x:' + i + ':' + r[cw], ic: '💸', t: who + ' logged ' + r[cw], s: (r[cc] === window.ppPlace().cur ? window.ppPlace().sym + r[ca] : r[ca] + ' ' + r[cc]) + ' · ' + new Date(at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), go: 'Money' });
       });
     }
     return out;
@@ -198,7 +200,7 @@
     if (document.getElementById('pp-help')) return;
     var w = document.createElement('div'); w.id = 'pp-help'; w.setAttribute('role', 'dialog'); w.setAttribute('aria-label', 'How to use penpen');
     w.innerHTML = '<div class="top"><button class="back" aria-label="Back">‹</button><h2>How to use penpen</h2></div><div class="wrap">' +
-      HELP.map(function (h) { return '<div class="hc"><div class="hh"><i>' + h[0] + '</i><b>' + h[1] + '</b></div><p>' + h[2] + '</p>' + (h[3].length ? '<div class="ex">' + h[3].map(function (x) { return '<span>' + esc(x) + '</span>'; }).join('') + '</div>' : '') + '</div>'; }).join('') +
+      HELP.map(function (h) { return '<div class="hc"><div class="hh"><i>' + h[0] + '</i><b>' + h[1] + '</b></div><p>' + h[2] + '</p>' + (h[3].length ? '<div class="ex">' + h[3].map(function (x) { return '<span>' + esc(ex(x)) + '</span>'; }).join('') + '</div>' : '') + '</div>'; }).join('') +
       '<p class="ft">More guides and videos coming soon.</p></div>';
     document.body.appendChild(w);
     w.onclick = function (e) { if (e.target.closest('.back')) w.remove(); };
@@ -225,12 +227,12 @@
   var ICON = { accommodation: '🏨', activities: '🎟️', tours: '🎟️', food: '🍜', transport: '🚐', transportation: '🚐', shopping: '🛍️', fees: '🧾', other: '📦' };
   function icon(c) { var k = Object.keys(ICON).filter(function (x) { return c.toLowerCase().indexOf(x) >= 0; })[0]; return ICON[k] || '📦'; }
   function num(v) { var n = parseFloat(String(v || '').replace(/[^\d.\-]/g, '')); return isNaN(n) ? 0 : n; }
-  function peso(n) { return '₱' + Math.round(n).toLocaleString('en-US'); }
+  function cash(n) { return window.ppPlace().sym + Math.round(n).toLocaleString('en-US'); }   // in the trip's currency
   function expenses() {
     var T = get('pp_trip'), E = T && T.tabs && T.tabs.Expenses; if (!E || !E.rows) return null;
     var H = E.rows[0].map(function (h) { return String(h).trim().toLowerCase(); });
     var col = function (n) { return H.indexOf(n); };
-    var c = { date: col('date'), what: col('what / place'), cat: col('category'), amt: col('amount'), cur: col('currency'), by: col('paid by'), st: col('status'), php: col('total php'), counts: col('counts') };
+    var c = { date: col('date'), what: col('what / place'), cat: col('category'), amt: col('amount'), cur: col('currency'), by: col('paid by'), st: col('status'), php: col('total ' + String(window.ppPlace().cur).toLowerCase()), counts: col('counts') };
     return E.rows.slice(1).filter(function (r) { return r[c.what]; }).map(function (r) {
       var st = String(r[c.st] || '');
       return { date: r[c.date], what: r[c.what], cat: r[c.cat] || 'Other', by: r[c.by], amt: r[c.amt], cur: r[c.cur], php: num(r[c.php]),
@@ -245,21 +247,21 @@
     card.setAttribute('aria-expanded', open ? 'true' : 'false');
     if (!open) { if (panel) panel.remove(); return; }
     var X = expenses(); if (!X) return;
-    var colors = {}; $$('.pp-cat-leg span', card).forEach(function (s) { var b = s.querySelector('b'), nm = s.textContent.replace(/₱.*/, '').trim(); if (b) colors[nm] = b.style.background; });
+    var colors = {}; $$('.pp-cat-leg span', card).forEach(function (s) { var b = s.querySelector('b'), nm = s.textContent.replace((s.querySelector('em') || {}).textContent || '', '').trim(); if (b) colors[nm] = b.style.background; });
     var cats = {}, total = 0;
     X.forEach(function (x) {
       var k = x.cat; cats[k] = cats[k] || { spent: 0, later: 0, items: [] };
       if (x.counts) { cats[k].spent += x.php; total += x.php; }
-      if (x.later) cats[k].later += x.cur === 'PHP' ? num(x.amt) : 0;
+      if (x.later) cats[k].later += x.cur === window.ppPlace().cur ? num(x.amt) : 0;
       cats[k].items.push(x);
     });
     var keys = Object.keys(cats).sort(function (a, b) { return cats[b].spent - cats[a].spent || cats[b].items.length - cats[a].items.length; });
     var h = keys.map(function (k) {
       var c = cats[k], pct = total ? Math.round(c.spent / total * 100) : 0, col = colors[k] || colors[k.replace(' · ', ' & ')] || 'var(--accent)';
-      var row = '<button type="button" class="dc' + (openCat === k ? ' open' : '') + '" data-c="' + esc(k) + '"><i>' + icon(k) + '</i><span class="nm"><b>' + esc(k) + '</b><small>' + c.items.length + ' item' + (c.items.length === 1 ? '' : 's') + (c.later ? ' · ' + peso(c.later) + ' still to pay' : '') + '</small><em class="bar"><u style="width:' + Math.max(pct, c.spent ? 3 : 0) + '%;background:' + col + '"></u></em></span><span class="amt">' + peso(c.spent) + '<small>' + pct + '%</small></span></button>';
+      var row = '<button type="button" class="dc' + (openCat === k ? ' open' : '') + '" data-c="' + esc(k) + '"><i>' + icon(k) + '</i><span class="nm"><b>' + esc(k) + '</b><small>' + c.items.length + ' item' + (c.items.length === 1 ? '' : 's') + (c.later ? ' · ' + esc(cash(c.later)) + ' still to pay' : '') + '</small><em class="bar"><u style="width:' + Math.max(pct, c.spent ? 3 : 0) + '%;background:' + col + '"></u></em></span><span class="amt">' + esc(cash(c.spent)) + '<small>' + pct + '%</small></span></button>';
       if (openCat === k) row += '<div class="items">' + c.items.map(function (x) {
         var tag = x.later ? '<em class="t later">not paid yet</em>' : x.personal ? '<em class="t">personal</em>' : '';
-        var amt = x.cur === 'PHP' ? '₱' + x.amt : x.amt + ' ' + x.cur;
+        var amt = x.cur === window.ppPlace().cur ? window.ppPlace().sym + x.amt : x.amt + ' ' + x.cur;
         return '<div class="it"><span><b>' + esc(x.what) + '</b><small>' + esc(x.date) + ' · ' + esc(x.by) + (x.later ? ' pays ' : ' paid ') + tag + '</small></span><span class="a">' + esc(amt) + '</span></div>';
       }).join('') + '</div>';
       return row;
@@ -325,9 +327,12 @@
 
   /* ---------- the middle penpen has a life of his own ---------- */
   var SAY = ['I’m your trouble buddy… I mean travel buddy 😇', 'Log it or lose it! exPENPENses 💸', 'What do you call a penguin who tracks money? An exPENPENse report 🐧', 'Why don’t penguins get lost? They always ice-plore with a map 🗺️', 'I’m not lazy, I’m in penguin power-saving mode 🔋', 'Chill-axing… penguin style 🧊', 'Ice to meet you! 🧊', 'Who’s the coolest travel buddy? Me. Literally. 🥶', 'Use me to translate! 🌐', 'Drop your expenses here 💸', '"Lunch 450, I paid" — just tell me!', 'Where to next? 🗺️', 'I\'m not lost, I\'m exploring 🐧',
-    'Ask me where to eat 🍜', 'Got sunscreen? ☀️', 'Tap me, I\'m bored 🥱', 'Need a route? I\'ve got 5 🗺️', 'I know a guy… for lechon 🐷', 'Fish tacos? No? OK 🐟',
-    'Hydrate, hooman 💧', 'I can call Brad for you 📞', 'Psst… tap me 👀', '✨', '🐟', '🥥', '🧊', '💭', '🎶'];
-  var FACTS = ['Penguins can’t fly, but they “fly” underwater at up to 35 km/h 🐧', 'The Philippines has about 7,641 islands 🏝️', 'A group of penguins on land is called a waddle 🐧🐧', 'Whale sharks are the biggest fish in the world 🐋', 'Penguins slide on their bellies to save energy — like me! 🛷', 'Cebu’s Magellan’s Cross dates back to 1521 ✝️', '“Salamat” means thank you 🙏', 'Emperor penguins can dive over 500 m deep 🌊', 'Mango is the national fruit of the Philippines 🥭', 'Penguins have a gland that filters salt from seawater 🧂', 'Puso — rice cooked in woven palm leaves — is a Cebu classic 🍚', 'Gentoo penguins give pebbles as gifts 💎'];
+    'Ask me where to eat 🍜', 'Got sunscreen? ☀️', 'Tap me, I\'m bored 🥱', 'Need a route? I\'ve got 5 🗺️', 'Fish tacos? No? OK 🐟',
+    'Hydrate, hooman 💧', 'I can call a travel buddy for you 📞', 'Psst… tap me 👀', '✨', '🐟', '🥥', '🧊', '💭', '🎶'];
+  var FACTS = ['Penguins can’t fly, but they “fly” underwater at up to 35 km/h 🐧', 'A group of penguins on land is called a waddle 🐧🐧', 'Whale sharks are the biggest fish in the world 🐋', 'Penguins slide on their bellies to save energy — like me! 🛷', 'Emperor penguins can dive over 500 m deep 🌊', 'Penguins have a gland that filters salt from seawater 🧂', 'Gentoo penguins give pebbles as gifts 💎'];
+  var FACTS_PH = ['The Philippines has about 7,641 islands 🏝️', 'Cebu’s Magellan’s Cross dates back to 1521 ✝️', '“Salamat” means thank you 🙏', 'Mango is the national fruit of the Philippines 🥭', 'Puso — rice cooked in woven palm leaves — is a Cebu classic 🍚'];   // only on Philippine trips
+  function ph() { return window.ppPlace().cc === 'PH'; }
+  function facts() { return ph() ? FACTS.concat(FACTS_PH) : FACTS; }
   var navBusy = false;
   function navPen() { var b = document.getElementById('navpen'); return b && b.querySelector('svg'); }
   function bodyColor(svg) {
@@ -399,19 +404,19 @@
     var K = {
       bob: [[{ transform: 'translateY(0)' }, { transform: 'translateY(-6%)' }, { transform: 'translateY(0)' }], 700, null],
       jump: [[{ transform: 'translateY(0) scale(1,1)' }, { transform: 'scale(1.15,.85)', offset: .2 }, { transform: 'translateY(-30%) scale(.95,1.08)', offset: .5 }, { transform: 'scale(1.1,.9)', offset: .85 }, { transform: 'translateY(0) scale(1,1)' }], 650, ['Wheee! ✨', '🎉', 'Boing! 🐧']],
-      think: [[{ transform: 'rotate(0)' }, { transform: 'rotate(-10deg)' }, { transform: 'rotate(-10deg)', offset: .8 }, { transform: 'rotate(0)' }], 1400, ['💭 …', '🤔 Hmm…', '💭 thinking about lechon']],
+      think: [[{ transform: 'rotate(0)' }, { transform: 'rotate(-10deg)' }, { transform: 'rotate(-10deg)', offset: .8 }, { transform: 'rotate(0)' }], 1400, ['💭 …', '🤔 Hmm…', ph() ? '💭 thinking about lechon' : '💭 thinking about snacks']],
       dance: [[{ transform: 'rotate(0) translateX(0)' }, { transform: 'rotate(-12deg) translateX(-8%)' }, { transform: 'rotate(12deg) translateX(8%)' }, { transform: 'rotate(-12deg) translateX(-8%)' }, { transform: 'rotate(0) translateX(0)' }], 1000, ['🎶', '💃', 'Budots time! 🕺']],
-      wave: [[{ transform: 'rotate(0)' }, { transform: 'rotate(8deg)' }, { transform: 'rotate(-8deg)' }, { transform: 'rotate(8deg)' }, { transform: 'rotate(0)' }], 700, ['Hi hi! 👋', 'Kumusta! 👋', 'Maayong buntag! ☀️']],
+      wave: [[{ transform: 'rotate(0)' }, { transform: 'rotate(8deg)' }, { transform: 'rotate(-8deg)' }, { transform: 'rotate(8deg)' }, { transform: 'rotate(0)' }], 700, ph() ? ['Hi hi! 👋', 'Kumusta! 👋', 'Maayong buntag! ☀️'] : ['Hi hi! 👋', 'Hello hello! 👋', 'Good morning! ☀️']],
       sleep: [[{ transform: 'rotate(0)' }, { transform: 'rotate(-6deg) translateY(3%)' }, { transform: 'rotate(-6deg) translateY(3%)', offset: .85 }, { transform: 'rotate(0)' }], 2000, ['💤', 'Zzz… 😴', '5 more minutes 💤']],
       shiver: [[{ transform: 'translateX(0)' }, { transform: 'translateX(-3%)' }, { transform: 'translateX(3%)' }, { transform: 'translateX(-3%)' }, { transform: 'translateX(3%)' }, { transform: 'translateX(0)' }], 500, ['Brrr 🥶', 'Aircon too cold 🧊']],
-      munch: [[{ transform: 'scale(1,1)' }, { transform: 'scale(1.05,.95)' }, { transform: 'scale(1,1)' }, { transform: 'scale(1.05,.95)' }, { transform: 'scale(1,1)' }], 800, ['🐟 nom nom', 'Snack break 🍡', 'Is that lechon? 🐷']],
+      munch: [[{ transform: 'scale(1,1)' }, { transform: 'scale(1.05,.95)' }, { transform: 'scale(1,1)' }, { transform: 'scale(1.05,.95)' }, { transform: 'scale(1,1)' }], 800, ['🐟 nom nom', 'Snack break 🍡', ph() ? 'Is that lechon? 🐷' : 'Is that dessert? 🍨']],
       sneeze: [[{ transform: 'rotate(0)' }, { transform: 'rotate(-6deg)', offset: .6 }, { transform: 'rotate(10deg) translateY(4%)', offset: .7 }, { transform: 'rotate(0)' }], 900, ['Achoo! 🤧', '…bless me 🙏']],
       love: [[{ transform: 'scale(1)' }, { transform: 'scale(1.12)' }, { transform: 'scale(1)' }, { transform: 'scale(1.12)' }, { transform: 'scale(1)' }], 900, ['💕', 'Love this trip already 💖']],
       cool: [[{ transform: 'rotate(0)' }, { transform: 'rotate(-5deg) translateX(-4%)' }, { transform: 'rotate(-5deg) translateX(-4%)', offset: .8 }, { transform: 'rotate(0)' }], 1200, ['😎', 'Too cool for the cold 😎']],
       sing: [[{ transform: 'rotate(0)' }, { transform: 'rotate(5deg)' }, { transform: 'rotate(-5deg)' }, { transform: 'rotate(5deg)' }, { transform: 'rotate(0)' }], 1300, ['🎶 la la la', '🎤 waddle waddle ♪']]
     }[k] || [[{ transform: 'rotate(0)' }], 300, null];
-    if (K[2] && talk) pop(Math.random() < .2 ? 'Fun fact: ' + pick(FACTS) : Math.random() < .35 ? pick(SAY) : pick(K[2]));
-    else if (!K[2] && Math.random() < .12) pop('Fun fact: ' + pick(FACTS));
+    if (K[2] && talk) pop(Math.random() < .2 ? 'Fun fact: ' + pick(facts()) : Math.random() < .35 ? pick(ph() ? SAY.concat('I know a guy… for lechon 🐷') : SAY) : pick(K[2]));
+    else if (!K[2] && Math.random() < .12) pop('Fun fact: ' + pick(facts()));
     anim(svg, K[0], K[1], function () { next(); });
   }
   setTimeout(play, 1500);

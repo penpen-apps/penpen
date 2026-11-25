@@ -37,25 +37,25 @@
     ['Asa ang CR?', 'A-sa ang see-AR', 'Where is the restroom?'], ['Palihug', 'pa-LEE-hoog', 'Please'], ['Hinay-hinay lang', 'HEE-nai HEE-nai lang', 'Slow down / take it easy'], ['Unsa ni?', 'OON-sa nee', 'What is this?'],
     ['Busog na ko', 'BOO-sog na ko', 'I\'m full'], ['Ingat!', 'EE-ngat', 'Take care!'], ['Tagpila?', 'tag-PEE-la', 'How much each?'], ['Para lang!', 'PA-ra lang', 'Stop here, please (to the driver)'],
     ['Gwapa / Gwapo', 'GWA-pa / GWA-po', 'Beautiful / Handsome'], ['Way problema', 'wai pro-BLE-ma', 'No problem'], ['Kumusta ka?', 'koo-MOOS-ta ka', 'How are you?']];
-  var QS = [['Which island is Oslob on?', ['Cebu', 'Bohol', 'Palawan'], 0], ['What’s “thank you” in Bisaya?', ['Salamat', 'Gracias', 'Maayo'], 0], ['Whale sharks eat mostly…', ['Plankton', 'Tuna', 'Seaweed'], 0],
-    ['What’s Cebu’s famous roast pig?', ['Lechon', 'Adobo', 'Sinigang'], 0], ['A group of penguins in water is a…', ['Raft', 'Pod', 'Waddle'], 0], ['Dipolog is on which island?', ['Mindanao', 'Luzon', 'Samar'], 0],
-    ['Moalboal is famous for…', ['Sardine run', 'Rice terraces', 'Volcano'], 0], ['Puso is rice wrapped in…', ['Woven palm leaves', 'Banana peel', 'Paper'], 0], ['The Philippine peso sign is…', ['₱', '₽', '£'], 0],
-    ['Fastest swimming penguin?', ['Gentoo', 'Emperor', 'Little blue'], 0], ['Kawasan Falls is in…', ['Badian, Cebu', 'Bohol', 'Siargao'], 0], ['“Lami” means…', ['Delicious', 'Cold', 'Far'], 0]];
+  var QS = [['Whale sharks eat mostly…', ['Plankton', 'Tuna', 'Seaweed'], 0], ['A group of penguins in water is a…', ['Raft', 'Pod', 'Waddle'], 0], ['Fastest swimming penguin?', ['Gentoo', 'Emperor', 'Little blue'], 0]];
+  var QS_PH = [['Which island is Oslob on?', ['Cebu', 'Bohol', 'Palawan'], 0], ['What’s “thank you” in Bisaya?', ['Salamat', 'Gracias', 'Maayo'], 0], ['What’s Cebu’s famous roast pig?', ['Lechon', 'Adobo', 'Sinigang'], 0], ['Dipolog is on which island?', ['Mindanao', 'Luzon', 'Samar'], 0], ['Moalboal is famous for…', ['Sardine run', 'Rice terraces', 'Volcano'], 0], ['Puso is rice wrapped in…', ['Woven palm leaves', 'Banana peel', 'Paper'], 0], ['The Philippine peso sign is…', ['₱', '₽', '£'], 0], ['Kawasan Falls is in…', ['Badian, Cebu', 'Bohol', 'Siargao'], 0], ['“Lami” means…', ['Delicious', 'Cold', 'Far'], 0]];   // only on Philippine trips
+  function ph() { return window.ppPlace().cc === 'PH'; }
   function dayNo() { return Math.floor(Date.now() / 864e5); }
   function daily() {
     var tiles = $('#pp-tiles'); if (!tiles) return;
     var card = $('#pp-daily'), D = get('pp_daily', {}), td = today();
-    var w = WORDS[dayNo() % WORDS.length], q = QS[dayNo() % QS.length], done = D.d === td;
-    var key = td + (done ? 'y' : 'n');
+    // the word of the day is Bisaya, so it only shows on Philippine trips
+    var qs = ph() ? QS.concat(QS_PH) : QS, w = ph() ? WORDS[dayNo() % WORDS.length] : null, q = qs[dayNo() % qs.length], done = D.d === td;
+    var key = td + (done ? 'y' : 'n') + (w ? 'w' : '');
     if (card && card.getAttribute('data-k') === key) return;
     if (!card) { card = document.createElement('div'); card.id = 'pp-daily'; tiles.parentNode.insertBefore(card, tiles.nextSibling); }
     card.setAttribute('data-k', key);
     var streak = D.s || 0;
     card.innerHTML = '<div class="dh">' + penSvg(38) + '<div><b>penpen’s daily</b><small>' + (streak ? '🔥 ' + streak + '-day streak' : 'Come back every day for a streak') + '</small></div></div>' +
-      '<div class="dw"><div><small>Word of the day</small><b>' + esc(w[0]) + '</b><span>' + esc(w[1]) + ' · ' + esc(w[2]) + '</span></div><button type="button" class="hear" aria-label="Hear it">🔊</button></div>' +
+      (w ? '<div class="dw"><div><small>Word of the day</small><b>' + esc(w[0]) + '</b><span>' + esc(w[1]) + ' · ' + esc(w[2]) + '</span></div><button type="button" class="hear" aria-label="Hear it">🔊</button></div>' : '') +
       (done ? '<div class="dq ok">✅ You answered today’s question. ' + (D.r ? '+5 coins for penpen!' : 'See you tomorrow!') + '</div>'
         : '<div class="dq"><small>Today’s question · +5 coins</small><b>' + esc(q[0]) + '</b><div class="ch">' + order(q).map(function (o) { return '<button type="button" data-i="' + o[1] + '">' + esc(o[0]) + '</button>'; }).join('') + '</div></div>');
-    $('.hear', card).onclick = function () { say(w[0] + '. ' + w[2] + '.'); };
+    if (w) $('.hear', card).onclick = function () { say(w[0] + '. ' + w[2] + '.'); };
     $$('.ch button', card).forEach(function (b) {
       b.onclick = function () {
         var right = +b.dataset.i === q[2], y = new Date(Date.now() - 864e5), yd = y.getFullYear() + '-' + ('0' + (y.getMonth() + 1)).slice(-2) + '-' + ('0' + y.getDate()).slice(-2);
@@ -236,15 +236,15 @@
     var o = get('pp_grp', null); if (!o) return;
     $$('#pp-me details.grp:not([data-r])').forEach(function (d) { d.setAttribute('data-r', '1'); var k = ((d.querySelector('summary span') || {}).textContent || '').slice(0, 20); if (k in o) d.open = o[k]; });
   }
-  var CC = { 'Asia/Manila': 'PH', 'Asia/Tokyo': 'JP', 'Asia/Seoul': 'KR', 'Asia/Singapore': 'SG', 'Asia/Bangkok': 'TH', 'Australia/Sydney': 'AU', 'Europe/London': 'GB', 'America/Los_Angeles': 'US', 'America/New_York': 'US', 'America/Chicago': 'US', 'America/Denver': 'US', 'America/Toronto': 'CA', 'Asia/Hong_Kong': 'HK', 'Asia/Dubai': 'AE' };
   var PH = { '2026-01-01': 'New Year’s Day', '2026-04-02': 'Maundy Thursday', '2026-04-03': 'Good Friday', '2026-04-09': 'Day of Valor', '2026-05-01': 'Labor Day', '2026-06-12': 'Independence Day', '2026-08-31': 'National Heroes Day', '2026-11-01': 'All Saints’ Day', '2026-11-30': 'Bonifacio Day', '2026-12-08': 'Immaculate Conception', '2026-12-24': 'Christmas Eve', '2026-12-25': 'Christmas Day', '2026-12-30': 'Rizal Day', '2026-12-31': 'New Year’s Eve',
     '2027-01-01': 'New Year’s Day', '2027-03-25': 'Maundy Thursday', '2027-03-26': 'Good Friday', '2027-04-09': 'Day of Valor', '2027-05-01': 'Labor Day', '2027-06-12': 'Independence Day', '2027-08-30': 'National Heroes Day', '2027-11-01': 'All Saints’ Day', '2027-11-30': 'Bonifacio Day', '2027-12-08': 'Immaculate Conception', '2027-12-25': 'Christmas Day', '2027-12-30': 'Rizal Day' };
   function holidays(y, cb) {
-    var cc = CC[(Intl.DateTimeFormat().resolvedOptions().timeZone) || ''] || 'PH', k = 'pp_hol_' + cc + y, c = get(k, null);
+    var cc = window.ppPlace().cc, k = 'pp_hol_' + cc + y, c = get(k, null);   // holidays of the trip's country
+    if (!cc) return cb({}, cc);
     if (c) return cb(c, cc);
     var fb = {}; if (cc === 'PH') Object.keys(PH).forEach(function (d) { if (d.indexOf(y) === 0) fb[d] = PH[d]; });
     cb(fb, cc);
-    fetch('https://date.nager.at/api/v3/PublicHolidays/' + y + '/' + cc).then(function (r) { return r.json(); }).then(function (a) {
+    fetch('https://date.nager.at/api/v3/PublicHolidays/' + y + '/' + cc).then(function (r) { if (!r.ok) throw new Error('holidays ' + r.status); return r.json(); }).then(function (a) {
       var o = {}; a.forEach(function (h) { o[h.date] = h.localName === h.name ? h.name : h.name; }); if (cc === 'PH') Object.keys(fb).forEach(function (d) { if (!o[d]) o[d] = fb[d]; });
       set(k, o); cb(o, cc);
     }).catch(function () {});
@@ -281,13 +281,19 @@
       }
       box.innerHTML = '<h3>My calendar</h3><div class="calc"><div class="ch"><button type="button" data-m="-1" aria-label="Previous month">‹</button><b>' + calM.toLocaleDateString(undefined, { month: 'long', year: 'numeric' }) + '</b><button type="button" data-m="1" aria-label="Next month">›</button></div>' +
         '<div class="wk">' + ['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(function (x) { return '<span>' + x + '</span>'; }).join('') + '</div><div class="gr">' + cells + '</div>' +
-        '<div class="lg"><span><i class="td"></i>Trip</span><span><i class="hd"></i>' + cc + ' holiday</span></div>' + (list.length ? '<ul>' + list.join('') + '</ul>' : '') + '</div>';
+        '<div class="lg"><span><i class="td"></i>Trip</span>' + (cc ? '<span><i class="hd"></i>' + esc(window.ppPlace.info(cc).name) + ' holiday</span>' : '') + '</div>' + (list.length ? '<ul>' + list.join('') + '</ul>' : '') + '</div>';
       box.onclick = function (e) { var b = e.target.closest('[data-m]'); if (!b) return; calM = new Date(y, m + +b.dataset.m, 1); drawCal(box); };
     });
   }
 
   /* ---------- 9. penpen's page (middle button): big penpen, Translate, History, a chat bar ---------- */
-  var IDEAS = ['“Lunch 450, I paid”', 'What’s next today?', 'Who owes who?', '“Dinner 2,000, my treat”', 'Top 5 spots near our hotel', 'How do I say “how much?” in Bisaya', 'Call Brad', 'Find a pharmacy near me', '“Brad paid 1,200 for the van”', 'Where can we eat lechon?', 'Undo my last expense', 'What should I pack?'];
+  // chat ideas fit the trip: its local language, its food, a real crew member's name
+  function ideas() {
+    var pl = window.ppPlace(), b = window.ppBuddy(), lang = String(pl.langs[0] || '').replace(/ \(.*\)/, '');
+    return ['“Lunch 450, I paid”', 'What’s next today?', 'Who owes who?', '“Dinner 2,000, my treat”', 'Top 5 spots near our hotel',
+      lang ? 'How do I say “how much?” in ' + lang : 'What’s a local dish I should try?', b ? 'Call ' + b : 'Call our hotel', 'Find a pharmacy near me',
+      b ? '“' + b + ' paid 1,200 for the van”' : '“I paid 1,200 for the van”', pl.cc === 'PH' ? 'Where can we eat lechon?' : 'Where can we eat near here?', 'Undo my last expense', 'What should I pack?'];
+  }
   var chatWas = false;
   function chatHome() {
     var p = $('#p-chat'); if (!p) return;
@@ -298,7 +304,7 @@
     var h = $('#pp-home', p);
     if (!h) {
       h = document.createElement('div'); h.id = 'pp-home'; p.insertBefore(h, p.firstChild);
-      var lst = IDEAS.concat(IDEAS).map(function (x) { return '<button type="button" data-idea="' + esc(x.replace(/[“”]/g, '')) + '">' + esc(x) + '</button>'; }).join('<i>·</i>');
+      var I = ideas(), lst = I.concat(I).map(function (x) { return '<button type="button" data-idea="' + esc(x.replace(/[“”]/g, '')) + '">' + esc(x) + '</button>'; }).join('<i>·</i>');
       h.innerHTML = '<div class="hb"><button type="button" class="hh" data-h="hist">🕘 History</button><button type="button" class="ht" data-h="tr">🌐 Translate</button></div>' +
         '<div class="hm"><div class="hsay" id="pp-hsay"></div><button type="button" class="hpen" data-h="talk" aria-label="Talk to penpen"><span class="r1"></span><span class="r2"></span><span class="hp"></span></button><div class="htip">Tap penpen to talk · or type below</div></div>' +
         '<div class="hidea" aria-label="Things you can ask"><div class="trk">' + lst + '</div></div>';
