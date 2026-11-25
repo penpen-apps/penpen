@@ -10,6 +10,11 @@
     honk:  { t: 'Honk!', e: '📣', how: 'Sneak up on tourists, HONK to make them drop things, and carry the loot to your igloo. Don’t get caught!', pad: 'honk' }
   };
   var cur = null;
+  // difficulty (all games) and Honk!'s scene, remembered on this phone
+  var DIFF = { easy: ['Easy', 0.75], normal: ['Normal', 1], hard: ['Hard', 1.3] };
+  var SCENES = { beach: '🏖️ Beach', park: '🌳 Park', snow: '❄️ Snow', city: '🏙️ City' };
+  function gset(o) { var v = {}; try { v = JSON.parse(localStorage.getItem('pp_games') || '{}') || {}; } catch (e) {} if (o) { Object.assign(v, o); try { localStorage.setItem('pp_games', JSON.stringify(v)); } catch (e) {} } if (!DIFF[v.diff]) v.diff = 'normal'; if (!SCENES[v.scene]) v.scene = 'beach'; return v; }
+  function chips(kind, list, on) { return '<div class="gopt" role="group" aria-label="' + kind + '">' + Object.keys(list).map(function (k) { return '<button type="button" data-' + kind + '="' + k + '" aria-pressed="' + (k === on) + '">' + (kind === 'diff' ? list[k][0] : list[k]) + '</button>'; }).join('') + '</div>'; }
   function $(s, r) { return (r || document).querySelector(s); }
   function rnd(a, b) { return a + Math.random() * (b - a); }
   function pick(a) { return a[Math.floor(Math.random() * a.length)]; }
@@ -42,13 +47,14 @@
   /* ---------- shared shell: Start circle → 3·2·1 → controls ---------- */
   function shell(host, id, done) {
     stop();
-    var G = GAMES[id];
+    var G = GAMES[id], O = gset();
+    function opts() { return chips('diff', DIFF, O.diff) + (id === 'honk' ? chips('scene', SCENES, O.scene) : ''); }
     host.innerHTML = '<div class="gx" data-g="' + id + '"><div class="gtop"><button type="button" class="gback" aria-label="Back to games">‹ Games</button><b>' + G.t + '</b><span class="gs">0</span></div>' +
-      '<div class="gstage"><canvas></canvas><div class="gover"><button type="button" class="gstart"><span>▶</span>Start</button><p>' + G.how + '</p></div></div><div class="gctl"></div></div>';
+      '<div class="gstage"><canvas></canvas><div class="gover"><button type="button" class="gstart"><span>▶</span>Start</button><p>' + G.how + '</p>' + opts() + '</div></div><div class="gctl"></div></div>';
     var cv = $('canvas', host), stage = $('.gstage', host), W = Math.min(host.clientWidth || 340, 480), H = Math.round(Math.min(Math.max(300, innerHeight - 330), W * 1.3));
     var dpr = Math.min(2, window.devicePixelRatio || 1); cv.width = W * dpr; cv.height = H * dpr; cv.style.width = W + 'px'; cv.style.height = H + 'px'; stage.style.height = H + 'px';
     var c = cv.getContext('2d'); c.scale(dpr, dpr);
-    var S = { id: id, host: host, c: c, W: W, H: H, keys: {}, raf: 0, on: false, score: 0, done: done, game: null };
+    var S = { id: id, host: host, c: c, W: W, H: H, keys: {}, raf: 0, on: false, score: 0, done: done, game: null, diff: DIFF[O.diff][1], scene: O.scene };
     cur = S;
     var over = $('.gover', host), ctl = $('.gctl', host);
     $('.gback', host).onclick = function () { stop(); if (done) done(null); };
@@ -72,11 +78,18 @@
       S.on = false; cancelAnimationFrame(S.raf); ctl.innerHTML = '';
       var coins = Math.min(30, Math.floor(S.score / (id === 'slide' ? 40 : 2)));
       over.style.display = ''; over.innerHTML = '<div class="gres"><b>' + (msg || 'Game over!') + '</b><span>Score ' + S.score + ' · +' + coins + ' coins</span></div><button type="button" class="gstart"><span>↻</span>Again</button><button type="button" class="gclose">✕ Back to games</button>';
+      over.insertAdjacentHTML('beforeend', opts());
       $('.gstart', over).onclick = begin; $('.gclose', over).onclick = function () { stop(); if (done) done(null); };
       if (done) done(S.score, coins, true);
     };
     S.add = function (n) { S.score += n; $('.gs', host).textContent = S.score; };
     $('.gstart', over).onclick = begin;
+    over.addEventListener('click', function (e) {   // Easy / Normal / Hard and the scene: pick before you start
+      var b = e.target.closest('[data-diff],[data-scene]'); if (!b) return;
+      O = gset(b.dataset.diff ? { diff: b.dataset.diff } : { scene: b.dataset.scene }); S.diff = DIFF[O.diff][1]; S.scene = O.scene;
+      [].slice.call(b.parentNode.children).forEach(function (x) { x.setAttribute('aria-pressed', String(x === b)); });
+      if (!S.on) MAKERS[id](S).draw(0);
+    });
     // a still picture behind the Start circle
     MAKERS[id](S).draw(0);
     swipe(cv, S);
@@ -118,14 +131,14 @@
 
   /* ---------- Belly Slide: front view, racing down toward you ---------- */
   MAKERS.slide = function (S) {
-    var c = S.c, W = S.W, H = S.H, hz = H * 0.28, lane = 1, px = W / 2, speed = 0.45, dist = 0, objs = [], spawn = 0.6, flakes = [], hit = 0, lean = 0;
+    var c = S.c, W = S.W, H = S.H, hz = H * 0.28, lane = 1, px = W / 2, speed = 0.45 * S.diff, dist = 0, objs = [], spawn = 0.6, flakes = [], hit = 0, lean = 0;
     for (var i = 0; i < 40; i++) flakes.push([Math.random() * W, Math.random() * H, rnd(1, 3)]);
     function laneX(l, z) { var vx = W / 2, bw = W * 0.95; return vx + (l - 1) * (bw / 3) * (1 - z * 0.92); }
     function yOf(z) { return hz + (H * 0.86 - hz) * (1 - z); }
     return {
       press: function (k) { if (k === 'left') lane = Math.max(0, lane - 1), lean = -1; if (k === 'right') lane = Math.min(2, lane + 1), lean = 1; },
       step: function (dt) {
-        speed = Math.min(1.3, speed + dt * 0.012); dist += dt * speed * 60; spawn -= dt;
+        speed = Math.min(1.3 * S.diff, speed + dt * 0.012); dist += dt * speed * 60; spawn -= dt;
         if (spawn <= 0) { spawn = rnd(0.55, 1.1) / speed; var fish = Math.random() < 0.3; objs.push({ l: Math.floor(Math.random() * 3), z: 1, k: fish ? '🐟' : pick(['🪨', '🌲', '⛄', '🪨']), fish: fish }); }
         objs.forEach(function (o) { o.z -= dt * speed * 0.55; });
         px += (laneX(lane, 0) - px) * Math.min(1, dt * 12); lean *= 0.9;
@@ -161,7 +174,7 @@
     for (var i = 0; i < 14; i++) bub.push([Math.random() * W, ice + Math.random() * (H - ice), rnd(1, 4)]);
     return {
       step: function (dt) {
-        t += dt; var k = S.keys, base = 90 + Math.min(80, t * 2);
+        t += dt; var k = S.keys, base = (90 + Math.min(80, t * 2)) * S.diff;
         if (k.down) vy += 520 * dt; else if (k.up) vy -= 560 * dt; else vy -= 140 * dt;
         vy *= 0.9; y += vy * dt;
         if (y > H - 26) { y = H - 26; vy = 0; }
@@ -170,7 +183,7 @@
         fish.forEach(function (f) { f.x -= base * dt; });
         for (var i = fish.length - 1; i >= 0; i--) { var f = fish[i]; if (Math.abs(f.x - x) < 26 && Math.abs(f.y - y) < 24) { S.add(f.k === '🦐' ? 3 : 1); fish.splice(i, 1); } else if (f.x < -20) fish.splice(i, 1); }
         next -= dt;
-        if (!foe && next <= 0) { warn = 1.6; foe = { x: -80, y: rnd(ice + 40, H - 40), go: false, v: 170 + Math.min(120, t * 3) }; next = rnd(6, 10); }
+        if (!foe && next <= 0) { warn = 1.6; foe = { x: -80, y: rnd(ice + 40, H - 40), go: false, v: (170 + Math.min(120, t * 3)) * S.diff }; next = rnd(6, 10); }
         if (foe) {
           if (warn > 0) warn -= dt; else foe.go = true;
           if (foe.go) {
@@ -214,7 +227,7 @@
     return {
       press: function (k) { if (D[k]) P.want = k; },
       step: function (dt) {
-        var ps = 5.2, bs = 3.4 + lvl * 0.5;
+        var ps = 5.2, bs = (3.4 + lvl * 0.5) * S.diff;
         P.p += dt * ps;
         if (P.p >= 1) {
           P.fr = P.r; P.fc = P.c; P.p = 0;
@@ -248,11 +261,18 @@
     };
   };
 
-  /* ---------- Honk!: annoy the tourists, steal the loot ---------- */
+  /* ---------- Honk!: annoy the tourists, steal the loot. Four places; reach the goal before time's up for the next level ---------- */
+  var HONK_AT = {
+    beach: { ground: '#F3E3BE', top: '#7CC7DB', loot: ['🍦', '🎩', '🥪', '🕶️', '📷', '🥥', '🩴', '🍢'], deco: [['⛱️', 0.7, 0.45, 40], ['🌴', 0.92, 0.2, 44], ['🌴', 0.45, 0.9, 40]] },
+    park:  { ground: '#BFE3A0', top: '#9FD3F0', loot: ['🍦', '🎈', '🥪', '🧺', '🍎', '🕶️', '📷', '🌭'], deco: [['🌳', 0.9, 0.2, 46], ['🌳', 0.5, 0.88, 40], ['🪑', 0.72, 0.5, 30], ['🦆', 0.32, 0.3, 24]], pond: 1 },
+    snow:  { ground: '#F4F8FB', top: '#C9DCEA', loot: ['🧣', '🧤', '☕', '🍫', '📷', '🥨', '🎿', '🕶️'], deco: [['⛄', 0.72, 0.45, 40], ['🌲', 0.92, 0.2, 44], ['🌲', 0.48, 0.9, 40]] },
+    city:  { ground: '#DAD6CF', top: '#9AA9B8', loot: ['🍔', '🛍️', '☕', '🕶️', '📷', '🌭', '🧋', '🎧'], deco: [['🚦', 0.9, 0.22, 36], ['🏪', 0.7, 0.48, 38], ['🛴', 0.46, 0.9, 30]], road: 1 }
+  };
   MAKERS.honk = function (S) {
     var c = S.c, W = S.W, H = S.H, P = { x: W * 0.15, y: H * 0.82, carry: null }, nest = { x: W * 0.14, y: H * 0.86 }, lives = 3, time = 90, items = [], honkT = 0, said = '', saidT = 0;
-    var LOOT = ['🍦', '🎩', '🥪', '🕶️', '📷', '🥥', '🩴', '🍢'];
-    var folk = [0, 1, 2, 3].map(function (i) { return { x: rnd(W * 0.3, W * 0.9), y: rnd(H * 0.15, H * 0.7), tx: 0, ty: 0, item: pick(LOOT), mad: 0, f: pick(['🧍', '🧍‍♀️', '🧍‍♂️', '🚶', '🚶‍♀️', '🚶‍♂️']), wait: 0 }; });
+    var AT = HONK_AT[S.scene] || HONK_AT.beach, LOOT = AT.loot, lvl = 1, goal = function () { return lvl * 40; };
+    function person() { return { x: rnd(W * 0.3, W * 0.9), y: rnd(H * 0.15, H * 0.7), tx: 0, ty: 0, item: pick(LOOT), mad: 0, f: pick(['🧍', '🧍‍♀️', '🧍‍♂️', '🚶', '🚶‍♀️', '🚶‍♂️']), wait: 0 }; }
+    var folk = [0, 1, 2, 3].map(person);
     function retarget(f) { f.tx = rnd(W * 0.25, W * 0.92); f.ty = rnd(H * 0.12, H * 0.75); }
     folk.forEach(retarget);
     return {
@@ -267,28 +287,33 @@
         if (!P.carry) for (var i = items.length - 1; i >= 0; i--) if (Math.hypot(items[i].x - P.x, items[i].y - P.y) < 26) { P.carry = items[i].k; items.splice(i, 1); break; }
         if (P.carry && Math.hypot(nest.x - P.x, nest.y - P.y) < 48) { S.add(10); P.carry = null; said = 'Mine now! 😈'; saidT = 1; }
         folk.forEach(function (f) {
-          var tx = f.tx, ty = f.ty, v = 40;
-          if (f.mad > 0) { f.mad -= dt; tx = P.x; ty = P.y; v = 95; }
+          var tx = f.tx, ty = f.ty, v = 40 + (lvl - 1) * 6;
+          if (f.mad > 0) { f.mad -= dt; tx = P.x; ty = P.y; v = (95 + (lvl - 1) * 10) * S.diff; }
           var dx = tx - f.x, dy = ty - f.y, d = Math.hypot(dx, dy);
           if (d > 4) { f.x += dx / d * v * dt; f.y += dy / d * v * dt; } else if (f.mad <= 0) { f.wait -= dt; if (f.wait <= 0) { retarget(f); f.wait = rnd(0.5, 2); } }
           if (!f.item && f.mad <= 0 && Math.random() < dt * 0.05) f.item = pick(LOOT);
           if (f.mad > 0 && d < 22) { f.mad = 0; retarget(f); lives--; if (P.carry) { items.push({ x: P.x, y: P.y + 10, k: P.carry }); P.carry = null; } said = 'Shoo! 😠'; saidT = 1; P.x = nest.x + 20; P.y = nest.y - 20; }
         });
         if (lives <= 0) return S.end('They chased you off! 😠');
-        if (time <= 0) return S.end('Time’s up! What a menace 😈');
+        if (time <= 0) {
+          if (S.score < goal()) return S.end('Time’s up! Level ' + lvl + ' · what a menace 😈');
+          lvl++; time = 75; var nf = person(); retarget(nf); folk.push(nf); said = 'Level ' + lvl + '! 🎉'; saidT = 1.6; S.add(10);   // next level: one more tourist, a bit faster
+        }
       },
       draw: function () {
-        c.fillStyle = '#F3E3BE'; c.fillRect(0, 0, W, H);
-        c.fillStyle = '#7CC7DB'; c.fillRect(0, 0, W, H * 0.08);
+        c.fillStyle = AT.ground; c.fillRect(0, 0, W, H);
+        c.fillStyle = AT.top; c.fillRect(0, 0, W, H * 0.08);
         c.fillStyle = 'rgba(255,255,255,.5)'; for (var i = 0; i < W; i += 40) { c.beginPath(); c.arc(i + 20, H * 0.08, 12, 0, Math.PI); c.fill(); }
-        emoji(c, '⛱️', W * 0.7, H * 0.45, 40); emoji(c, '🌴', W * 0.92, H * 0.2, 44); emoji(c, '🌴', W * 0.45, H * 0.9, 40);
+        if (AT.pond) { c.fillStyle = '#7CC7DB'; c.beginPath(); c.ellipse(W * 0.32, H * 0.3, W * 0.14, H * 0.06, 0, 0, 7); c.fill(); }
+        if (AT.road) { c.fillStyle = '#8A8F96'; c.fillRect(0, H * 0.6, W, H * 0.07); c.fillStyle = '#fff'; for (var j = 0; j < W; j += 36) c.fillRect(j, H * 0.632, 18, 3); }
+        AT.deco.forEach(function (d) { emoji(c, d[0], W * d[1], H * d[2], d[3]); });
         c.fillStyle = '#E8F4FA'; c.beginPath(); c.arc(nest.x, nest.y, 40, Math.PI, 0); c.fill(); c.fillStyle = '#9CC9E2'; c.fillRect(nest.x - 10, nest.y - 18, 20, 18); txt(c, 'Igloo', nest.x, nest.y + 13, 12, '#13507A');
         items.forEach(function (it) { emoji(c, it.k, it.x, it.y, 22); });
         folk.forEach(function (f) { emoji(c, f.f, f.x, f.y, 36); if (f.item) emoji(c, f.item, f.x + 16, f.y - 8, 18); if (f.mad > 0) emoji(c, '💢', f.x + 14, f.y - 24, 16); });
         drawPen(c, P.x, P.y, 52, honkT > 0 ? -0.15 : 0); if (P.carry) emoji(c, P.carry, P.x + 18, P.y - 18, 20);
         if (honkT > 0) { c.strokeStyle = 'rgba(19,50,74,.35)'; c.lineWidth = 3; c.beginPath(); c.arc(P.x, P.y, 70 * (1 - honkT / 0.35) + 10, 0, 7); c.stroke(); }
         if (saidT > 0) txt(c, said, P.x, P.y - 40, 16, '#13324A');
-        txt(c, '❤️'.repeat(Math.max(0, lives)) + '   ⏱ ' + Math.ceil(time), 8, 14, 14, '#13324A', 'left');
+        txt(c, '❤️'.repeat(Math.max(0, lives)) + '   ⏱ ' + Math.ceil(time) + '   Lv ' + lvl + ' · goal ' + goal(), 8, 14, 14, '#13324A', 'left');
       }
     };
   };
@@ -498,6 +523,7 @@
     '.sg .sglyr{background:#13324A;color:#9FB4C4;border-radius:22px;padding:14px;margin:10px 0}.sg .sglyr b{display:block;color:#fff;margin-bottom:6px}.sg .sglyr p{margin:6px 0;font:900 20px/1.4 ' + F + '}.sg .sglyr span.now{color:#F2A33A}.sg .sglyr span.sung{color:#fff}.sg .sglyr button{margin-top:10px;border:0;border-radius:99px;padding:10px 22px;font:900 15px ' + F + ';background:#F2A33A;color:#13324A;cursor:pointer}' +
     '.lrn{font-family:' + F + '}.lrh{display:flex;align-items:center;gap:8px;margin-bottom:8px}.lrh b{font-size:18px;font-weight:900;flex:1}.lrh small{color:var(--muted,#7A8B99);font-weight:800}.lrx{border:0;background:none;font-size:18px;padding:4px}.lrmsg{background:var(--accentSoft,#E3F3EF);border-radius:14px;padding:10px 12px;font-weight:800;margin:6px 0}.lrlang{display:flex;gap:8px;margin:6px 0 10px}.lrlang button{flex:1;border:1.5px solid #237566;background:none;color:#237566;border-radius:99px;padding:8px;font:800 14px ' + F + '}.lrlang button.on{background:#237566;color:#fff}.lrlist{display:grid;grid-template-columns:1fr 1fr;gap:10px}.lrlist button{border:0;background:var(--card,#fff);color:inherit;border-radius:20px;padding:14px 8px;font:inherit;min-height:110px;box-shadow:0 1px 3px rgba(0,0,0,.06)}.lrlist span{display:block;font-size:34px}.lrlist b{display:block;font-weight:900;margin-top:4px}.lrlist small{color:var(--muted,#7A8B99);font-weight:700}.lrtip{font-size:13px;color:var(--muted,#7A8B99);text-align:center;margin-top:10px}.lrbar{height:8px;border-radius:99px;background:var(--line,#E5E9EC);overflow:hidden;margin-bottom:14px}.lrbar i{display:block;height:100%;background:#F2A33A;border-radius:99px;transition:width .3s}.lrcard{background:var(--card,#fff);border-radius:24px;padding:24px 16px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.06)}.lrcard small{display:block;color:var(--muted,#7A8B99);font-weight:800;font-size:15px}.lrcard b{display:block;font-size:28px;font-weight:900;margin:8px 0 14px;color:#237566}.lrcard button{border:1.5px solid var(--line,#E5E9EC);background:none;border-radius:99px;padding:8px 14px;font:800 14px ' + F + ';color:inherit}.lrgo{display:block;width:100%;margin-top:14px;border:0;border-radius:18px;padding:15px;background:#237566;color:#fff;font:900 17px ' + F + '}.lropts{display:flex;flex-direction:column;gap:10px;margin-top:14px}.lropts button{border:1.5px solid var(--line,#E5E9EC);background:var(--card,#fff);color:inherit;border-radius:18px;padding:14px;font:800 17px ' + F + '}.lropts button.ok{background:#DFF3E4;border-color:#3FA55B}.lropts button.no{background:#FBE3E0;border-color:#D9534F}' +
     '.gcards{display:grid;grid-template-columns:1fr 1fr;gap:10px}.gcards button{border:0;background:var(--card,#fff);color:inherit;border-radius:20px;padding:16px 10px;font:inherit;cursor:pointer;min-height:120px}.gcards span{display:block;font-size:40px}.gcards b{display:block;font-weight:900;font-size:16px;margin-top:4px}.gcards small{display:block;color:var(--muted,#6B7C8A);font-weight:700;font-size:12px}';
+  css += '.gx .gopt{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}.gx .gopt button{border:0;background:rgba(255,255,255,.88);color:#13324A;border-radius:99px;padding:8px 12px;min-height:36px;font:800 14px ' + F + ';cursor:pointer}.gx .gopt button[aria-pressed="true"]{background:#13324A;color:#fff}';
   var st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
 
   window.ppGames = {
