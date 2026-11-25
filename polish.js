@@ -437,7 +437,7 @@
         sv.textContent = 'Saving photo ' + (i + 1) + ' of ' + n + '…';
         window.ppCall('penpenDiaryAdd', [{ text: i === 0 && !hasVid ? t : '', kind: kind, photo: list[i], video: null, caption: i === 0 ? cap.trim() : '' }])
           .then(function (r) { if (r) { url = r.url || url; msg = msg || r.msg; } i++; next(); },
-            function (e) { sv.disabled = false; DPH = list.slice(i); dStrip(); alert((e && e.message) || 'Couldn’t save that photo — try again.'); });
+            function (e) { sv.disabled = false; DPH = list.slice(i); dStrip(); if (window.ppDiaryErr) ppDiaryErr(e); else alert((e && e.message) || 'Couldn’t save that photo — try again.'); });
       };
       next();
     };
