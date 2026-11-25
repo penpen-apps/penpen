@@ -3523,8 +3523,12 @@ function ppGeoFill_(ss, max) {
 
 /* ============================ Plan screen ============================ */
 function penpenPlan() {
-  const ss = ss_(), tz = ppTz_(ss);
+  const ss = ss_();
   try { ppGeoFill_(ss, 6); } catch (e) { console.warn(e); }
+  return ppPlanData_(ss);
+}
+function ppPlanData_(ss) {   // the plan without the map-lookup catch-up (so Add a stop answers quickly)
+  const tz = ppTz_(ss);
   const stops = ppStops_(ss), by = {};
   stops.forEach(s => { (by[s.day] = by[s.day] || []).push(s); });
   const trip = ppTrip_(ss);
@@ -3809,8 +3813,10 @@ function penpenAddStop(a) {
   const hm = time.match(/^([01]\d|2[0-3]):([0-5]\d)$/);   // the phone's time picker gives 19:30
   if (time && !hm) throw new Error('That time doesn’t look right.');
   if (hm) time = ((+hm[1] % 12) || 12) + ':' + hm[2] + (+hm[1] < 12 ? ' am' : ' pm');
-  const r = ppPlanAdd_(ss_(), {date: day, time: time, what: what, place: ppFormText_(a.place, 120), notes: ppFormText_(a.notes, 300)});
-  return {msg: r.text, plan: penpenPlan()};
+  const ss = ss_(), trip = ppTrip_(ss);
+  if ((trip.start && day < trip.start) || (trip.end && day > trip.end)) throw new Error('Pick a day during the trip.');
+  const r = ppPlanAdd_(ss, {date: day, time: time, what: what, place: ppFormText_(a.place, 120), notes: ppFormText_(a.notes, 300)});
+  return {msg: r.text, plan: ppPlanData_(ss)};
 }
 function penpenAddContact(a) {
   a = a || {};

@@ -359,7 +359,7 @@ th .pp-qt{position:absolute;right:0;top:100%;width:210px;z-index:5;box-shadow:0 
 .pp-add .pp-sub{margin-bottom:4px}
 .pp-addrow{display:flex;align-items:center;gap:14px;margin-top:10px}
 .pp-addbtn{flex:none;min-height:44px;padding:0 16px;font-size:15px;color:var(--accentText);border-color:var(--accent)}
-body.pp-viewer .pp-addbtn{display:none}
+body.pp-viewer .pp-addbtn,body.pp-viewer .pp-edtxt{display:none}
 .pp-dlg{border:0;border-radius:22px;padding:18px 18px 16px;background:var(--card);color:var(--ink);width:min(440px,calc(100vw - 24px));max-height:calc(100dvh - 24px);overflow:auto;box-shadow:0 18px 50px rgba(19,50,74,.28)}
 .pp-dlg::backdrop{background:rgba(19,50,74,.45)}
 .pp-dlg h2{font-size:22px;margin:0 0 2px}
@@ -442,7 +442,7 @@ body.pp-viewer .pp-addbtn{display:none}
         <div class="card" id="live"><div class="muted">Loading…</div></div>
         <div class="card" id="emer"></div>
         <div class="card" id="trip-ct"></div>
-        <div class="card tip">Add or fix a number by telling penpen — e.g. “Harolds Hotel’s number is 032 123 4567” — or add it here.
+        <div class="card tip">Add or fix a number by telling penpen — e.g. “Harolds Hotel’s number is 032 123 4567” <span class="pp-edtxt"> — or add it here</span>.
           <div class="pp-addrow"><button class="btn pp-addbtn" type="button" data-addct="Emergency">＋ Add a contact</button></div></div>
       </div>
     </section>
@@ -967,8 +967,14 @@ body.pp-viewer .pp-addbtn{display:none}
   $('plan-ask').onclick = function () { askPenpen('Add to the plan: '); };
 
   /* ---------- Add a stop / Add a contact: a short form instead of chat (crew and creator; viewers can't change the trip) ---------- */
-  function canEdit() { var r = window.ppTrips && window.ppTrips.role(); document.body.classList.toggle('pp-viewer', r === 'viewer'); return r !== 'viewer'; }
+  function canEdit(say) {
+    var r = window.ppTrips && window.ppTrips.role(); document.body.classList.toggle('pp-viewer', r === 'viewer');
+    if (r === 'viewer' && say) notice('You can view this trip but can\u2019t change it.');
+    return r !== 'viewer';
+  }
   canEdit();
+  var go1 = go; go = function (id) { canEdit(); go1(id); };   // the role can arrive after the page loads
+  function keep(fn, v) { try { localStorage.setItem('pp_c_' + fn + ':[]', JSON.stringify(v)); } catch (x) {} }   // offline copy stays current
   function notice(t) { var d = el('div', 'pp-ptoast', t); d.setAttribute('role', 'status'); document.body.appendChild(d); setTimeout(function () { d.remove(); }, 4200); }
   // one native <dialog>: Esc and the Cancel button close it, focus returns to the button that opened it
   function formDialog(title, sub, fields, okLabel, send) {
@@ -996,7 +1002,7 @@ body.pp-viewer .pp-addbtn{display:none}
     return (P && (P.open || P.start)) || t;
   }
   $('plan-add').onclick = function () {
-    if (!canEdit()) return;
+    if (!canEdit(true)) return;
     var lo = (P && P.start) || '', hi = (P && P.end) || '';
     formDialog('Add a stop', 'It goes straight into the plan and on the map.',
       '<label class="f" for="st-day">DAY</label><input class="in" type="date" id="st-day" name="date" required value="' + esc(tripDay()) + '"' + (lo ? ' min="' + esc(lo) + '"' : '') + (hi ? ' max="' + esc(hi) + '"' : '') + ' data-err="Pick a day' + (lo && hi ? ' during the trip' : '') + '.">'
@@ -1007,7 +1013,7 @@ body.pp-viewer .pp-addbtn{display:none}
       'Add stop', function (f, fail, close) {
         var v = function (k) { return f.elements[k].value.trim(); }, day = v('date');
         google.script.run.withSuccessHandler(function (r) {
-          close(); P = r.plan; planStale = false; todayStale = true;
+          close(); P = r.plan; planStale = false; todayStale = true; keep('penpenPlan', r.plan);
           needLeaflet(function () { renderDays(); showDay(P.days.some(function (d) { return d.day === day; }) ? day : P.open); });
           notice(r.msg || 'Added to the plan.');
         }).withFailureHandler(function (er) { fail(er.message); })
@@ -1015,7 +1021,7 @@ body.pp-viewer .pp-addbtn{display:none}
       });
   };
   document.addEventListener('click', function (e) {
-    var b = e.target.closest && e.target.closest('[data-addct]'); if (!b || !canEdit()) return;
+    var b = e.target.closest && e.target.closest('[data-addct]'); if (!b || !canEdit(true)) return;
     var type = b.dataset.addct, update = false, typeTouched = false;
     var cf = formDialog('Add a contact', 'A hotel, driver, tour or someone to call at home.',
       '<label class="f" for="ct-name">NAME</label><input class="in" id="ct-name" name="name" required maxlength="60" autocomplete="off" placeholder="e.g. Harolds Hotel" data-err="Add the contact\u2019s name.">'
@@ -1035,7 +1041,7 @@ body.pp-viewer .pp-addbtn{display:none}
             fail(r.exists + ' is already in your contacts. Update it with what you typed? Anything left blank stays as it is.');
             ok.textContent = 'Yes, update ' + r.exists; return;
           }
-          close(); renderSafety(r.safety); notice(r.msg || 'Contact saved.');
+          close(); keep('penpenSafety', r.safety); renderSafety(r.safety); notice(r.msg || 'Contact saved.');
         }).withFailureHandler(function (er) { fail(er.message); })
           .penpenAddContact({name: v('name'), type: v('type'), phone: v('phone'), messenger: v('messenger'), email: v('email'), place: v('place'), notes: v('notes'), update: update});
       });
