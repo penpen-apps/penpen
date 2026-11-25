@@ -3264,8 +3264,10 @@ function penpenToday() {
    never the home trip. The app ticks the steps off from these counts. */
 function ppSetup_(ss, expenses) {
   if (!__PP_TRIP) return null;
-  const t = ppTripList_()[__PP_TRIP] || {}, made = Date.parse(t.made || '') || 0, stops = ppStops_(ss).length;
-  if (!(Date.now() - made < 30 * 864e5) && (stops || expenses)) return null;
+  const t = ppTripList_()[__PP_TRIP] || {}, recent = Date.now() - (Date.parse(t.made || '') || 0) < 30 * 864e5;
+  if (!recent && expenses) return null;
+  const stops = ppStops_(ss).length;
+  if (!recent && stops) return null;
   return {stops: stops, expenses: expenses, emergency: ppContacts_(ss).filter(c => c.type === 'Emergency').length};
 }
 

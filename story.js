@@ -219,8 +219,14 @@
     var b = e.target.closest('[data-start]'); if (!b) return;
     var k = b.dataset.start, trip = window.ppTrips.current();
     if (k === 'country') return placeSetting(sheet('Trip country', '', b, 'left'));
-    if (k === 'crew') { nav('Crew'); return setTimeout(function () { var n = document.getElementById('pp-add-name'); if (n) { n.scrollIntoView({ block: 'center', behavior: 'smooth' }); n.focus({ preventScroll: true }); } }, 500); }
-    if (k === 'solo') { localStorage.setItem('pp_start_solo@' + trip, '1'); window.ppCall('penpenSaveProfile', [{ tripType: 'solo' }]).catch(function () {}); return paint(); }
+    if (k === 'crew') {   // the Add a friend form appears once the crew list has loaded
+      nav('Crew'); var tries = 0;
+      return (function look() { var n = document.getElementById('pp-add-name'); if (n) { n.scrollIntoView({ block: 'center', behavior: 'smooth' }); n.focus({ preventScroll: true }); } else if (++tries < 30) setTimeout(look, 100); })();
+    }
+    if (k === 'solo') {
+      localStorage.setItem('pp_start_solo@' + trip, '1'); paint();
+      return window.ppCall('penpenSaveProfile', [{ tripType: 'solo' }]).catch(function () { localStorage.removeItem('pp_start_solo@' + trip); paint(); });   // not saved: show the step again
+    }
     if (k === 'hide') { localStorage.setItem('pp_start_hide@' + trip, '1'); return paint(); }
     if (!window.ppStart) return;
     if (k === 'stop') return window.ppStart.addStop();
