@@ -26,6 +26,7 @@
     '@keyframes ppbob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}' +
     '@media (prefers-reduced-motion:reduce){#pp-talk.speaking .pen{animation:none}}' +
     '#pp-talk .cap{max-width:420px;text-align:center;font-size:19px;min-height:54px;opacity:.85}' +
+    '#pp-talk .cap .alt{display:block;margin-top:6px;font-size:16px;opacity:.8}' +
     '#pp-talk .bar{display:flex;gap:28px}' +
     '#pp-talk .bar button{width:68px;height:68px;border-radius:50%;border:0;display:grid;place-items:center;font-size:26px;box-shadow:0 4px 14px rgba(0,0,0,.12)}' +
     '#pp-talk .mute{background:#fff;color:#2B2A28}#pp-talk .mute.on{background:#2B2A28;color:#fff}' +
@@ -104,6 +105,20 @@
   }
   function status(t) { var s = document.getElementById('pp-t-st'); if (s) s.textContent = t; }
   function caption(t) { var c = document.getElementById('pp-t-cap'); if (c) c.textContent = t; }
+  // languages not written in English letters: their captions get a second line in the other writing
+  var NON_LATIN = /japanese|korean|mandarin|cantonese|chinese|thai|khmer|lao|burmese|hindi|nepali|arabic|greek|russian|hebrew/i;
+  function twin(turn, lang) {
+    if (!turn || !window.ppCall) return;
+    window.ppCall('penpenScript', [turn.t, lang]).then(function (r) {
+      if (!r) return;
+      var latin = !/[^\u0000-\u024F\u1E00-\u1EFF\s\d.,!?¡¿'"()\-–—…:;]/.test(turn.t);   // the caption is already in English letters?
+      var alt = latin ? r.script : r.roman;
+      if (!alt || alt === turn.t) return;
+      turn.alt = alt;
+      var c = document.getElementById('pp-t-cap');   // still showing this sentence: add the twin under it
+      if (c && c.textContent.trim() === turn.t) { var d = document.createElement('span'); d.className = 'alt'; d.textContent = alt; c.appendChild(d); }
+    }, function () {});   // no twin is fine: the translation itself already worked
+  }
 
 
   /* ---------- hold-to-talk: press, speak, let go (Talk has one button, Translate has Me / Them) ---------- */
@@ -146,7 +161,7 @@
       var label = b.innerHTML;
       var down = function (e) {
         e.preventDefault(); if (!S || !S.ready || S.ptt) return;
-        stopAudio(); S.ptt = b.dataset.who; b.classList.add('on'); S.el.classList.add('holding');
+        stopAudio(); S.ptt = S.lastWho = b.dataset.who; b.classList.add('on'); S.el.classList.add('holding');
         b.innerHTML = '🔴 Listening…<small>let go to send</small>';
         status(S.mode === 'translate' ? (b.dataset.who === 'me' ? '🙋 Listening to you…' : '🧑 Listening to them…') : '🔴 Listening… let go when done');
         try { S.ws.send(JSON.stringify({ realtimeInput: { activityStart: {} } })); } catch (x) {}
@@ -213,8 +228,11 @@
     if (sc.modelTurn) sc.modelTurn.parts.forEach(function (p) { if (p.inlineData && p.inlineData.data) play(p.inlineData.data, p.inlineData.mimeType); });
     if (sc.outputTranscription && sc.outputTranscription.text) { S.outT += sc.outputTranscription.text; caption(S.outT); }
     if (sc.turnComplete) {
-      if (S.inT.trim() && S.inT.indexOf('(The user just opened') < 0) S.turns.push({ who: 'me', t: S.inT.trim() });
-      if (S.outT.trim()) S.turns.push({ who: 'pp', t: S.outT.trim() });
+      var tIn = null, tOut = null;
+      if (S.inT.trim() && S.inT.indexOf('(The user just opened') < 0) S.turns.push(tIn = { who: 'me', t: S.inT.trim() });
+      if (S.outT.trim()) S.turns.push(tOut = { who: 'pp', t: S.outT.trim() });
+      // Translate: the local-language half also gets its script / English-letters twin (ありがとう + arigatou)
+      if (S.mode === 'translate' && NON_LATIN.test(S.lang)) twin(S.lastWho === 'them' ? tIn : tOut, S.lang);
       S.inT = ''; S.outT = '';
       setTimeout(function () { if (S && !S.sources.length) { S.el.classList.remove('speaking'); status(idle()); } }, 300);
     }
@@ -291,7 +309,7 @@
     var log = document.getElementById('log');
     if (log && s.turns.length) {
       if (s.mode === 'translate') { var hd = document.createElement('div'); hd.className = 'msg pp'; hd.textContent = '🌐 Translation (' + myLang() + ' ⇄ ' + s.lang + ')'; log.appendChild(hd); }
-      s.turns.forEach(function (t) { var d = document.createElement('div'); d.className = 'msg ' + t.who; d.textContent = t.t; log.appendChild(d); });
+      s.turns.forEach(function (t) { var d = document.createElement('div'); d.className = 'msg ' + t.who; d.textContent = t.t + (t.alt ? '\n' + t.alt : ''); if (t.alt) d.style.whiteSpace = 'pre-line'; log.appendChild(d); });
       log.scrollTop = log.scrollHeight;
     }
     if (s.mode !== 'translate') try {
