@@ -21,6 +21,7 @@
     var g = 'bubbly';
     if (sprite && spriteG === g) return sprite;
     var inner = window.ppLook ? window.ppLook.svg(g) : '';
+    if (!inner && window.ppFrontPen) inner = window.ppFrontPen();
     if (!inner) { var n = document.querySelector('#navpen svg'); inner = n ? (n.getAttribute('data-orig') || n.innerHTML) : ''; }
     var img = new Image();
     img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="-7 -14 134 134" width="268" height="268">' + inner + '</svg>');

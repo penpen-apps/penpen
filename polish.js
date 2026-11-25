@@ -11,7 +11,8 @@
   function today() { var d = new Date(); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
   function say(text) { try { if (window.speechSynthesis) { speechSynthesis.cancel(); speechSynthesis.speak(new SpeechSynthesisUtterance(text)); } } catch (e) {} }
   function penSvg(size) {
-    var n = $('#navpen svg'), inner = window.ppLook && window.ppGuideNow ? window.ppLook.svg(window.ppGuideNow()) : (n ? n.innerHTML : '');
+    // the classic penpen has no ppLook drawing (svg() gives ''), so fall back to the front-facing penguin
+    var n = $('#navpen svg'), inner = (window.ppLook && window.ppGuideNow ? window.ppLook.svg(window.ppGuideNow()) : '') || (window.ppFrontPen ? window.ppFrontPen() : (n ? n.innerHTML : ''));
     return '<svg viewBox="-7 -14 134 134" width="' + size + '" height="' + size + '" aria-hidden="true">' + (inner || '') + '</svg>';
   }
 
