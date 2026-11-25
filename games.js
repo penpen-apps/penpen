@@ -201,13 +201,13 @@
         fish.forEach(function (f) { f.x -= base * dt; });
         for (var i = fish.length - 1; i >= 0; i--) { var f = fish[i]; if (Math.abs(f.x - x) < 26 && Math.abs(f.y - y) < 24) { S.add(f.k === '🦐' ? 3 : 1); fish.splice(i, 1); } else if (f.x < -20) fish.splice(i, 1); }
         next -= dt;
-        if (!foe && next <= 0) { warn = 1.6; foe = { x: -80, y: rnd(ice + 40, H - 40), go: false, v: (170 + Math.min(120, t * 3)) * S.diff }; next = rnd(6, 10); }
+        if (!foe && next <= 0) { warn = 1.6; foe = { x: W + 80, y: rnd(ice + 40, H - 40), go: false, v: (170 + Math.min(120, t * 3)) * S.diff }; next = rnd(6, 10); }
         if (foe) {
           if (warn > 0) warn -= dt; else foe.go = true;
           if (foe.go) {
-            foe.x += foe.v * dt; if (!safe) foe.y += (y - foe.y) * Math.min(1, dt * 2.2);
+            foe.x -= foe.v * dt; if (!safe) foe.y += (y - foe.y) * Math.min(1, dt * 2.2);
             if (!safe && Math.abs(foe.x - x) < 38 && Math.abs(foe.y - y) < 30) return S.end('The sea lion got you! 🦭');
-            if (foe.x > W + 90) { foe = null; S.add(5); }
+            if (foe.x < -90) { foe = null; S.add(5); }
           }
         }
         bub.forEach(function (b) { b[1] -= dt * 30 * b[2]; if (b[1] < ice) { b[1] = H; b[0] = Math.random() * W; } });
@@ -217,8 +217,8 @@
         var g = c.createLinearGradient(0, ice, 0, H); g.addColorStop(0, '#4FB3D9'); g.addColorStop(1, '#13507A'); c.fillStyle = g; c.fillRect(0, ice, W, H - ice);
         c.fillStyle = '#F4FBFF'; c.beginPath(); c.moveTo(0, ice - 6); for (var i = 0; i <= W; i += 30) c.lineTo(i, ice - 6 + (i / 30 % 2 ? 4 : -2)); c.lineTo(W, ice + 8); c.lineTo(0, ice + 8); c.fill();
         c.fillStyle = 'rgba(255,255,255,.35)'; bub.forEach(function (b) { c.beginPath(); c.arc(b[0], b[1], b[2], 0, 7); c.fill(); });
-        fish.forEach(function (f) { emoji(c, f.k, f.x, f.y, 26, true); });
-        if (foe) { if (!foe.go) { txt(c, '⚠️ Sea lion! Swim up!', W / 2, ice + 26, 18, '#fff'); emoji(c, '🦭', 24, foe.y, 30); } else emoji(c, '🦭', foe.x, foe.y, 54, true); }
+        fish.forEach(function (f) { emoji(c, f.k, f.x, f.y, 26); });
+        if (foe) { if (!foe.go) { txt(c, '⚠️ Sea lion! Swim up!', W / 2, ice + 26, 18, '#fff'); emoji(c, '🦭', W - 24, foe.y, 30); } else emoji(c, '🦭', foe.x, foe.y, 54); }
         var under = y > ice - 6; drawPen(c, x, y, 64, under ? clamp(vy / 600, -0.6, 0.6) + Math.PI / 2 * 0.0 : 0);
         if (!under && foe && foe.go) txt(c, 'Safe! 🧊', x, y - 44, 15, '#13324A');
       }
