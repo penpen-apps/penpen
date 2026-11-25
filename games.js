@@ -338,11 +338,11 @@
     var L = lget(); L.lang = L.lang || 'Bisaya (Cebuano)'; L.done = L.done || {};
     function home(msg) {
       var ls = LESSONS[L.lang], today = new Date().toDateString();
-      host.innerHTML = '<div class="lrn"><div class="lrh"><b>📚 Learn with penpen</b><small>' + (L.streak ? '🔥 ' + L.streak + '-day streak' : 'Learn a few words a day') + '</small></div>' +
+      host.innerHTML = '<div class="lrn"><div class="lrh"><b>📚 Learn with penpen</b><small>' + (L.streak > 1 ? '🐧 ' + L.streak + ' days in a row' : 'Learn a few words a day') + '</small></div>' +
         (msg ? '<p class="lrmsg">' + msg + '</p>' : '') +
         '<div class="lrlang">' + Object.keys(LESSONS).map(function (k) { return '<button type="button" data-ll="' + k + '" class="' + (k === L.lang ? 'on' : '') + '">' + k.replace(/ \(.*\)/, '') + '</button>'; }).join('') + '</div>' +
         '<div class="lrlist">' + ls.map(function (l, i) { var st = L.done[L.lang + i] || 0; return '<button type="button" data-li="' + i + '"><span>' + l.e + '</span><b>' + l.t + '</b><small>' + (st ? '⭐'.repeat(st) + '☆'.repeat(3 - st) : l.w.length + ' words') + '</small></button>'; }).join('') + '</div>' +
-        '<p class="lrtip">Tap 🔊 to hear each word. Works offline. ' + (L.last === today ? 'Come back tomorrow to keep your streak!' : '') + '</p></div>';
+        '<p class="lrtip">Tap 🔊 to hear each word. Works offline. ' + (L.last === today ? 'See you tomorrow for more words!' : '') + '</p></div>';
       host.onclick = function (e) {
         var b = e.target.closest('button'); if (!b) return;
         if (b.dataset.ll) { L.lang = b.dataset.ll; lset(L); return home(); }
