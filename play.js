@@ -125,10 +125,19 @@
 
   /* ---------- garden: drawn in code. To use a picture instead, swap gardenArt() for an <img> ---------- */
   var PALS = ['sweet', 'surfer', 'sunny', 'buddy', 'goofydad', 'grandma'];   // penguin friends who wander the garden (ids from guides.js)
-  var START = [[20, 22], [80, 16], [32, 30], [68, 28], [12, 8], [88, 6]];   // where each friend stands when the garden opens (% across, % up)
+  var START = [[38, 20], [62, 14], [44, 24], [57, 22], [30, 8], [70, 6]];   // where each friend stands when the garden opens (% across the whole field, % up)
+  var WIDE = 3;                     // the garden field is about three screens wide; the view follows penpen and you can swipe to look around
   var MUSIC_FILE = '';              // set to a music file (e.g. 'audio/garden.m4a') to play it instead of the code-made tune
   // the garden's igloo: the cozy games room is inside (tap it or its sign to go in)
-  var IGLOO = '<path d="M22 176 A36 36 0 0 1 94 176 Z" fill="#F4FAFF" stroke="#C9DCEA" stroke-width="2"/><path d="M50 176 A8 11 0 0 1 66 176Z" fill="#5B7A99"/><path d="M30 164 H86 M40 152 H76" stroke="#C9DCEA" stroke-width="2"/>';
+  var IGLOO = '<ellipse cx="452" cy="370" rx="86" ry="10" fill="#EAF5FB"/><clipPath id="pp-dome"><path d="M392 366 C392 296 508 296 508 366 Z"/></clipPath>' +
+    '<path d="M392 366 C392 296 508 296 508 366 Z" fill="#F4FAFF" stroke="#BCD4E6" stroke-width="2"/><g clip-path="url(#pp-dome)"><ellipse cx="506" cy="352" rx="30" ry="62" fill="#DCEBF5"/>' +
+    '<path d="M380 352 H520 M380 338 H520 M380 324 H520 M380 312 H520 M404 366 V352 M428 366 V352 M476 366 V352 M500 366 V352 M416 352 V338 M440 352 V338 M464 352 V338 M488 352 V338 M428 338 V324 M452 338 V324 M476 338 V324 M440 324 V312 M464 324 V312" stroke="#C9DCEA" stroke-width="1.6"/></g>' +
+    '<path d="M414 372 C414 338 462 338 462 372 Z" fill="#F4FAFF" stroke="#BCD4E6" stroke-width="2"/><path d="M417 358 H459 M426 372 V358 M450 372 V358 M438 358 V346" stroke="#C9DCEA" stroke-width="1.4"/><path d="M426 372 C426 350 450 350 450 372 Z" fill="#5B7A99"/>';
+  // a stone fountain with an upper bowl; its water streams flow (CSS)
+  var FOUNTAIN = '<ellipse cx="630" cy="372" rx="50" ry="7" fill="#5E9E57" opacity=".45"/><path d="M588 352 H672 V364 Q672 372 630 372 Q588 372 588 364 Z" fill="#C9C2BA" stroke="#9C8F86" stroke-width="1.5"/>' +
+    '<ellipse cx="630" cy="352" rx="42" ry="7" fill="#7FC8E8" stroke="#9C8F86" stroke-width="1.5"/><ellipse cx="618" cy="351" rx="16" ry="2.5" fill="#BFE6F5"/><rect x="625" y="318" width="10" height="34" fill="#C9C2BA" stroke="#9C8F86" stroke-width="1.2"/>' +
+    '<path d="M612 316 H648 Q646 326 630 326 Q614 326 612 316 Z" fill="#C9C2BA" stroke="#9C8F86" stroke-width="1.2"/><ellipse cx="630" cy="316" rx="18" ry="3.5" fill="#7FC8E8"/>' +
+    '<g class="fnt" fill="none" stroke="#DDF2FB" stroke-width="2.4" stroke-linecap="round"><path d="M630 316 V300"/><path d="M630 300 Q614 296 609 313"/><path d="M630 300 Q646 296 651 313"/><path d="M614 322 Q600 330 598 349"/><path d="M646 322 Q660 330 662 349"/></g>';
   var SHUT = '<path class="shut" d="M45 49 Q51 54 57 49 M63 49 Q69 54 75 49" fill="none" stroke="#1F2A36" stroke-width="3" stroke-linecap="round"/>';
   // the egg a new game starts with; its cracks show one by one as you tap
   var EGG = '<ellipse cx="60" cy="112" rx="24" ry="4" fill="#13324A" opacity=".14"/><path d="M60 20 C80 20 92 56 92 78 C92 98 78 110 60 110 C42 110 28 98 28 78 C28 56 40 20 60 20 Z" fill="#FFF8EE" stroke="#C9DCEA" stroke-width="2"/>' +
@@ -152,32 +161,51 @@
   function sad(p) { return !p.asleep && !p.egg && (p.food < 25 || p.joy < 25); }
   // a happy moment: open beak and flappy flippers for a bit
   function cheer(el, ms) { if (!el) return; el.classList.add('yay'); clearTimeout(el.ppYay); el.ppYay = setTimeout(function () { el.classList.remove('yay'); }, ms || 1400); }
+  // the garden field: 1080 x 600, three phone screens wide. Left: the pond. Middle: the igloo and the fountain. Right: bushes and a flower meadow.
+  // Penguins walk only on the grass in front of the igloo and the fountain (see far()); on a phone the far left and right edges are cropped a little.
   function gardenArt() {
-    var fl = [[24, 250, '#F28AA5'], [62, 272, '#FFFFFF'], [150, 258, '#F4A62A'], [200, 276, '#B7A2F0'], [340, 254, '#F28AA5'], [122, 204, '#FFFFFF'], [214, 208, '#F28AA5'], [330, 220, '#F4A62A'],
-      [40, 340, '#B7A2F0'], [104, 372, '#F4A62A'], [182, 350, '#FFFFFF'], [268, 380, '#F28AA5'], [326, 344, '#FFFFFF'], [86, 412, '#F28AA5'], [236, 418, '#B7A2F0'], [300, 404, '#F4A62A']].map(function (f) {
-      return '<g><path d="M' + f[0] + ' ' + (f[1] + 4) + ' v10" stroke="#4E9A48" stroke-width="2"/><circle cx="' + f[0] + '" cy="' + f[1] + '" r="5" fill="' + f[2] + '"/><circle cx="' + f[0] + '" cy="' + f[1] + '" r="2" fill="#F4C542"/></g>';
-    }).join('');
+    var fl = '', n = 0, seed = 7;
+    function rnd() { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; }
+    function blocked(x, y) { return (y < 376 && ((x > 380 && x < 560) || (x > 578 && x < 682) || (x > 156 && x < 304) || (x > 744 && x < 810) || (x > 862 && x < 902))); }
+    while (n < 90) {
+      var x = 110 + rnd() * 860, y = n < 24 ? 318 + rnd() * 50 : 382 + rnd() * 210, c = ['#F28AA5', '#FFFFFF', '#F4A62A', '#B7A2F0', '#FF7A7A'][Math.floor(rnd() * 5)], k = 0.7 + (y - 300) / 300;
+      if (blocked(x, y)) continue;
+      n++;
+      fl += '<g><path d="M' + x.toFixed(1) + ' ' + (y + 4 * k).toFixed(1) + ' v' + (10 * k).toFixed(1) + '" stroke="#4E9A48" stroke-width="2"/>' + (n % 2 ?
+        [0, 72, 144, 216, 288].map(function (d) { var r = d * Math.PI / 180; return '<circle cx="' + (x + Math.cos(r) * 4 * k).toFixed(1) + '" cy="' + (y + Math.sin(r) * 4 * k).toFixed(1) + '" r="' + (3 * k).toFixed(1) + '" fill="' + c + '"/>'; }).join('') :
+        '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="' + (5 * k).toFixed(1) + '" fill="' + c + '"/>') + '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="' + (2 * k).toFixed(1) + '" fill="#F4C542"/></g>';
+    }
     function cloud(x, y, k) { return '<ellipse cx="' + x + '" cy="' + y + '" rx="' + 30 * k + '" ry="' + 9 * k + '"/><ellipse cx="' + (x - 12 * k) + '" cy="' + (y - 6 * k) + '" rx="' + 14 * k + '" ry="' + 8 * k + '"/><ellipse cx="' + (x + 10 * k) + '" cy="' + (y - 7 * k) + '" rx="' + 12 * k + '" ry="' + 8 * k + '"/>'; }
-    // 360x600: tall enough for a full-screen phone garden; on wider screens the top of the sky is cut off, never the ground
-    return '<svg class="gart" viewBox="0 0 360 600" preserveAspectRatio="xMidYMax slice" aria-hidden="true">' +
+    function bush(x, y) { return '<g fill="#5FA956"><circle cx="' + x + '" cy="' + (y - 8) + '" r="13"/><circle cx="' + (x + 16) + '" cy="' + (y - 14) + '" r="15"/><circle cx="' + (x + 32) + '" cy="' + (y - 7) + '" r="12"/></g><circle cx="' + (x + 12) + '" cy="' + (y - 18) + '" r="5" fill="#76BD6A"/>'; }
+    // tall enough for a full-screen phone garden; on wider screens the top of the sky is cut off, never the ground
+    return '<svg class="gart" viewBox="0 0 1080 600" preserveAspectRatio="xMidYMax slice" aria-hidden="true">' +
       '<defs><linearGradient id="pp-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8FCFF2"/><stop offset=".55" stop-color="#CDEBFA"/></linearGradient></defs>' +
-      '<rect width="360" height="600" fill="url(#pp-sky)"/><circle cx="300" cy="166" r="34" fill="#FFF3C4" opacity=".6"/><circle cx="300" cy="166" r="21" fill="#FFE58A"/>' +
-      '<g class="cloud c1" fill="#fff" opacity=".9">' + cloud(70, 150, 1) + cloud(240, 228, .8) + '</g><g class="cloud c2" fill="#fff" opacity=".7">' + cloud(170, 196, .7) + cloud(320, 120, .6) + '</g>' +
-      '<path d="M96 186 q5 -5 10 0 q5 -5 10 0 M128 172 q4 -4 8 0 q4 -4 8 0" fill="none" stroke="#5B7A99" stroke-width="2" stroke-linecap="round"/>' +
-      '<path d="M0 322 L34 282 L62 300 L108 250 L156 304 L204 268 L236 290 L292 246 L336 292 L360 276 V340 H0Z" fill="#E4F1FA"/><path d="M95 265 L108 250 L121 264 L112 260 Z M280 261 L292 246 L305 260 L296 256 Z" fill="#fff"/>' +
-      '<g transform="translate(0 160)">' +
-      '<path d="M0 156 Q90 132 180 152 T360 144 V440 H0Z" fill="#A6DA92"/><path d="M0 184 Q120 164 220 182 T360 174 V440 H0Z" fill="#86C977"/><path d="M0 300 Q140 284 250 298 T360 292 V440 H0Z" fill="#7BBF6C"/>' +
-      '<ellipse cx="282" cy="194" rx="54" ry="13" fill="#7FC8E8"/><ellipse cx="270" cy="191" rx="24" ry="4" fill="#BFE6F5" opacity=".75"/>' +
-      '<g transform="translate(40 0)">' + IGLOO + '</g>' +
-      fl + '</g></svg>';
+      '<rect width="1080" height="600" fill="url(#pp-sky)"/><circle cx="860" cy="166" r="34" fill="#FFF3C4" opacity=".6"/><circle cx="860" cy="166" r="21" fill="#FFE58A"/>' +
+      '<g class="cloud c1" fill="#fff" opacity=".9">' + cloud(150, 150, 1) + cloud(330, 228, .8) + cloud(560, 140, .9) + cloud(790, 222, .8) + '</g><g class="cloud c2" fill="#fff" opacity=".7">' + cloud(250, 196, .7) + cloud(450, 120, .6) + cloud(680, 186, .7) + cloud(930, 124, .6) + '</g>' +
+      '<path d="M226 186 q5 -5 10 0 q5 -5 10 0 M258 172 q4 -4 8 0 q4 -4 8 0 M690 150 q5 -5 10 0 q5 -5 10 0" fill="none" stroke="#5B7A99" stroke-width="2" stroke-linecap="round"/>' +
+      // the mountains: one range, drawn three times (the middle one mirrored) so the peaks don't repeat side by side
+      '<g id="pp-mt"><path d="M0 322 L34 282 L62 300 L108 250 L156 304 L204 268 L236 290 L292 246 L336 292 L360 276 V350 H0Z" fill="#E4F1FA"/><path d="M95 265 L108 250 L121 264 L112 260 Z M280 261 L292 246 L305 260 L296 256 Z" fill="#fff"/></g>' +
+      '<use href="#pp-mt" transform="translate(720 0) scale(-1 1)"/><use href="#pp-mt" transform="translate(720 0)"/>' +
+      '<path d="M0 316 Q90 292 180 312 T360 304 T540 312 T720 302 T900 312 T1080 304 V600 H0Z" fill="#A6DA92"/><path d="M0 344 Q120 326 220 342 T420 336 T620 344 T820 334 T1080 340 V600 H0Z" fill="#86C977"/>' +
+      '<path d="M0 460 Q140 444 250 458 T470 452 T690 460 T910 450 T1080 456 V600 H0Z" fill="#7BBF6C"/>' +
+      '<ellipse cx="230" cy="350" rx="66" ry="13" fill="#7FC8E8"/><ellipse cx="214" cy="347" rx="28" ry="4" fill="#BFE6F5" opacity=".75"/><ellipse cx="262" cy="353" rx="8" ry="2.6" fill="#4E9A48"/><ellipse cx="190" cy="354" rx="6" ry="2" fill="#4E9A48"/>' +
+      bush(748, 372) + bush(864, 370) + IGLOO + FOUNTAIN + fl + '</svg>';
   }
-  var GD = { t: {}, hold: 0, s: [] }, Y = 37;   // Y: how far back (in % of the garden) the penguins can walk
+  var GD = { t: {}, hold: 0, s: [] }, CAM = { raf: 0, user: 0 }, BACK = 228;   // BACK: art units from the bottom of the garden drawing to the back of the grass
+  // how far up (in % of the garden) a penguin's feet can go and still be on the grass, in front of the igloo and the fountain.
+  // The drawing is scaled to fill the screen (whichever of width or height needs more), and walkers sit above the food bar by their bottom margin.
+  function far(el) {
+    var wd = document.getElementById('pp-world'), H = wd ? wd.clientHeight : 0, mb = el ? parseFloat(getComputedStyle(el).marginBottom) || 0 : 0;
+    return H ? Math.max(10, (BACK * Math.max(wd.clientWidth / 1080, H / 600) - mb) / H * 100) : 34;
+  }
+  function wide(el) { return el && el.parentNode && el.parentNode.id === 'pp-world' ? WIDE : 1; }   // the field is WIDE screens across, so 1% of it is WIDE% of a screen
+  function clampX(x) { return Math.max(4, Math.min(96, x)); }
   function still() { return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); }
   function later(el, key, ms) { clearTimeout(GD.t[key]); GD.t[key] = setTimeout(function () { stroll(el, key); }, ms); }
   // walk el to x% across, y% up; returns the seconds it takes (pace: % per second)
   // the walking class is 'walking', not 'go': #pp-play .go is the green Start button style, and it painted a green box behind penpen
   function go(el, x, y, pace, deep) {
-    var x0 = parseFloat(el.style.left) || 50, secs = Math.max(pace ? 0.5 : 1.2, Math.abs(x - x0) / (pace || 14));
+    var x0 = parseFloat(el.style.left) || 50, secs = Math.max(pace ? 0.5 : 1.2, Math.abs(x - x0) * wide(el) / (pace || 14));
     el.style.transitionDuration = secs + 's'; if (x !== x0) el.classList.toggle('l', x < x0); el.classList.add('walking');
     el.style.left = x + '%'; el.style.bottom = y + '%'; el.style.zIndex = String(40 - Math.round(y)); el.style.setProperty('--d', (1 - y / (deep || 160)).toFixed(3));
     clearTimeout(el.ppStop); el.ppStop = setTimeout(function () { el.classList.remove('walking'); }, secs * 1000);
@@ -187,11 +215,12 @@
   function stroll(el, key) {
     if (!el.isConnected) return;
     if ((key === 'me' && GD.hold > now()) || el.ppBusy) return later(el, key, 1200);
-    later(el, key, go(el, 10 + Math.random() * 80, 3 + Math.random() * Y) * 1000 + 1500 + Math.random() * 3500);
+    var me = document.getElementById('pp-walk'), from = pos(key === 'me' || !me ? el : me)[0];
+    later(el, key, go(el, clampX(from + (Math.random() * 2 - 1) * 30), 3 + Math.random() * (far(el) - 3)) * 1000 + 1500 + Math.random() * 3500);
   }
   // stop penpen where he is (while you drag food or rub his belly)
   function freeze(ms) {
-    var el = document.getElementById('pp-walk'), g = document.getElementById('pp-garden'); GD.hold = now() + ms; endPlay();
+    var el = document.getElementById('pp-walk'), g = el && el.parentNode; GD.hold = now() + ms; endPlay();
     if (!el || !g || !el.classList.contains('walking')) return;
     var r = el.getBoundingClientRect(), b = g.getBoundingClientRect();
     var mb = parseFloat(getComputedStyle(el).marginBottom) || 0;   // full screen lifts the walkers above the food bar with a bottom margin
@@ -216,11 +245,12 @@
     if (!me || !me.isConnected) return;
     if (load().asleep || still() || document.hidden || GD.hold > now() || !pals.length) return playSoon();
     var f = pick(pals), nm = window.ppLook ? window.ppLook.name(f.dataset.pal) : 'his friend', mine = nameOf(load()), who = [me].concat(pals), game = pick(['meet', 'tag', 'dance', 'ball']);
+    var k = 1 / wide(me), c = Math.max(15, Math.min(85, pos(me)[0])), Y = far(me);   // k turns a screen's % into the field's %; c: play near where penpen is
     function done(ms) { step(ms, function () { endPlay(); playSoon(); }); }
     (game === 'dance' ? who : [me, f]).forEach(function (el) { el.ppBusy = true; });
     if (game === 'meet') {
-      var mx = 25 + Math.random() * 50, my = 4 + Math.random() * Y * 0.6;
-      var walk = Math.max(go(me, mx - 11, my), go(f, mx + 11, my)) * 1000;
+      var mx = c + (Math.random() * 2 - 1) * 25 * k, my = 4 + Math.random() * (Y - 4) * 0.6;
+      var walk = Math.max(go(me, mx - 11 * k, my), go(f, mx + 11 * k, my)) * 1000;
       step(walk + 100, function () {
         face(me, f); hop(me.querySelector('.pen')); hop(f.querySelector('.pen')); pop(me, pick(['✋', '💛', '🤗'])); sfx('hi');
         tell(mine + ' and ' + nm + ' ' + pick(['high-five! ✋', 'share a hug 🤗', 'are best buds 💛']));
@@ -230,15 +260,15 @@
     if (game === 'tag') {
       tell(nm + ' is it! Tag! 🏃');
       (function leg(n) {
-        var at = pos(f), nx = at[0] < 50 ? 60 + Math.random() * 30 : 10 + Math.random() * 30;
-        if (!n) { var t = go(me, at[0] + (pos(me)[0] < at[0] ? -9 : 9), at[1], 30); step(t * 1000 + 50, function () { face(me, f); hop(f.querySelector('.pen')); pop(f, '😆'); sfx('hi'); tell('Tagged! ' + mine + ' got ' + nm + ' 😆'); }); return done(t * 1000 + 1600); }
-        step(Math.max(go(f, nx, 3 + Math.random() * Y, 32), go(me, at[0], at[1], 26)) * 1000 + 150, function () { leg(n - 1); });
+        var at = pos(f), nx = clampX(c + (at[0] < c ? 1 : -1) * (10 + Math.random() * 30) * k);
+        if (!n) { var t = go(me, at[0] + (pos(me)[0] < at[0] ? -9 : 9) * k, at[1], 30); step(t * 1000 + 50, function () { face(me, f); hop(f.querySelector('.pen')); pop(f, '😆'); sfx('hi'); tell('Tagged! ' + mine + ' got ' + nm + ' 😆'); }); return done(t * 1000 + 1600); }
+        step(Math.max(go(f, nx, 3 + Math.random() * (Y - 3), 32), go(me, at[0], at[1], 26)) * 1000 + 150, function () { leg(n - 1); });
       })(2);
       return;
     }
     if (game === 'dance') {
       var dy = 6 + Math.random() * 10, arrive = 0;
-      who.forEach(function (el, i) { arrive = Math.max(arrive, go(el, [50, 37, 63, 24, 76, 11, 89][i] || 50, dy)); });
+      who.forEach(function (el, i) { arrive = Math.max(arrive, go(el, clampX(c + (([50, 37, 63, 24, 76, 11, 89][i] || 50) - 50) * k), dy)); });
       step(arrive * 1000 + 100, function () {
         tell('Dance party! 🎶'); sfx('la');
         who.forEach(function (el) { el.classList.add('dance'); });
@@ -247,15 +277,15 @@
       return done(arrive * 1000 + 3400);
     }
     // catch: toss a ball back and forth
-    var x1 = 18 + Math.random() * 12, x2 = 66 + Math.random() * 14, by = 4 + Math.random() * Y * 0.5, g = document.getElementById('pp-garden');
+    var x1 = clampX(c + (Math.random() * 12 - 32) * k), x2 = clampX(c + (16 + Math.random() * 14) * k), by = 4 + Math.random() * (Y - 4) * 0.5, g = me.parentNode;
     var reach = Math.max(go(me, x1, by), go(f, x2, by)) * 1000;
     step(reach + 100, function () {
       face(me, f); tell(mine + ' and ' + nm + ' play catch 🏐');
       var ball = document.createElement('span'), i = document.createElement('i'); ball.className = 'ball'; i.textContent = '🏐'; ball.appendChild(i);
-      ball.style.left = (x1 + 6) + '%'; ball.style.bottom = (by + 9) + '%'; g.appendChild(ball);
-      [0, 1, 2, 3].forEach(function (k) {
-        step(k * 950 + 50, function () { ball.style.left = (k % 2 ? x1 + 6 : x2 - 6) + '%'; i.classList.remove('up'); void i.offsetWidth; i.classList.add('up'); });
-        step(k * 950 + 850, function () { hop((k % 2 ? me : f).querySelector('.pen')); sfx('hi'); });
+      ball.style.left = (x1 + 6 * k) + '%'; ball.style.bottom = (by + 9) + '%'; g.appendChild(ball);
+      [0, 1, 2, 3].forEach(function (j) {
+        step(j * 950 + 50, function () { ball.style.left = (j % 2 ? x1 + 6 * k : x2 - 6 * k) + '%'; i.classList.remove('up'); void i.offsetWidth; i.classList.add('up'); });
+        step(j * 950 + 850, function () { hop((j % 2 ? me : f).querySelector('.pen')); sfx('hi'); });
       });
     });
     done(reach + 4200);
@@ -263,9 +293,22 @@
   function startGarden() {
     stopGarden();
     if (!load().asleep && !still()) { [].slice.call(w.querySelectorAll('#pp-garden .walker')).forEach(function (el, i) { var me = el.id === 'pp-walk'; later(el, me ? 'me' : 'p' + i, me ? 700 : 1300 + i * 600); }); playSoon(); }   // penpen sets off first, then his friends one by one
-    music(true);
+    music(true); camera();
   }
-  function stopGarden() { Object.keys(GD.t).forEach(function (k) { clearTimeout(GD.t[k]); }); GD.t = {}; endPlay(); music(false); }
+  function stopGarden() { Object.keys(GD.t).forEach(function (k) { clearTimeout(GD.t[k]); }); GD.t = {}; endPlay(); music(false); cancelAnimationFrame(CAM.raf); }
+  // the view follows penpen across the wide field. Swipe to look around; a few seconds after you let go, it glides back to him
+  function camera() {
+    var f = document.getElementById('pp-field'); if (!f) return;
+    function mid() { var me = document.getElementById('pp-walk') || document.getElementById('pp-egg'), fr = f.getBoundingClientRect(), r = me ? me.getBoundingClientRect() : fr; return r.left + r.width / 2 - (fr.left + fr.width / 2); }
+    f.scrollLeft += mid();   // start with him in the middle
+    ['pointerdown', 'touchstart', 'wheel'].forEach(function (ev) { f.addEventListener(ev, function () { CAM.user = now(); }, { passive: true }); });
+    (function tick() {
+      CAM.raf = requestAnimationFrame(tick);
+      var dx = mid(), dead = f.clientWidth * 0.18;   // he can roam the middle of the screen before the view moves
+      if (now() - CAM.user < 4000 || Math.abs(dx) <= dead) return;
+      f.scrollLeft += (dx - (dx > 0 ? dead : -dead)) * (still() ? 1 : 0.08);
+    })();
+  }
 
   /* ---------- sounds and music, made in code (no files) ---------- */
   var AC = null, MU = null;
@@ -301,10 +344,10 @@
   /* ---------- the cozy igloo: a games room inside the garden's igloo. Walk penpen to a thing and Play pops up ---------- */
   // the door layer over the garden art: the igloo's doorway glows, and a little Games sign points the way in
   function doorArt() {
-    return '<svg class="gart gdoor" viewBox="0 0 360 600" preserveAspectRatio="xMidYMax slice"><g transform="translate(40 160)" class="door" data-act="igloo" role="button" tabindex="0" aria-label="Igloo: go inside to play">' +
-      '<rect class="hit" x="16" y="120" width="122" height="62" rx="12" fill="transparent"/><path class="glow" d="M50 176 A8 11 0 0 1 66 176Z" fill="#F7B955"/>' +
-      '<path d="M116 178 V146" stroke="#8B5530" stroke-width="3" stroke-linecap="round"/><rect x="98" y="132" width="36" height="16" rx="3" fill="#C98A52" stroke="#8B5530" stroke-width="1.5"/>' +
-      '<text x="116" y="143.5" text-anchor="middle" font-family="' + F + '" font-size="8.5" font-weight="900" fill="#fff">Games</text></g></svg>';
+    return '<svg class="gart gdoor" viewBox="0 0 1080 600" preserveAspectRatio="xMidYMax slice"><g class="door" data-act="igloo" role="button" tabindex="0" aria-label="Igloo: go inside to play">' +
+      '<rect class="hit" x="386" y="290" width="172" height="90" rx="14" fill="transparent"/><path class="glow" d="M426 372 C426 350 450 350 450 372 Z" fill="#F7B955"/>' +
+      '<path d="M534 380 V348" stroke="#8B5530" stroke-width="3" stroke-linecap="round"/><rect x="514" y="334" width="40" height="17" rx="3" fill="#C98A52" stroke="#8B5530" stroke-width="1.5"/>' +
+      '<text x="534" y="346" text-anchor="middle" font-family="' + F + '" font-size="9" font-weight="900" fill="#fff">Games</text></g></svg>';
   }
   // the room, seen from inside the dome: rings of ice blocks curve up and over, a round wood floor with a woven rug,
   // a crackling fire pit a little left of the middle, a round window, string lights and a crooked fish picture
@@ -503,13 +546,14 @@
     if (tab === 'igloo') h += iglooRoom(p);
     else if (tab === 'pet') {
       var face = (p.asleep ? SHUT : '') + JOY;
-      h += '<div class="garden' + (p.asleep ? ' night' : '') + '" id="pp-garden">' + gardenArt() + (p.egg ? '' : doorArt()) +
-        '<div class="gtop"><button class="back" aria-label="Back">‹</button><span class="meters">' + meters(p) + '</span>' + coins + '<button type="button" data-act="sound" class="gbtn" aria-pressed="' + soundOn() + '" aria-label="Music and sounds">' + (soundOn() ? '🔊' : '🔇') + '</button>' + menu(p) + '</div>' +
+      h += '<div class="garden' + (p.asleep ? ' night' : '') + '" id="pp-garden"><div class="gfield" id="pp-field"><div class="gworld" id="pp-world">' + gardenArt() + (p.egg ? '' : doorArt()) +
         (window.ppLook ? PALS.map(function (id, i) { return '<button type="button" class="walker pal" data-pal="' + id + '" aria-label="' + window.ppLook.name(id) + ', penpen’s friend" style="left:' + START[i][0] + '%;bottom:' + START[i][1] + '%;--d:' + (1 - START[i][1] / 160).toFixed(3) + '"><span class="pen' + (p.asleep ? ' zz' : '') + '">' + views(window.ppLook.svg(id) + faceBits(51, 69, 49, 6) + (p.asleep ? SHUT : ''), window.ppLook.side(id)) + '</span></button>'; }).join('') : '') +
         (p.egg ? '<button type="button" class="egg" id="pp-egg" data-act="hatch" aria-label="Your egg. Tap to hatch it"><svg viewBox="-7 -14 134 134" width="120" height="120" aria-hidden="true">' + EGG + '</svg></button>' :
         '<div class="walker' + (sad(p) ? ' sad' : '') + '" id="pp-walk" style="left:50%;bottom:8%"><div class="pen' + (p.asleep ? ' zz' : '') + '" id="pp-petpen" aria-label="' + esc(nameOf(p)) + '">' +
         views(inner(p) + faceBits(51, 69, 49, 6) + face, window.ppLook ? window.ppLook.side(look(p)) : '') + (wear.e ? '<span class="wear">' + wear.e + '</span>' : '') + (p.asleep ? '<span class="fx">💤</span><span class="bed">🛏️</span>' : '') +
-        '</div></div>') + '<div class="say" id="pp-say">' + (msg || mood(p)) + '</div>' +
+        '</div></div>') + '</div></div>' +
+        '<div class="gtop"><button class="back" aria-label="Back">‹</button><span class="meters">' + meters(p) + '</span>' + coins + '<button type="button" data-act="sound" class="gbtn" aria-pressed="' + soundOn() + '" aria-label="Music and sounds">' + (soundOn() ? '🔊' : '🔇') + '</button>' + menu(p) + '</div>' +
+        '<div class="say" id="pp-say">' + (msg || mood(p)) + '</div>' +
         (p.asleep ? '<button data-act="wake" class="zbtn">☀️ Wake</button>' : '') +
         // food: just the pictures with a small count; drag one to penpen, or tap it (hidden until he hatches)
         (p.egg ? '' : '<div class="foods" aria-label="Food: drag to penpen, or tap">' + Object.keys(FOODS).map(function (k) { var n = p.bag[k] || 0; return '<button data-feed="' + k + '"' + (n ? '' : ' disabled') + ' title="' + FOODS[k].n + '"><span aria-hidden="true">' + FOODS[k].e + '</span><i class="sr">' + FOODS[k].n + '</i><small>×' + n + '</small></button>'; }).join('') + '</div>') + '</div>';
@@ -932,6 +976,9 @@
     '#pp-play.imm{padding:0;overflow:hidden}#pp-play.imm .wrap{max-width:none;height:100%;margin:0}' +
     '#pp-play.imm .garden{position:absolute;inset:0;aspect-ratio:auto;min-height:0;max-height:none;border-radius:0;--fb:calc(64px + env(safe-area-inset-bottom))}' +
     '#pp-play.imm .walker,#pp-play.imm .ball{margin-bottom:var(--fb)}' +
+    // the wide field: a sideways scroller (swipe to look around) holding a world three screens wide; walkers' % positions are of the whole field
+    '#pp-play .gfield{position:absolute;inset:0;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;scrollbar-width:none;-webkit-overflow-scrolling:touch}#pp-play .gfield::-webkit-scrollbar{display:none}#pp-play .gworld{position:relative;width:' + WIDE * 100 + '%;height:100%}' +
+    '#pp-play .fnt path{stroke-dasharray:5 5;animation:ppflow .9s linear infinite}@keyframes ppflow{to{stroke-dashoffset:-10}}@media(prefers-reduced-motion:reduce){#pp-play .fnt path{animation:none}}' +
     '#pp-play.imm .gtop{top:calc(8px + env(safe-area-inset-top));left:8px;right:8px;z-index:60}#pp-play.imm .gtop .back{width:36px;height:36px;font-size:22px;background:rgba(255,255,255,.9);color:#13324A;flex:none}#pp-play.imm .gtop .coins{background:rgba(255,255,255,.9);color:#13324A;padding:5px 10px;font-size:14px;flex:none}#pp-play.imm .mtr{padding:5px 7px}#pp-play.imm .gbtn{flex:none;min-width:36px;height:34px;padding:0 9px}' +
     '#pp-play.imm .garden .say{top:calc(56px + env(safe-area-inset-top))}#pp-play.imm .garden .zbtn{top:calc(96px + env(safe-area-inset-top));bottom:auto;right:10px}' +
     '#pp-play .gmenu{position:relative;flex:none}#pp-play .gmenu summary{list-style:none;display:grid;place-items:center;font-size:18px;line-height:1;cursor:pointer}#pp-play .gmenu summary::-webkit-details-marker{display:none}' +
