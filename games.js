@@ -10,6 +10,13 @@
     honk:  { t: 'Honk!', e: '📣', how: 'Sneak up on tourists, HONK to make them drop things, and carry the loot to your igloo. Don’t get caught!', pad: 'honk' }
   };
   var cur = null;
+  // "How to play": the ? button in every game opens this and pauses the game until you close it
+  var HELP = {
+    slide: ['Slide down the mountain as far as you can.', ['Tap <b>◀</b> or <b>▶</b> (or swipe) to move one lane left or right.', 'Grab 🐟 fish for 10 points. You also score as you go.', 'Don’t hit a rock, tree or snowman. One bump ends the run.', 'It gets faster the longer you last.']],
+    dive: ['Catch fish, and hide from the sea lion.', ['Hold <b>▼</b> to dive down, hold <b>▲</b> to swim up. Let go and you float up slowly.', 'Swim into 🐟 for 1 point, 🦐 for 3.', 'When “Sea lion! Swim up!” shows, get up onto the ice at the top and stay there until it swims past (+5).', 'If the sea lion reaches you underwater, the game is over.']],
+    chase: ['Eat every fish in the maze before the polar bear gets you.', ['Tap <b>▲ ▼ ◀ ▶</b> (or swipe) to turn. You keep moving that way until a wall.', 'Each 🐟 is 1 point. Clear the maze for +20 and the next level, with a faster bear.', 'Grab a ❄️ for 5 points: it freezes the bear for 5 seconds.', 'You have 3 hearts ❤️. The bear takes one each time he catches you.']],
+    honk: ['Steal the tourists’ stuff and bring it home to your igloo (bottom left).', ['Walk with <b>▲ ▼ ◀ ▶</b> until you’re right next to a tourist holding something.', 'Tap <b>HONK</b>. They drop it (+2), then get angry 💢 and chase you for a few seconds.', 'Walk over the dropped thing to pick it up, then carry it to the igloo (+10). You’re slower while carrying.', 'If an angry tourist catches you, you lose a heart ❤️ and drop what you’re carrying.', 'Reach the goal score at the top before the clock hits 0 to go up a level. Tip: honk, then run!']]
+  };
   // difficulty (all games) and Honk!'s scene, remembered on this phone
   var DIFF = { easy: ['Easy', 0.75], normal: ['Normal', 1], hard: ['Hard', 1.3] };
   var SCENES = { beach: '🏖️ Beach', park: '🌳 Park', snow: '❄️ Snow', city: '🏙️ City' };
@@ -49,8 +56,9 @@
     stop();
     var G = GAMES[id], O = gset();
     function opts() { return chips('diff', DIFF, O.diff) + (id === 'honk' ? chips('scene', SCENES, O.scene) : ''); }
-    host.innerHTML = '<div class="gx" data-g="' + id + '"><div class="gtop"><button type="button" class="gback" aria-label="Back to games">‹ Games</button><b>' + G.t + '</b><span class="gs">0</span></div>' +
-      '<div class="gstage"><canvas></canvas><div class="gover"><button type="button" class="gstart"><span>▶</span>Start</button><p>' + G.how + '</p>' + opts() + '</div></div><div class="gctl"></div></div>';
+    host.innerHTML = '<div class="gx" data-g="' + id + '"><div class="gtop"><button type="button" class="gback" aria-label="Back to games">‹ Games</button><b>' + G.t + '</b><button type="button" class="ghelp" aria-label="How to play" title="How to play">?</button><span class="gs">0</span></div>' +
+      '<div class="gstage"><canvas></canvas><div class="gover"><button type="button" class="gstart"><span>▶</span>Start</button><p>' + G.how + '</p><button type="button" class="ghow">How to play</button>' + opts() + '</div></div><div class="gctl"></div>' +
+      '<dialog class="ghd" aria-label="How to play ' + G.t + '"><b>How to play ' + G.t + '</b><p>' + HELP[id][0] + '</p><ol>' + HELP[id][1].map(function (x) { return '<li>' + x + '</li>'; }).join('') + '</ol><form method="dialog"><button>Got it</button></form></dialog></div>';
     var cv = $('canvas', host), stage = $('.gstage', host), W = Math.min(host.clientWidth || 340, 480), H = Math.round(Math.min(Math.max(300, innerHeight - 330), W * 1.3));
     var dpr = Math.min(2, window.devicePixelRatio || 1); cv.width = W * dpr; cv.height = H * dpr; cv.style.width = W + 'px'; cv.style.height = H + 'px'; stage.style.height = H + 'px';
     var c = cv.getContext('2d'); c.scale(dpr, dpr);
@@ -70,6 +78,7 @@
     }
     function loop(t) {
       if (cur !== S || !S.on) return;
+      if (S.paused) { S.last = t; S.raf = requestAnimationFrame(loop); return; }   // How to play is open: hold still
       var dt = Math.min(0.05, (t - S.last) / 1000); S.last = t;
       S.game.step(dt); S.game.draw(dt);
       S.raf = requestAnimationFrame(loop);
@@ -78,13 +87,22 @@
       S.on = false; cancelAnimationFrame(S.raf); ctl.innerHTML = '';
       var coins = Math.min(30, Math.floor(S.score / (id === 'slide' ? 40 : 2)));
       over.style.display = ''; over.innerHTML = '<div class="gres"><b>' + (msg || 'Game over!') + '</b><span>Score ' + S.score + ' · +' + coins + ' coins</span></div><button type="button" class="gstart"><span>↻</span>Again</button><button type="button" class="gclose">✕ Back to games</button>';
-      over.insertAdjacentHTML('beforeend', opts());
+      over.insertAdjacentHTML('beforeend', '<button type="button" class="ghow">How to play</button>' + opts());
       $('.gstart', over).onclick = begin; $('.gclose', over).onclick = function () { stop(); if (done) done(null); };
       if (done) done(S.score, coins, true);
     };
     S.add = function (n) { S.score += n; $('.gs', host).textContent = S.score; };
     $('.gstart', over).onclick = begin;
+    var hd = $('.ghd', host);
+    function help() {
+      S.paused = true; S.keys = {}; [].slice.call(ctl.querySelectorAll('.on')).forEach(function (b) { b.classList.remove('on'); });
+      if (hd.showModal) hd.showModal(); else hd.setAttribute('open', '');
+    }
+    hd.addEventListener('close', function () { S.paused = false; });
+    if (!hd.showModal) $('form', hd).addEventListener('submit', function (e) { e.preventDefault(); hd.removeAttribute('open'); S.paused = false; });
+    $('.ghelp', host).onclick = help;
     over.addEventListener('click', function (e) {   // Easy / Normal / Hard and the scene: pick before you start
+      if (e.target.closest('.ghow')) return help();
       var b = e.target.closest('[data-diff],[data-scene]'); if (!b) return;
       O = gset(b.dataset.diff ? { diff: b.dataset.diff } : { scene: b.dataset.scene }); S.diff = DIFF[O.diff][1]; S.scene = O.scene;
       [].slice.call(b.parentNode.children).forEach(function (x) { x.setAttribute('aria-pressed', String(x === b)); });
@@ -115,7 +133,7 @@
     }, { passive: true });
   }
   document.addEventListener('keydown', function (e) {
-    if (!cur || !cur.on) return; var k = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down', ' ': 'honk' }[e.key]; if (!k) return;
+    if (!cur || !cur.on || cur.paused) return; var k = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down', ' ': 'honk' }[e.key]; if (!k) return;
     e.preventDefault(); if (!cur.keys[k] && cur.game.press) cur.game.press(k); cur.keys[k] = true;
   });
   document.addEventListener('keyup', function (e) { if (!cur) return; var k = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down', ' ': 'honk' }[e.key]; if (k) cur.keys[k] = false; });
@@ -524,6 +542,10 @@
     '.lrn{font-family:' + F + '}.lrh{display:flex;align-items:center;gap:8px;margin-bottom:8px}.lrh b{font-size:18px;font-weight:900;flex:1}.lrh small{color:var(--muted,#7A8B99);font-weight:800}.lrx{border:0;background:none;font-size:18px;padding:4px}.lrmsg{background:var(--accentSoft,#E3F3EF);border-radius:14px;padding:10px 12px;font-weight:800;margin:6px 0}.lrlang{display:flex;gap:8px;margin:6px 0 10px}.lrlang button{flex:1;border:1.5px solid #237566;background:none;color:#237566;border-radius:99px;padding:8px;font:800 14px ' + F + '}.lrlang button.on{background:#237566;color:#fff}.lrlist{display:grid;grid-template-columns:1fr 1fr;gap:10px}.lrlist button{border:0;background:var(--card,#fff);color:inherit;border-radius:20px;padding:14px 8px;font:inherit;min-height:110px;box-shadow:0 1px 3px rgba(0,0,0,.06)}.lrlist span{display:block;font-size:34px}.lrlist b{display:block;font-weight:900;margin-top:4px}.lrlist small{color:var(--muted,#7A8B99);font-weight:700}.lrtip{font-size:13px;color:var(--muted,#7A8B99);text-align:center;margin-top:10px}.lrbar{height:8px;border-radius:99px;background:var(--line,#E5E9EC);overflow:hidden;margin-bottom:14px}.lrbar i{display:block;height:100%;background:#F2A33A;border-radius:99px;transition:width .3s}.lrcard{background:var(--card,#fff);border-radius:24px;padding:24px 16px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.06)}.lrcard small{display:block;color:var(--muted,#7A8B99);font-weight:800;font-size:15px}.lrcard b{display:block;font-size:28px;font-weight:900;margin:8px 0 14px;color:#237566}.lrcard button{border:1.5px solid var(--line,#E5E9EC);background:none;border-radius:99px;padding:8px 14px;font:800 14px ' + F + ';color:inherit}.lrgo{display:block;width:100%;margin-top:14px;border:0;border-radius:18px;padding:15px;background:#237566;color:#fff;font:900 17px ' + F + '}.lropts{display:flex;flex-direction:column;gap:10px;margin-top:14px}.lropts button{border:1.5px solid var(--line,#E5E9EC);background:var(--card,#fff);color:inherit;border-radius:18px;padding:14px;font:800 17px ' + F + '}.lropts button.ok{background:#DFF3E4;border-color:#3FA55B}.lropts button.no{background:#FBE3E0;border-color:#D9534F}' +
     '.gcards{display:grid;grid-template-columns:1fr 1fr;gap:10px}.gcards button{border:0;background:var(--card,#fff);color:inherit;border-radius:20px;padding:16px 10px;font:inherit;cursor:pointer;min-height:120px}.gcards span{display:block;font-size:40px}.gcards b{display:block;font-weight:900;font-size:16px;margin-top:4px}.gcards small{display:block;color:var(--muted,#6B7C8A);font-weight:700;font-size:12px}';
   css += '.gx .gopt{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}.gx .gopt button{border:0;background:rgba(255,255,255,.88);color:#13324A;border-radius:99px;padding:8px 12px;min-height:36px;font:800 14px ' + F + ';cursor:pointer}.gx .gopt button[aria-pressed="true"]{background:#13324A;color:#fff}';
+  css += '.gx .ghelp{width:36px;height:36px;flex:none;border-radius:50%;border:0;background:var(--chip,#EEE);color:inherit;font:900 18px ' + F + ';cursor:pointer}.gx .gs{min-width:44px}' +
+    '.gx .ghow{border:0;background:rgba(255,255,255,.88);color:#13324A;border-radius:99px;padding:8px 14px;min-height:36px;font:800 14px ' + F + ';text-decoration:underline;cursor:pointer}' +
+    '.ghd{border:0;border-radius:22px;padding:18px 18px 14px;max-width:min(340px,calc(100vw - 32px));background:#fff;color:#13324A;font:700 15px/1.4 ' + F + ';box-shadow:0 10px 40px rgba(19,50,74,.3)}.ghd::backdrop{background:rgba(19,50,74,.45)}.ghd[open]{position:fixed;inset:0;margin:auto;height:fit-content;max-height:calc(100vh - 32px);overflow:auto;z-index:50}' +
+    '.ghd b{display:block;font-size:19px;font-weight:900}.ghd p{margin:6px 0 4px;font-weight:800}.ghd ol{margin:6px 0 12px;padding-left:22px}.ghd li{margin:6px 0}.ghd li b{display:inline;font-size:inherit}.ghd form{margin:0}.ghd form button{width:100%;min-height:48px;border:0;border-radius:16px;background:#237566;color:#fff;font:900 16px ' + F + ';cursor:pointer}';
   var st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
 
   window.ppGames = {
