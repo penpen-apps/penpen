@@ -6,7 +6,7 @@ if (/phone/.test(location.search)) { document.write('<iframe src="garden-preview
 else {
   localStorage.setItem('pp_sound','off');localStorage.setItem('pp_pet',JSON.stringify({v:2,name:'Pip',look:{body:'#5DA9E9',eyes:'shine',beak:'#F4A62A',feet:'#F4A62A'},st:{swim:14,run:9,power:4,stamina:7,charm:11},food:70,joy:70,energy:80,xp:60,coins:42,bag:{fish:3},own:{none:1,hat:1},wear:'none',asleep:false,t:Date.now()}));
   ['../place.js','../guides.js','../games.js','../play.js'].forEach(function (s) { document.write('<script src="' + s + '"><\/script>'); });
-  document.write('<script>window.ppOpenPlay();setTimeout(function(){var q=location.search;if(/room|near/.test(q))document.querySelector("[data-act=igloo] .hit").dispatchEvent(new MouseEvent("click",{bubbles:true}));if(/near/.test(q))setTimeout(function(){document.querySelector("[data-item=" + (q.split("near-")[1]||"dive") + "]").click()},200)},300);<\/script>');
+  document.write('<script>window.ppOpenPlay();setTimeout(function(){var q=location.search;if(/room|near/.test(q))document.querySelector("[data-act=igloo] .hit").dispatchEvent(new MouseEvent("click",{bubbles:true}));if(/near/.test(q))setTimeout(function(){document.querySelector("[data-item=" + (q.split("near-")[1]||"dive") + "]").click()},200);if(/back/.test(q))setTimeout(function(){document.dispatchEvent(new KeyboardEvent("keydown",{key:"ArrowUp"}));setTimeout(function(){document.dispatchEvent(new KeyboardEvent("keyup",{key:"ArrowUp"}))},2600)},200)},300);<\/script>');
 }
 </script>
 </body></html>
