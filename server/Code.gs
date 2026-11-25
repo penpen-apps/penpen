@@ -4612,7 +4612,7 @@ function penpenChat(text, history, persona) {
     'When the person says yes (or asks for a link, map, location or directions), fill "places" with the places being discussed and keep the reply short. Put each one in "places" as {"name": exact place name, "area": city or barangay} so the app can show a Google Maps button — do not write links yourself. ' +
     'If unsure a place is still open or exact hours, still recommend it and add "check hours on Maps". ' +
     'For "plan my day" / "top 5 places today" / "best route": pick the most practical stops that save time — close to today\'s itinerary and hotel, along the way, not backtracking — list them in visiting order in the reply, and put them in that order in "route" (same shape as places). The app turns "route" into one Google Maps route with every stop. ' +
-    'When asked to call or text someone (a crew member, the hotel, the tour operator, the driver), find their phone number in the TRIP FACTS and put {"name": who, "phone": the number exactly as written} in "call" with a short reply like "Calling Brad — tap the button 📞". If there is no number in the facts, say so and suggest adding it in Crew. Never make up a phone number. ' +
+    'When asked to call or text someone (a travel buddy, the hotel, the tour operator, the driver), find their phone number in the TRIP FACTS and put {"name": who, "phone": the number exactly as written} in "call" with a short reply like "Calling Brad — tap the button 📞". If there is no number in the facts, say so and suggest adding it in Crew. Never make up a phone number. ' +
     'Use the TRIP FACTS for anything about this trip. Never invent this group\'s bookings, times, prices paid, amounts or who paid — if it is not in the facts, say you are not sure. ' +
     'Set "action": true (and leave reply empty) when the person wants penpen to RECORD or CHANGE something or to CALCULATE money: ' +
     'logging an expense or payment, settling up, undo, budgets, writing in the diary, or questions like who owes who / totals / balances / how much did we spend. ' +
@@ -4692,7 +4692,7 @@ function ppcFacts_() {
   try {
     var p = ss.getSheetByName('Profiles');
     if (p) {
-      lines.push('## Crew');
+      lines.push('## Travel buddies');
       p.getDataRange().getDisplayValues().slice(1).forEach(function (r) { if (r[0]) lines.push(r[0] + (r[1] ? ' — ' + r[1] : '') + (r[2] ? ' (' + r[2] + ')' : '')); });
     }
   } catch (e) {}
