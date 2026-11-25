@@ -24,7 +24,7 @@
     sunny: "Good day! I'm penpen, ready when you are.",
     coolcat: "penpen. Your trip. Handled. Relax, my friend.",
     goofydad: "Hi, I'm penpen! Why don't penguins get lost? They always ice-plore! Heh heh.",
-    trailer: "In a world... where one penguin keeps track of every peso... this is penpen.",
+    trailer: "In a world... where one penguin keeps track of every penny... this is penpen.",
     surfer: "Duuude, penpen here. This trip is gonna be so gnarly.",
     grandma: "Hello, dear! It's penpen. Have you eaten? Don't forget your jacket.",
     phone: "Hi! I'm penpen, your trip buddy."

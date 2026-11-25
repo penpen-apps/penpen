@@ -9,6 +9,7 @@
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="place.js"></script>
 <script src="boot.js"></script>
 <script src="voice.js" defer></script>
 <script src="talk.js" defer></script>
@@ -394,7 +395,7 @@ th .pp-qt{position:absolute;right:0;top:100%;width:210px;z-index:5;box-shadow:0 
         <div id="map" role="region" aria-label="Map of the day's stops"></div>
         <div class="acts"><a class="act p" id="route" target="_blank" rel="noopener">Open whole route in Google Maps</a></div>
         <div class="card" id="stops"><div class="muted">Loading the plan…</div></div>
-        <div class="card tip">To change the plan, tell penpen — e.g. “Add dinner at Larsian on Dec 5 at 7 pm”, “Move canyoneering to 9 am”, or “Remove the free day”. Changes ask Yes / No first.
+        <div class="card tip">To change the plan, tell penpen — e.g. “Add dinner on Dec 5 at 7 pm”, “Move canyoneering to 9 am”, or “Remove the free day”. Changes ask Yes / No first.
           <div><button class="linkbtn" type="button" id="plan-ask">Ask penpen</button></div></div>
       </div>
     </section>
@@ -496,7 +497,7 @@ th .pp-qt{position:absolute;right:0;top:100%;width:210px;z-index:5;box-shadow:0 
         <form id="addf" class="card" novalidate>
           <div class="fred" style="font-size:20px">Add an expense</div>
           <label class="f" for="a-what">WHAT / PLACE</label>
-          <input class="in" id="a-what" placeholder="e.g. Dinner at Larsian">
+          <input class="in" id="a-what" placeholder="e.g. Dinner, taxi, museum tickets">
           <label class="f" for="a-amt">AMOUNT</label>
           <input class="in amt" id="a-amt" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00">
           <label class="f" id="l-cur">CURRENCY</label><div class="opts" id="a-cur" role="radiogroup" aria-labelledby="l-cur"></div>
@@ -591,7 +592,9 @@ th .pp-qt{position:absolute;right:0;top:100%;width:210px;z-index:5;box-shadow:0 
   $('voice').onclick = function () { talk = !talk; try { localStorage.setItem('pp_voice', talk ? 'on' : 'off'); } catch (e) {} if (!talk && window.speechSynthesis) speechSynthesis.cancel(); paintVoice(); };
   function speak(t) {
     if (!talk || !window.speechSynthesis) return;
-    var clean = String(t).replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}\u{FE0F}\u{200D}]/gu, '').replace(/₱/g, ' pesos ').replace(/\$(?=\d)/g, ' dollars ').replace(/\s+/g, ' ').trim();
+    var pl = window.ppPlace(), clean = String(t).replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}\u{FE0F}\u{200D}]/gu, '');
+    if (pl.sym && pl.sym !== '$') clean = clean.replace(new RegExp(pl.sym.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s?(\\d[\\d,.]*)', 'g'), '$1 ' + pl.word);   // "¥500" is read out as "500 yen"
+    clean = clean.replace(/\$(\d[\d,.]*)/g, '$1 dollars').replace(/\s+/g, ' ').trim();
     if (!clean) return;
     try { speechSynthesis.cancel(); var u = new SpeechSynthesisUtterance(clean); u.rate = 1.03; u.pitch = 1.15; speechSynthesis.speak(u); } catch (e) {}
   }
@@ -748,7 +751,7 @@ th .pp-qt{position:absolute;right:0;top:100%;width:210px;z-index:5;box-shadow:0 
 
   /* ---------- Today ---------- */
   function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
-  function money(n) { return (T ? T.ls : '₱') + Math.round(Number(n) || 0).toLocaleString('en-US'); }
+  function money(n) { return (T ? T.ls : window.ppPlace().sym) + Math.round(Number(n) || 0).toLocaleString('en-US'); }
   function ago(at) {
     var ms = at - Date.now();
     if (ms < 0) return 'NOW';
@@ -815,11 +818,11 @@ th .pp-qt{position:absolute;right:0;top:100%;width:210px;z-index:5;box-shadow:0 
     var g = el('div', 'grid2');
     var bc = el('button', 'card'); bc.type = 'button'; bc.onclick = function () { go('p-money'); };
     bc.appendChild(el('div', 'kick', 'WHO OWES WHO'));
-    var first = String(t.settle || 'All square').split('\n')[0], m = first.match(/^(.*?)\s+(₱[\d,.]+|\$[\d,.]+)$/);
+    var first = String(t.settle || 'All square').split('\n')[0], m = first.match(/^(.*?)\s+(\D{0,4}\d[\d,.]*)$/);   // "Kate owes Brad ¥1,200" → amount with any currency sign
     bc.appendChild(el('div', 'big', m ? m[2].replace(/\.\d+$/, '') : '✓'));
     bc.appendChild(el('div', 'muted', m ? m[1] : first));
     g.appendChild(bc);
-    var pc = el('button', 'card'); pc.type = 'button'; pc.onclick = function () { askPenpen('I put 1,000 pesos in the pocket money'); };
+    var pc = el('button', 'card'); pc.type = 'button'; pc.onclick = function () { askPenpen('I put 1,000 ' + window.ppPlace().word + ' in the pocket money'); };
     pc.appendChild(el('div', 'kick', 'POCKET MONEY'));
     pc.appendChild(el('div', 'big', money(t.pocket.left) + ' left'));
     var pb = el('div', 'bar'), pf = el('i'); pf.style.width = (t.pocket.put ? Math.max(0, Math.min(100, Math.round(t.pocket.left / t.pocket.put * 100))) : 0) + '%'; pb.appendChild(pf); pc.appendChild(pb);
@@ -938,7 +941,7 @@ th .pp-qt{position:absolute;right:0;top:100%;width:210px;z-index:5;box-shadow:0 
       MAP.invalidateSize();
       if (pts.length > 1) MAP.fitBounds(pts, {padding: [30, 30], maxZoom: 14});
       else if (pts.length === 1) MAP.setView(pts[0], 13);
-      else MAP.setView([10.3, 123.9], 7);
+      else { var cz = window.ppPlace().centre; MAP.setView(cz ? [cz[0], cz[1]] : [20, 0], cz ? cz[2] : 2); }   // no stops yet: show the trip's country
     }, 60);
   }
   $('plan-ask').onclick = function () { askPenpen('Add to the plan: '); };
@@ -1100,76 +1103,23 @@ th .pp-qt{position:absolute;right:0;top:100%;width:210px;z-index:5;box-shadow:0 
   var S = null, safetyStale = false;
   $('to-add').onclick = function () { go('p-add'); };
   $('sos').onclick = function () { $('sosask').classList.add('on'); $('sos-yes').focus(); };
-  // SOS: emergency numbers for the country this trip is in (not always 911).
-  // [name, police, ambulance, fire, tourist police (optional), words that point to the country]
-  var SOS_NUM = {
-    PH: ['the Philippines', '911', '911', '911', '', 'philippines|cebu|dipolog|manila|bohol|davao|palawan|siargao|dumaguete|iloilo|boracay|moalboal|oslob|el nido|coron|baguio'],
-    US: ['the US', '911', '911', '911', '', 'united states|usa|hawaii|honolulu|new york|las vegas|los angeles|san francisco|orlando|miami|chicago|seattle|alaska'],
-    CA: ['Canada', '911', '911', '911', '', 'canada|vancouver|toronto|montreal|banff|calgary|quebec'],
-    MX: ['Mexico', '911', '911', '911', '', 'mexico|cancun|tulum|cabo|puerto vallarta|playa del carmen|oaxaca|guadalajara'],
-    JP: ['Japan', '110', '119', '119', '', 'japan|tokyo|osaka|kyoto|okinawa|hokkaido|sapporo|nara|hiroshima|fukuoka|nagoya|yokohama|hakone'],
-    KR: ['South Korea', '112', '119', '119', '', 'korea|seoul|busan|jeju|incheon'],
-    TW: ['Taiwan', '110', '119', '119', '', 'taiwan|taipei|kaohsiung|taichung|tainan'],
-    HK: ['Hong Kong', '999', '999', '999', '', 'hong kong'],
-    MO: ['Macau', '999', '999', '999', '', 'macau|macao'],
-    CN: ['China', '110', '120', '119', '', 'china|beijing|shanghai|guangzhou|shenzhen|chengdu|xi\'an'],
-    SG: ['Singapore', '999', '995', '995', '', 'singapore'],
-    MY: ['Malaysia', '999', '999', '999', '', 'malaysia|kuala lumpur|penang|langkawi|sabah|borneo|kota kinabalu|malacca|melaka'],
-    TH: ['Thailand', '191', '1669', '199', '1155', 'thailand|bangkok|phuket|chiang mai|krabi|pattaya|koh samui|ko samui|phi phi|chiang rai'],
-    VN: ['Vietnam', '113', '115', '114', '', 'vietnam|viet nam|hanoi|ho chi minh|saigon|da nang|hoi an|ha long|nha trang|phu quoc'],
-    ID: ['Indonesia', '110', '118', '113', '', 'indonesia|bali|jakarta|lombok|ubud|yogyakarta|komodo|gili'],
-    KH: ['Cambodia', '117', '119', '118', '', 'cambodia|siem reap|phnom penh|angkor'],
-    IN: ['India', '112', '112', '112', '', 'india|delhi|mumbai|goa|jaipur|agra|bangalore|bengaluru|kerala'],
-    AU: ['Australia', '000', '000', '000', '', 'australia|sydney|melbourne|brisbane|perth|cairns|gold coast|adelaide'],
-    NZ: ['New Zealand', '111', '111', '111', '', 'new zealand|auckland|queenstown|wellington|christchurch'],
-    GB: ['the UK', '999', '999', '999', '', 'united kingdom|england|scotland|wales|london|edinburgh|manchester|liverpool'],
-    IE: ['Ireland', '112', '112', '112', '', 'ireland|dublin|galway|cork'],
-    FR: ['France', '112', '112', '112', '', 'france|paris|lyon|marseille|bordeaux'],
-    DE: ['Germany', '110', '112', '112', '', 'germany|berlin|munich|frankfurt|hamburg|cologne'],
-    ES: ['Spain', '112', '112', '112', '', 'spain|madrid|barcelona|seville|ibiza|mallorca|valencia'],
-    IT: ['Italy', '112', '112', '112', '', 'italy|rome|milan|venice|florence|naples|amalfi|sicily'],
-    PT: ['Portugal', '112', '112', '112', '', 'portugal|lisbon|porto|algarve|madeira'],
-    NL: ['the Netherlands', '112', '112', '112', '', 'netherlands|holland|amsterdam|rotterdam'],
-    GR: ['Greece', '112', '112', '112', '', 'greece|athens|santorini|mykonos|crete'],
-    CH: ['Switzerland', '117', '144', '118', '', 'switzerland|zurich|geneva|lucerne|interlaken|zermatt'],
-    AT: ['Austria', '133', '144', '122', '', 'austria|vienna|salzburg|innsbruck'],
-    TR: ['Turkey', '112', '112', '112', '', 'turkey|türkiye|turkiye|istanbul|cappadocia|antalya'],
-    AE: ['the UAE', '999', '998', '997', '', 'united arab emirates|uae|dubai|abu dhabi']
-  };
-  // the phone's time zone follows you abroad, so it says where you are right now
-  var SOS_TZ = { 'Asia/Manila': 'PH', 'Asia/Tokyo': 'JP', 'Asia/Seoul': 'KR', 'Asia/Taipei': 'TW', 'Asia/Hong_Kong': 'HK', 'Asia/Macau': 'MO', 'Asia/Shanghai': 'CN',
-    'Asia/Singapore': 'SG', 'Asia/Kuala_Lumpur': 'MY', 'Asia/Kuching': 'MY', 'Asia/Bangkok': 'TH', 'Asia/Ho_Chi_Minh': 'VN', 'Asia/Saigon': 'VN', 'Asia/Jakarta': 'ID', 'Asia/Makassar': 'ID',
-    'Asia/Phnom_Penh': 'KH', 'Asia/Kolkata': 'IN', 'Asia/Calcutta': 'IN', 'Australia/Sydney': 'AU', 'Australia/Melbourne': 'AU', 'Australia/Brisbane': 'AU', 'Australia/Perth': 'AU', 'Australia/Adelaide': 'AU',
-    'Pacific/Auckland': 'NZ', 'Europe/London': 'GB', 'Europe/Dublin': 'IE', 'Europe/Paris': 'FR', 'Europe/Berlin': 'DE', 'Europe/Madrid': 'ES', 'Europe/Rome': 'IT', 'Europe/Lisbon': 'PT',
-    'Europe/Amsterdam': 'NL', 'Europe/Athens': 'GR', 'Europe/Zurich': 'CH', 'Europe/Vienna': 'AT', 'Europe/Istanbul': 'TR', 'Asia/Dubai': 'AE',
-    'America/New_York': 'US', 'America/Chicago': 'US', 'America/Denver': 'US', 'America/Phoenix': 'US', 'America/Los_Angeles': 'US', 'America/Anchorage': 'US', 'Pacific/Honolulu': 'US', 'America/Detroit': 'US',
-    'America/Toronto': 'CA', 'America/Vancouver': 'CA', 'America/Edmonton': 'CA', 'America/Winnipeg': 'CA', 'America/Halifax': 'CA', 'America/Montreal': 'CA',
-    'America/Mexico_City': 'MX', 'America/Cancun': 'MX', 'America/Tijuana': 'MX', 'America/Monterrey': 'MX', 'America/Merida': 'MX' };
-  function sosTrip(here) {   // countries the trip's name, destination and plan point to, in order
-    var txt = (localStorage.getItem('pp_trip_name') || '') + ' ' + (here || ''), cur = localStorage.getItem('pp_trip_id') || '', out = [];
-    try { JSON.parse(localStorage.getItem('pp_trips_list') || '[]').forEach(function (t) { if ((t.id || '') === cur) txt = t.where + ' ' + t.name + ' ' + txt; }); } catch (e) {}
-    try { var P = JSON.parse(localStorage.getItem('pp_c_penpenPlan:[]') || 'null'); ((P && P.days) || []).forEach(function (d) { (d.stops || []).forEach(function (st) { txt += ' ' + (st.place || ''); }); }); } catch (e) {}
-    var low = ' ' + txt.toLowerCase() + ' ';
-    Object.keys(SOS_NUM).map(function (k) { var m = low.search(new RegExp('[^a-z](' + SOS_NUM[k][5] + ')[^a-z]')); return [m, k]; })
-      .filter(function (x) { return x[0] >= 0; }).sort(function (a, b) { return a[0] - b[0]; }).forEach(function (x) { out.push(x[1]); });
-    return out;
-  }
+  // SOS: emergency numbers for the country this trip is in (not always 911). The numbers live in place.js.
+  function sosName(k) { return window.ppPlace.info(k).the; }
   function sosNums(k) {   // one button per number: police 110, ambulance & fire 119 …
-    var c = SOS_NUM[k], by = {}, order = [];
-    [['Police', c[1]], ['Ambulance', c[2]], ['Fire', c[3]], ['Tourist police', c[4]]].forEach(function (x) {
+    var c = window.ppPlace.info(k).sos, by = {}, order = [];
+    [['Police', c[0]], ['Ambulance', c[1]], ['Fire', c[2]], ['Tourist police', c[3]]].forEach(function (x) {
       if (!x[1]) return; if (!by[x[1]]) { by[x[1]] = []; order.push(x[1]); } by[x[1]].push(x[0]);
     });
     return order.map(function (n) { var w = by[n]; return { n: n, l: w.length >= 3 ? 'Emergency' : w[0] + w.slice(1).map(function (x) { return ' & ' + x.toLowerCase(); }).join('') }; });
   }
   var sosKey = '';
   function renderSos(here) {
-    var tz = ''; try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (e) {}
-    var now = SOS_TZ[tz] || '', trip = sosTrip(here), k = trip.indexOf(now) >= 0 ? now : (trip[0] || now);
+    var now = window.ppPlace.phone(), trip = window.ppPlace.candidates(here), k = trip.indexOf(now) >= 0 ? now : (trip[0] || now);
     if (k + '/' + now === sosKey) return; sosKey = k + '/' + now;
     var nums = k ? sosNums(k) : [{ n: '112', l: 'Emergency' }], one = nums.length === 1, ask = $('sosask');
     $('sos').lastChild.textContent = one ? 'Call ' + nums[0].n : 'Emergency call';
     ask.innerHTML = '';
-    var q = el('div', '', k ? (one ? 'Call ' + nums[0].n + ' now? (emergency number in ' + SOS_NUM[k][0] + ')' : 'Which emergency? (numbers for ' + SOS_NUM[k][0] + ')')
+    var q = el('div', '', k ? (one ? 'Call ' + nums[0].n + ' now? (emergency number in ' + sosName(k) + ')' : 'Which emergency? (numbers for ' + sosName(k) + ')')
       : 'Call 112 now? We don\u2019t know this trip\u2019s country. 112 works on mobile phones in many countries, but check the local number.');
     q.id = 'sosq'; q.style.cssText = 'font-size:17px;font-weight:600'; ask.appendChild(q);
     var row = null;
@@ -1181,7 +1131,7 @@ th .pp-qt{position:absolute;right:0;top:100%;width:210px;z-index:5;box-shadow:0 
     var no = el('button', 'btn', 'No'); no.type = 'button'; no.id = 'sos-no'; no.onclick = function () { ask.classList.remove('on'); $('sos').focus(); }; row.appendChild(no);
     var nn = function (c) { return sosNums(c).map(function (x) { return x.n; }).join(); };
     if (now && now !== k && nn(now) !== nn(k)) {   // e.g. a Japan trip while you're still at home in the US
-      var p = el('div', 'tip', 'Not in ' + SOS_NUM[k][0] + ' yet? In ' + SOS_NUM[now][0] + ' call ');
+      var p = el('div', 'tip', 'Not in ' + sosName(k) + ' yet? In ' + sosName(now) + ' call ');
       sosNums(now).forEach(function (x, i) { var a = el('a', '', x.n); a.href = 'tel:' + x.n; a.style.cssText = 'display:inline;background:none;color:inherit;text-decoration:underline;min-height:0;font-size:inherit'; if (i) p.appendChild(document.createTextNode(' / ')); p.appendChild(a); });
       ask.appendChild(p);
     }
@@ -1450,7 +1400,7 @@ th .pp-qt{position:absolute;right:0;top:100%;width:210px;z-index:5;box-shadow:0 
   var CUR_MOOD = 'happy';
   var mood1 = mood;
   mood = function (m) { CUR_MOOD = m || 'happy'; mood1(m); paintScene(); };
-  function lookFor(m) { var hr = new Date().getHours(); if (m === 'sleep' || hr >= 22 || hr < 5) return 'sleep'; return {travel: 'travel', sunny: 'sunny', beach: 'beach', rain: 'rain', cold: 'cold'}[m] || ''; }
+  function lookFor(m) { var hr = window.ppPlace.now().hour; if (m === 'sleep' || hr >= 22 || hr < 5) return 'sleep'; return {travel: 'travel', sunny: 'sunny', beach: 'beach', rain: 'rain', cold: 'cold'}[m] || ''; }
   function actFor(look, i) { if (look === 'sleep') return 'calm'; if (look === 'travel') return 'waddle'; if (CUR_MOOD === 'excited' && i === 0) return 'jump'; return 'idle'; }
   function paintScene() {
     paintNav();
@@ -1472,9 +1422,9 @@ th .pp-qt{position:absolute;right:0;top:100%;width:210px;z-index:5;box-shadow:0 
   function paintNow(t) {
     var old = $('pp-now'); if (old) old.remove();
     if (!t || !t.timeline || !t.timeline.length) return;
-    var today = new Date().toLocaleDateString('en-US', {weekday: 'short', month: 'short', day: 'numeric'});
+    var today = new Date().toLocaleDateString('en-US', {weekday: 'short', month: 'short', day: 'numeric', timeZone: window.ppPlace().tz});   // the trip's date, not the phone's
     if (String(t.timelineDay || '') !== today) return;
-    var now = new Date(), nm = now.getHours() * 60 + now.getMinutes();
+    var now = window.ppPlace.now(), nm = now.hour * 60 + now.minute;
     var items = t.timeline.map(function (x) { return {x: x, m: minsOf(x.time)}; }).filter(function (o) { return o.m !== null; });
     var cur = null, nxt = null;
     items.forEach(function (o) { if (o.m <= nm) cur = o; else if (!nxt) nxt = o; });
@@ -1606,36 +1556,38 @@ th .pp-qt{position:absolute;right:0;top:100%;width:210px;z-index:5;box-shadow:0 
   function loadCats() {
     google.script.run.withSuccessHandler(function (c) {
       var rate = (c && c.rate) || (LAST_T && LAST_T.rate) || 0, rows = [], tot = 0; c = (c && c.cats) || {};
+      var LOCAL = (LAST_T && LAST_T.cur) || window.ppPlace().cur, HOME = (LAST_T && LAST_T.home) || 'USD';
       Object.keys(c).forEach(function (k) {
-        var v = 0; Object.keys(c[k]).forEach(function (cur) { v += cur === 'USD' ? c[k][cur] * rate : (cur === 'PHP' ? c[k][cur] : 0); });
+        // count in the trip's currency: home-currency spending is converted with the live rate
+        var v = 0; Object.keys(c[k]).forEach(function (cur) { v += cur === LOCAL ? c[k][cur] : (cur === HOME ? c[k][cur] * rate : 0); });
         if (v > 0) { rows.push([k, v]); tot += v; }
       });
       var old = $('pp-cats'); if (old) old.remove();
-      if (!rows.length || !tot) return oddCurrencies(c, rate);
+      if (!rows.length || !tot) return oddCurrencies(c, rate, LOCAL, HOME);
       rows.sort(function (x, y) { return y[1] - x[1]; });
       var C = {'Accommodation': '#237566', 'Activities & Tours': '#F4A62A', 'Transportation': '#2E6F84', 'Food & Drinks': '#E46F5A', 'Shopping & Other': '#8A79C2'};
       var card = el('div', 'card pp-cats'); card.id = 'pp-cats';
       card.innerHTML = '<div class="kick">WHERE THE GROUP MONEY WENT</div>' + rows.map(function (x) {
         var p = Math.round(x[1] / tot * 100);
-        return '<div class="pp-cat"><div class="pp-catl"><span>' + esc(x[0]) + '</span><span>\u20B1' + Math.round(x[1]).toLocaleString('en-US') + ' \u00b7 ' + p + '%</span></div><div class="pp-bar"><i style="width:' + Math.max(3, p) + '%;background:' + (C[x[0]] || '#9AA7B4') + '"></i></div></div>';
+        return '<div class="pp-cat"><div class="pp-catl"><span>' + esc(x[0]) + '</span><span>' + esc(money(x[1])) + ' \u00b7 ' + p + '%</span></div><div class="pp-bar"><i style="width:' + Math.max(3, p) + '%;background:' + (C[x[0]] || '#9AA7B4') + '"></i></div></div>';
       }).join('');
       var box = $('money'), stats = box.querySelector('.stats');
       if (stats && stats.parentNode) stats.parentNode.insertBefore(card, stats.nextSibling); else box.insertBefore(card, box.firstChild);
-      oddCurrencies(c, rate);   // goes right under the totals, above this card
+      oddCurrencies(c, rate, LOCAL, HOME);   // goes right under the totals, above this card
     }).withFailureHandler(function () {}).penpenMoneyCats();
   }
 
-  // money in a currency the totals can't count (only pesos, and dollars once there's a rate) used to vanish as $0: say so and offer a fix
-  function oddCurrencies(c, rate) {
+  // money in a currency the totals can't count (only the trip's currency, and home money once there's a rate) used to vanish as $0: say so and offer a fix
+  function oddCurrencies(c, rate, LOCAL, HOME) {
     var odd = {}, old = $('pp-odd'); if (old) old.remove();
-    Object.keys(c).forEach(function (k) { Object.keys(c[k]).forEach(function (cur) { if (cur !== 'PHP' && !(cur === 'USD' && rate) && c[k][cur]) odd[cur] = (odd[cur] || 0) + c[k][cur]; }); });
+    Object.keys(c).forEach(function (k) { Object.keys(c[k]).forEach(function (cur) { if (cur !== LOCAL && !(cur === HOME && rate) && c[k][cur]) odd[cur] = (odd[cur] || 0) + c[k][cur]; }); });
     var curs = Object.keys(odd); if (!curs.length) return;
     var card = el('div', 'card'); card.id = 'pp-odd'; card.setAttribute('role', 'status');
     card.appendChild(el('div', 'kick', '\u26A0\uFE0F NOT IN THE TOTALS YET'));
-    card.appendChild(el('div', '', curs.map(function (k) { return k + ' ' + Math.round(odd[k]).toLocaleString('en-US'); }).join(' \u00b7 ') + ' ' + (curs.length > 1 ? 'aren\u2019t' : 'isn\u2019t') + ' counted, because penpen only adds up pesos' + (rate ? ' and dollars' : '') + ' for now.'));
+    card.appendChild(el('div', '', curs.map(function (k) { return k + ' ' + Math.round(odd[k]).toLocaleString('en-US'); }).join(' \u00b7 ') + ' ' + (curs.length > 1 ? 'aren\u2019t' : 'isn\u2019t') + ' counted, because penpen only adds up ' + window.ppPlace().word + (rate ? ' and ' + HOME : '') + ' for now.'));
     var f = el('div', 'fixes'); f.style.marginTop = '10px';
     curs.forEach(function (k) {
-      var b = el('button', 'fix p', 'Convert ' + k + ' to pesos'); b.type = 'button'; b.onclick = function () { convertRate(k, odd[k], b, card); }; f.appendChild(b);
+      var b = el('button', 'fix p', 'Convert ' + k + ' to ' + LOCAL); b.type = 'button'; b.onclick = function () { convertRate(k, odd[k], b, card, LOCAL); }; f.appendChild(b);
     });
     var a = el('button', 'fix', 'Fix it in chat'); a.type = 'button'; a.onclick = function () { askPenpen('Change the currency of my ' + curs[0] + ' expense: '); }; f.appendChild(a);
     card.appendChild(f);
@@ -1644,23 +1596,23 @@ th .pp-qt{position:absolute;right:0;top:100%;width:210px;z-index:5;box-shadow:0 
   }
   // asking penpen to "convert" used to just swap the label (¥1,500 became ₱1,500): get today's rate (Frankfurter, free, no key),
   // show it with the converted total, and only on "Convert at this rate" send penpen the exact rate (its Yes/No card still shows each change)
-  function convertRate(cur, amt, btn, card) {
+  function convertRate(cur, amt, btn, card, to) {   // to = the trip's currency
     var old = card.querySelector('.pp-rate'); if (old) old.remove();
     var box = el('div', 'pp-rate'); box.style.marginTop = '10px'; card.appendChild(box);
     function cash(v, c, dp) { try { return new Intl.NumberFormat('en-US', { style: 'currency', currency: c, maximumFractionDigits: dp }).format(v); } catch (e) { return c + ' ' + v.toLocaleString('en-US'); } }
     btn.disabled = true; btn.textContent = 'Getting today’s rate…';
-    var ok = /^[A-Z]{3}$/.test(cur) ? fetch('https://api.frankfurter.dev/v2/rate/' + cur + '/PHP', { signal: AbortSignal.timeout(8000) }) : Promise.reject(new Error('code'));
+    var ok = /^[A-Z]{3}$/.test(cur) && /^[A-Z]{3}$/.test(to) ? fetch('https://api.frankfurter.dev/v2/rate/' + cur + '/' + to, { signal: AbortSignal.timeout(8000) }) : Promise.reject(new Error('code'));
     ok.then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }).then(function (d) {
       var rate = Number(d && d.rate); if (!(rate > 0)) throw new Error('no rate');
-      box.appendChild(el('div', '', 'Today’s rate: ' + cash(1, cur) + ' = ' + cash(rate, 'PHP', 4) + ' (' + d.date + '). So ' + cash(amt, cur) + ' ≈ ' + cash(amt * rate, 'PHP') + '.'));
+      box.appendChild(el('div', '', 'Today’s rate: ' + cash(1, cur) + ' = ' + cash(rate, to, 4) + ' (' + d.date + '). So ' + cash(amt, cur) + ' ≈ ' + cash(amt * rate, to) + '.'));
       var f = el('div', 'fixes'); f.style.marginTop = '8px';
       var go = el('button', 'fix p', 'Convert at this rate'); go.type = 'button';
-      go.onclick = function () { askPenpen('Convert my ' + cur + ' expenses to PHP at 1 ' + cur + ' = ' + rate + ' PHP (rate from ' + d.date + '): multiply each ' + cur + ' amount by ' + rate + ', round to 2 decimals and change its currency to PHP. All together ' + cash(amt, cur) + ' should become ' + cash(amt * rate, 'PHP') + '.'); $('sayf').requestSubmit(); };
+      go.onclick = function () { askPenpen('Convert my ' + cur + ' expenses to ' + to + ' at 1 ' + cur + ' = ' + rate + ' ' + to + ' (rate from ' + d.date + '): multiply each ' + cur + ' amount by ' + rate + ', round to 2 decimals and change its currency to ' + to + '. All together ' + cash(amt, cur) + ' should become ' + cash(amt * rate, to) + '.'); $('sayf').requestSubmit(); };
       var no = el('button', 'fix', 'Cancel'); no.type = 'button'; no.onclick = function () { box.remove(); };
       f.appendChild(go); f.appendChild(no); box.appendChild(f);
     }).catch(function () {
       box.appendChild(el('div', '', '⚠️ Couldn’t get today’s rate (no signal?). Try again, or tap “Fix it in chat” and tell penpen the rate.'));
-    }).then(function () { btn.disabled = false; btn.textContent = 'Convert ' + cur + ' to pesos'; });
+    }).then(function () { btn.disabled = false; btn.textContent = 'Convert ' + cur + ' to ' + to; });
   }
 
   /* ---------- Stage 5: money tidy + help, diary remove, QR invite, selfie ---------- */

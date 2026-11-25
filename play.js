@@ -23,23 +23,26 @@
     flower: { e: '🌺', n: 'Flower', price: 25 },
     crown:  { e: '👑', n: 'Crown', price: 120 }
   };
+  // questions tagged 'PH' only come up on Philippine trips
   var QUIZ = [
-    ['How many islands does the Philippines have?', ['About 7,641', 'About 700', 'About 70,000'], 0],
-    ['What do Cebuanos call lechon’s crispy skin?', ['Panit', 'Ube', 'Kalamay'], 0],
-    ['Which is the national bird of the Philippines?', ['Philippine eagle', 'Maya', 'Kingfisher'], 0],
-    ['Where can you swim with whale sharks in Cebu?', ['Oslob', 'Bantayan', 'Moalboal only'], 0],
+    ['How many islands does the Philippines have?', ['About 7,641', 'About 700', 'About 70,000'], 0, 'PH'],
+    ['What do Cebuanos call lechon’s crispy skin?', ['Panit', 'Ube', 'Kalamay'], 0, 'PH'],
+    ['Which is the national bird of the Philippines?', ['Philippine eagle', 'Maya', 'Kingfisher'], 0, 'PH'],
+    ['Where can you swim with whale sharks in Cebu?', ['Oslob', 'Bantayan', 'Moalboal only'], 0, 'PH'],
     ['How fast can a penguin swim?', ['Up to ~35 km/h', '5 km/h', '100 km/h'], 0],
     ['Which penguin is the tallest?', ['Emperor', 'King', 'Little blue'], 0],
-    ['What does “Salamat” mean?', ['Thank you', 'Hello', 'Goodbye'], 0],
-    ['“Maayong buntag” in Bisaya means…', ['Good morning', 'Good night', 'How much?'], 0],
-    ['Which fruit is Cebu famous for?', ['Mango', 'Durian', 'Kiwi'], 0],
+    ['What does “Salamat” mean?', ['Thank you', 'Hello', 'Goodbye'], 0, 'PH'],
+    ['“Maayong buntag” in Bisaya means…', ['Good morning', 'Good night', 'How much?'], 0, 'PH'],
+    ['Which fruit is Cebu famous for?', ['Mango', 'Durian', 'Kiwi'], 0, 'PH'],
     ['Do penguins live at the North Pole?', ['No — almost all live south of the equator', 'Yes, lots', 'Only in winter'], 0],
-    ['What is Magellan’s Cross?', ['A cross planted in Cebu in 1521', 'A bridge', 'A dance'], 0],
-    ['“Pila ni?” in Bisaya means…', ['How much is this?', 'Where is it?', 'I’m full'], 0],
+    ['What is Magellan’s Cross?', ['A cross planted in Cebu in 1521', 'A bridge', 'A dance'], 0, 'PH'],
+    ['“Pila ni?” in Bisaya means…', ['How much is this?', 'Where is it?', 'I’m full'], 0, 'PH'],
     ['Penguins can drink salt water because…', ['They have a gland that removes salt', 'They can’t', 'They boil it'], 0],
-    ['Which Cebu delicacy is a sticky rice treat?', ['Puso (hanging rice)', 'Adobo', 'Sinigang'], 0],
+    ['Which Cebu delicacy is a sticky rice treat?', ['Puso (hanging rice)', 'Adobo', 'Sinigang'], 0, 'PH'],
     ['What do you call a group of penguins on land?', ['A waddle', 'A flock of ducks', 'A pod'], 0]
   ];
+  // the coin shows the trip's money sign (¥, ₱, €…); for longer ones like "NT$" or "RM", one character
+  var COIN_SIGN = (function (y) { var m = y.match(/\p{Sc}/u), c = m ? m[0] : y.charAt(0); return /^[\p{L}\p{Sc}]$/u.test(c) ? c : '$'; })(window.ppPlace().sym || '');
   function now() { return Date.now(); }
   var FLOOR = 20;   // how low hunger and happiness can drop while you're away
   function fresh() { return { food: 80, joy: 75, energy: 80, hp: 100, xp: 0, fit: 0, coins: 20, best: 0, bag: { fish: 3, meds: 1 }, own: { none: 1, hat: 1 }, wear: 'none', t: now(), exp: -1, asleep: false, born: now() }; }
@@ -349,7 +352,7 @@
       c.textAlign = 'center'; c.textBaseline = 'middle';
       for (var i = G.items.length - 1; i >= 0; i--) {
         var it = G.items[i]; it.x -= G.speed; var iy = it.ground ? groundY(it.x, H) - 12 : it.y;
-        if (it.k === 'coin') { c.fillStyle = '#F4C542'; c.beginPath(); c.arc(it.x, iy, 9, 0, 7); c.fill(); c.strokeStyle = '#C9962B'; c.lineWidth = 2; c.stroke(); c.fillStyle = '#8A6516'; c.font = 'bold 10px sans-serif'; c.fillText('₱', it.x, iy + 1); }
+        if (it.k === 'coin') { c.fillStyle = '#F4C542'; c.beginPath(); c.arc(it.x, iy, 9, 0, 7); c.fill(); c.strokeStyle = '#C9962B'; c.lineWidth = 2; c.stroke(); c.fillStyle = '#8A6516'; c.font = 'bold 10px sans-serif'; c.fillText(COIN_SIGN, it.x, iy + 1); }
         else { c.font = (it.high ? '22px' : '26px') + ' serif'; c.fillText(it.k, it.x, iy); }
         var hy = G.duck ? G.y + 6 : G.y, near = Math.abs(it.x - (px + 12)) < 24;
         if (near) {
@@ -405,7 +408,7 @@
 
   /* ---------- Trivia quiz ---------- */
   function quiz(next) {
-    if (!Q || next) { var pool = QUIZ.slice().sort(function () { return Math.random() - 0.5; }); Q = { qs: pool.slice(0, 3), i: 0, right: 0 }; }
+    if (!Q || next) { var ph = window.ppPlace().cc === 'PH', pool = QUIZ.filter(function (q) { return ph || q[3] !== 'PH'; }).sort(function () { return Math.random() - 0.5; }); Q = { qs: pool.slice(0, 3), i: 0, right: 0 }; }
     var box = document.getElementById('pp-quiz'); if (!box) return;
     if (Q.i >= Q.qs.length) {
       var p = load(), earn = Q.right * 3; p.coins += earn; p.joy = clamp(p.joy + Q.right * 3); p.xp += Q.right; save(p); setCoins(p);
@@ -435,7 +438,7 @@
     '#pp-play .top{display:flex;align-items:center;gap:10px;max-width:560px;margin:0 auto 10px}#pp-play h2{flex:1;margin:0;font:900 24px ' + F + '}' +
     '#pp-play .back{border:0;background:var(--card);color:var(--ink);border-radius:50%;width:40px;height:40px;font-size:24px;line-height:1;padding:0 0 3px;cursor:pointer}' +
     '#pp-play .coins{background:var(--card);border-radius:99px;padding:6px 12px;font-weight:900;display:flex;align-items:center;gap:6px}' +
-    '.cn{display:inline-block;width:1.05em;height:1.05em;border-radius:50%;background:radial-gradient(circle at 35% 30%,#FFE58A,#F4C542 55%,#C9962B);box-shadow:inset 0 0 0 2px #E0AE36;vertical-align:-0.15em;position:relative}.cn::after{content:"₱";position:absolute;inset:0;display:grid;place-items:center;font:900 .62em/1 ' + F + ';color:#8A6516;font-style:normal}' +
+    '.cn{display:inline-block;width:1.05em;height:1.05em;border-radius:50%;background:radial-gradient(circle at 35% 30%,#FFE58A,#F4C542 55%,#C9962B);box-shadow:inset 0 0 0 2px #E0AE36;vertical-align:-0.15em;position:relative}.cn::after{content:"' + COIN_SIGN + '";position:absolute;inset:0;display:grid;place-items:center;font:900 .62em/1 ' + F + ';color:#8A6516;font-style:normal}' +
     '#pp-play .wrap{max-width:560px;margin:0 auto}#pp-play h3{font:900 13px ' + F + ';letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:16px 4px 8px}#pp-play h3 small{text-transform:none;letter-spacing:0;font-weight:700}' +
     '#pp-play .tabs{display:flex;gap:4px;background:var(--chip);border-radius:18px;padding:4px;margin-bottom:12px}#pp-play .tabs button{flex:1;border:0;background:none;border-radius:14px;padding:6px 2px;font:800 12px ' + F + ';color:var(--ink);cursor:pointer;display:flex;flex-direction:column;align-items:center}#pp-play .tabs span{font-size:20px}#pp-play .tabs .on{background:var(--card);box-shadow:0 2px 6px rgba(0,0,0,.08)}' +
     '#pp-play .petrow{display:flex;gap:10px;align-items:stretch}#pp-play .stage{flex:1;background:linear-gradient(180deg,var(--accentSoft),var(--card));border-radius:24px;padding:12px 8px;text-align:center;position:relative;transition:background .4s}#pp-play .stage.night{background:linear-gradient(180deg,#24324F,#3C4C70)}' +
