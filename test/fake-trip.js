@@ -45,7 +45,7 @@ function makeTrip(now = new Date()) {
     { row: 4, type: 'Driver', name: 'Rico (driver)', forr: 'Everyone', person: 'Rico', phone: '+63 917 555 0199', msg: '', email: '', place: 'Cebu', notes: 'Airport pickups' },
   ];
 
-  const profiles = people.map((n, i) => ({ name: n, role: i === 0 ? 'creator' : 'crew', job: ['Planner', 'Money', 'Photos'][i], avatar: null,
+  const profiles = people.map((n, i) => ({ name: n, role: ['Partner', 'Partner', 'Friend'][i], job: ['Planner', 'Money', 'Photos'][i], avatar: null,
     flight: i === 0 ? 'PR 1845' : '', phone: '+1 555 010' + i, saved: true, isMe: n === me }));
 
   const look = [{ row: 7, what: 'Taxi from airport', date: ymd(start), status: '⚠ Who paid?', entry: '', amt: 650, cur: 'PHP', by: '', forr: 'Shared', kind: 'payer' }];
