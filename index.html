@@ -726,6 +726,7 @@ th .pp-qt{position:absolute;right:0;top:100%;width:210px;z-index:5;box-shadow:0 
   function loadForm() {
     google.script.run.withSuccessHandler(function (d) { F = d; formReady = true; resetForm(); }).withFailureHandler(function (e) { $('a-err').textContent = e.message; }).penpenFormData();
   }
+  var maybeAdded = '';
   $('addf').onsubmit = function (e) {
     e.preventDefault();
     var o = {what: $('a-what').value.trim(), amount: $('a-amt').value, cur: val('cur'), date: $('a-date').value, cat: val('cat'),
@@ -734,10 +735,14 @@ th .pp-qt{position:absolute;right:0;top:100%;width:210px;z-index:5;box-shadow:0 
     if (!o.what) { er.textContent = 'Add what it was for.'; return; }
     if (!(Number(o.amount) > 0)) { er.textContent = 'Enter an amount above 0.'; return; }
     if (!o.cat) { er.textContent = 'Pick a category.'; return; }
+    // a try that got no answer may still have been added: ask before adding the same thing again
+    var same = [o.what, o.amount, o.cur, o.date].join('|');
+    if (maybeAdded === same && !confirm('Your last try at adding "' + o.what + '" got no answer, so it may already be in Money. Add it again anyway?')) return;
     er.textContent = ''; var b = $('a-go'); b.disabled = true; b.textContent = 'Adding…';
     google.script.run.withSuccessHandler(function (r) {
+      maybeAdded = '';
       b.disabled = false; b.textContent = 'Add expense'; $('a-ok').style.display = 'block'; $('a-ok').textContent = '✅ Added: ' + r; moneyStale = true; todayStale = true; resetForm();
-    }).withFailureHandler(function (x) { er.textContent = x.message; b.disabled = false; b.textContent = 'Add expense'; }).addExpenseForm(o);
+    }).withFailureHandler(function (x) { if (x.weak) maybeAdded = same; er.textContent = x.message; b.disabled = false; b.textContent = 'Add expense'; }).addExpenseForm(o);
   };
 
   /* ---------- Today ---------- */

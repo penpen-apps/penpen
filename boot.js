@@ -25,10 +25,21 @@
   function valid() { return !!SESS || !!(TOKEN && TOKEN.exp * 1000 > Date.now() + 60000); }
 
   /* ---------- talking to the server ---------- */
+  // weak signal: stop waiting after 15 seconds instead of sitting on "Loading…" forever.
+  // AI answers, uploads and new trips can honestly take longer, so they get 60.
+  var SLOW = ['penpenAsk', 'penpenVoice', 'penpenReadBooking', 'penpenReceipt', 'penpenReceiptPdf', 'penpenSelfie',
+    'penpenDiaryAdd', 'penpenDiaryVideos', 'penpenLiveStart', 'penpenLiveAction', 'penpenAudit'];
   function post(action, args) {
-    return fetch(SERVER, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    var secs = (action === 'newTrip' || (action === 'call' && SLOW.indexOf(args && args.fn) >= 0)) ? 60 : 15;
+    return fetch(SERVER, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, signal: AbortSignal.timeout ? AbortSignal.timeout(secs * 1000) : undefined,
       body: JSON.stringify(SESS ? { session: SESS, action: action, args: args || {}, trip: TRIP } : { token: TOKEN && TOKEN.cred, action: action, args: args || {}, trip: TRIP }) })
       .then(function (r) { return r.json(); })
+      .catch(function (e) {   // no answer, or the connection dropped: say so plainly (the server may still have got it)
+        var late = e && e.name === 'TimeoutError';
+        if (!late && !(e instanceof TypeError)) throw e;   // anything else (e.g. a garbled reply) keeps its own message
+        var t = new Error(late ? 'No answer after ' + secs + ' seconds. The signal may be weak.' : 'Couldn\u2019t reach penpen. The signal may be weak.');
+        t.weak = true; throw t;
+      })
       .then(function (j) { if (!j.ok) throw new Error(j.error); return j.data; });
   }
   function ready() { return new Promise(function (res) { if (valid() && ROLE) res(); else waiting.push(res); }); }
@@ -55,6 +66,7 @@
         if (isRead && c !== undefined) return c;
         if (e.message === 'personaldiary') throw new Error('Your private diary is moving to your own Google Drive — use the group diary for now.');
         if (e.message === 'notallowed') throw new Error("You can view this trip but can't change it.");
+        if (e.weak && !isRead) e.message += ' It may still have gone through, so check before trying again.';
         throw e;
       });
   }
@@ -199,6 +211,7 @@
       if (e.message === 'badinvite') return showSignin('That invite link has expired — ask for a new one.');
       if (e.message === 'signin') { SESS = ''; localStorage.removeItem('pp_sess'); return showSignin('Please sign in again.'); }
       if (!navigator.onLine) return;
+      if (e.weak && ROLE) return;   // weak signal on a phone that's already signed in: keep showing the saved copy, don't lock the app
       showSignin("Couldn't reach penpen — check your connection and try again.");
     });
   }
