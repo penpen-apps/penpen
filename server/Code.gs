@@ -108,13 +108,14 @@ function ppTripsAction_(user, action, a) {
 function ppNewTrip_(user, a) {
   var name = String(a.name || '').trim().slice(0, 60) || 'New trip';
   var start = String(a.start || '').slice(0, 10), end = String(a.end || '').slice(0, 10), where = String(a.where || '').trim().slice(0, 80);
+  var cc = String(a.country || '').toUpperCase(); if (cc && !PP_PLACES[cc]) throw new Error('badcountry');
   var copy = DriveApp.getFileById(PP_HOME).makeCopy('penpen · ' + name, ppTripsFolder_());
   var id = copy.getId();
   var all = ppTripList_();
   all[id] = { name: name, start: start, end: end, where: where, by: user.email, made: new Date().toISOString() };
   ppProps_().setProperty('pp_trips', JSON.stringify(all));
   ppUseTrip_(id);
-  ppBlank_(SpreadsheetApp.openById(id), user, name, start, end, where);
+  ppBlank_(SpreadsheetApp.openById(id), user, name, start, end, where, cc, String(a.tz || ''));
   ppMineAdd_(user.email, id);
   return { id: id, name: name, start: start, end: end, where: where, role: 'creator' };
 }
@@ -129,7 +130,8 @@ function ppAddPerson_(ss, name, email) {
   }
   if (free >= 0) { d.getRange(D_FIRST + free, 2).setValue(name); d.getRange(D_FIRST + free, 5).setValue(email); }
 }
-function ppDate_(s) { var m = String(s || '').match(/^(\d{4})-(\d{2})-(\d{2})$/); return m ? new Date(+m[1], +m[2] - 1, +m[3]) : ''; }
+// midnight in the trip sheet's own time zone, so the date doesn't slip a day when the script runs in another zone
+function ppDate_(s, tz) { return /^\d{4}-\d{2}-\d{2}$/.test(String(s || '')) ? Utilities.parseDate(s, tz, 'yyyy-MM-dd') : ''; }
 function ppClearBelowHead_(s) {
   if (!s) return;
   var last = s.getLastRow(), cols = Math.max(1, s.getLastColumn()); if (last < 2) return;
@@ -139,7 +141,7 @@ function ppClearBelowHead_(s) {
   s.getRange(h + 1, 1, last - h, cols).clearContent();
 }
 /* Wipe a fresh copy so the new trip starts empty (same steps as "start over", plus the private bits). */
-function ppBlank_(ss, user, name, start, end, where) {
+function ppBlank_(ss, user, name, start, end, where, cc, tz) {
   ss.getSheets().forEach(function (s) { if (/^Backup/i.test(s.getName())) ss.deleteSheet(s); });
   var es = ss.getSheetByName(EXP), n = es.getMaxRows() - FR + 1;
   es.getRange(FR, 1, n, PX_USER).clearContent();
@@ -157,8 +159,10 @@ function ppBlank_(ss, user, name, start, end, where) {
   if (loc) loc.offset(0, 1, loc.getNumRows(), loc.getNumColumns() - 1).clearContent();
   d.getRange(D_FIRST, 2, MAXP, 4).clearContent();
   var set = function (nm, v) { var r = ss.getRangeByName(nm); if (r && v !== '') r.getCell(1, 1).setValue(v); };
-  set('TripName', name); set('FileTitle', name); set('TripStart', ppDate_(start)); set('TripEnd', ppDate_(end));
   if (loc && where) loc.getCell(1, 2).setValue(where);
+  if (cc) ppApplyPlace_(ss, cc, tz);   // country first: it sets the time zone the dates below are read in
+  var stz = ss.getSpreadsheetTimeZone();
+  set('TripName', name); set('FileTitle', name); set('TripStart', ppDate_(start, stz)); set('TripEnd', ppDate_(end, stz));
   ppAddPerson_(ss, user.name, user.email);
   var m = ss.getSheetByName('Members');
   if (m) { m.clearContents(); m.appendRow(['Email', 'Name', 'Role', 'Joined', 'Invited by']); m.appendRow([user.email, user.name, 'creator', new Date(), '']); }
@@ -301,6 +305,8 @@ function srvRoute_(user, action, a) {
 
   if (action === 'theme') { srvNeed_(me, 'read'); return { theme: PropertiesService.getScriptProperties().getProperty(ppK_('pp_trip_theme')) || '' }; }
   if (action === 'setTheme') { srvNeed_(me, 'admin'); var th = String(a.theme || '').replace(/[^a-z]/g, '').slice(0, 20); PropertiesService.getScriptProperties().setProperty(ppK_('pp_trip_theme'), th); return { theme: th }; }
+
+  if (action === 'setPlace') { srvNeed_(me, 'admin'); return { place: ppSetPlace_(a) }; }
 
   if (action === 'invite') { srvNeed_(me, 'admin'); return { code: srvInvite_(!!a.fresh) }; }
   if (action === 'members') { srvNeed_(me, 'admin'); return { members: srvMembers_() }; }
@@ -1052,7 +1058,11 @@ const CUR = {
   CNY: {sym: 'CN¥', pre: ['cny', 'rmb'], words: ['yuan', 'rmb', 'cny']},
   INR: {sym: '₹', pre: ['₹', 'inr', 'rs'], words: ['rupees?', 'inr']},
   MXN: {sym: 'MX$', pre: ['mxn'], words: ['mexican pesos?', 'mxn']},
-  AED: {sym: 'AED ', pre: ['aed'], words: ['dirhams?', 'aed']}
+  AED: {sym: 'AED ', pre: ['aed'], words: ['dirhams?', 'aed']},
+  CHF: {sym: 'CHF ', pre: ['chf'], words: ['swiss francs?', 'francs?', 'chf']},
+  TRY: {sym: '₺', pre: ['₺'], words: ['turkish lira', 'lira']},
+  NZD: {sym: 'NZ$', pre: ['nz\\$', 'nzd'], words: ['new zealand dollars?', 'nz dollars?', 'nzd']},
+  MOP: {sym: 'MOP$', pre: ['mop\\$', 'mop'], words: ['patacas?', 'mop']}
 };
 
 const CATS = [
@@ -1237,6 +1247,10 @@ function splitByPayerItems(text, ctx) {
   });
 }
 
+// '"yen"/"jpy" = JPY, "dollars"/"usd"/"bucks" = USD' — what people say for this trip's two currencies
+function ppCurSay_(ctx) {
+  return [...new Set([ctx.local, ctx.home])].map(c => (CUR[c] ? CUR[c].words : [c.toLowerCase()]).map(w => '"' + w.replace(/s\?$/, 's').replace(/\?/g, '') + '"').join('/') + ' = ' + c).join(', ');
+}
 function curWord(code) { const c = CUR[code]; return c ? c.words[0].replace(/s\?$/, 's').replace(/\?/g, '') : code; }
 
 function curRegexes(ctx) {
@@ -1630,7 +1644,7 @@ function aiExpenses(text, ctx, speaker) {
     'You turn a spoken travel-expense note into expense records for a shared trip tracker.',
     'Travelers: ' + ctx.names.join(', ') + '.',
     'The speaker ("I", "me", "my") is: ' + (speaker || 'unknown') + '.',
-    'Currencies on this trip: home ' + ctx.home + ', local ' + ctx.local + '. "pesos" = PHP, "dollars"/"bucks" = USD.',
+    'Currencies on this trip: home ' + ctx.home + ', local ' + ctx.local + '. ' + ppCurSay_(ctx) + '.',
     'Rules:',
     '- Only include real purchases or payments that have an amount. Ignore the story: things seen, feelings, people met, plans, prices only mentioned but not paid.',
     '- One record per separate purchase. Never merge different items, never invent or add up amounts that were not said.',
@@ -1641,7 +1655,7 @@ function aiExpenses(text, ctx, speaker) {
     '- currency: ISO code, or null if no currency was said.',
     '- day: "today" or "yesterday".',
     '- quote: the shortest part of the note that describes this purchase.',
-    'Return JSON only: {"expenses":[{"item":"","category":"","currency":"PHP","total":0,"payers":{"Name":0},"split":"Shared","day":"today","quote":""}]}',
+    'Return JSON only: {"expenses":[{"item":"","category":"","currency":"' + ctx.local + '","total":0,"payers":{"Name":0},"split":"Shared","day":"today","quote":""}]}',
     'Note: ' + text
   ].join('\n');
   for (const model of models) {
@@ -2347,7 +2361,64 @@ function penpenCheck() {
  */
 var PP_TRACK = null;                       // rows written by writeRow() during one request
 const PP_REM = 'Reminders';
-const PP_COUNTRY = {PHP: 'PH', USD: 'US', JPY: 'JP', THB: 'TH', VND: 'VN', IDR: 'ID', MYR: 'MY', SGD: 'SG', KRW: 'KR', TWD: 'TW', HKD: 'HK', AUD: 'AU', EUR: '', GBP: 'GB'};
+/* ============================ the trip's place ============================
+   Each trip has a country. It sets the trip currency (LocalCur), the sheet's time zone, map and place searches,
+   and what penpen's chat assumes. Countries penpen knows: code → [name, currency, time zones (first = default)].
+   Keep in step with the country list in place.js (the app). */
+const PP_PLACES = {
+  PH: ['Philippines', 'PHP', ['Asia/Manila']],
+  US: ['United States', 'USD', ['America/New_York', 'America/Chicago', 'America/Denver', 'America/Phoenix', 'America/Los_Angeles', 'America/Anchorage', 'Pacific/Honolulu']],
+  CA: ['Canada', 'CAD', ['America/Toronto', 'America/Vancouver', 'America/Edmonton', 'America/Winnipeg', 'America/Halifax']],
+  MX: ['Mexico', 'MXN', ['America/Mexico_City', 'America/Cancun', 'America/Tijuana']],
+  JP: ['Japan', 'JPY', ['Asia/Tokyo']], KR: ['South Korea', 'KRW', ['Asia/Seoul']], TW: ['Taiwan', 'TWD', ['Asia/Taipei']],
+  HK: ['Hong Kong', 'HKD', ['Asia/Hong_Kong']], MO: ['Macau', 'MOP', ['Asia/Macau']], CN: ['China', 'CNY', ['Asia/Shanghai']],
+  SG: ['Singapore', 'SGD', ['Asia/Singapore']], MY: ['Malaysia', 'MYR', ['Asia/Kuala_Lumpur']], TH: ['Thailand', 'THB', ['Asia/Bangkok']],
+  VN: ['Vietnam', 'VND', ['Asia/Ho_Chi_Minh']], ID: ['Indonesia', 'IDR', ['Asia/Makassar', 'Asia/Jakarta', 'Asia/Jayapura']],
+  KH: ['Cambodia', 'USD', ['Asia/Phnom_Penh']], IN: ['India', 'INR', ['Asia/Kolkata']],
+  AU: ['Australia', 'AUD', ['Australia/Sydney', 'Australia/Melbourne', 'Australia/Brisbane', 'Australia/Adelaide', 'Australia/Darwin', 'Australia/Perth']],
+  NZ: ['New Zealand', 'NZD', ['Pacific/Auckland']], GB: ['United Kingdom', 'GBP', ['Europe/London']], IE: ['Ireland', 'EUR', ['Europe/Dublin']],
+  FR: ['France', 'EUR', ['Europe/Paris']], DE: ['Germany', 'EUR', ['Europe/Berlin']], ES: ['Spain', 'EUR', ['Europe/Madrid']],
+  IT: ['Italy', 'EUR', ['Europe/Rome']], PT: ['Portugal', 'EUR', ['Europe/Lisbon']], NL: ['Netherlands', 'EUR', ['Europe/Amsterdam']],
+  GR: ['Greece', 'EUR', ['Europe/Athens']], CH: ['Switzerland', 'CHF', ['Europe/Zurich']], AT: ['Austria', 'EUR', ['Europe/Vienna']],
+  TR: ['Turkey', 'TRY', ['Europe/Istanbul']], AE: ['United Arab Emirates', 'AED', ['Asia/Dubai']]
+};
+/* {cc, name, cur, sym, tz, set} for the open trip. set = the creator picked the country; otherwise it's worked out
+   from the trip currency (PHP → Philippines), which is how trips made before countries existed still work. */
+function ppPlace_(ss) {
+  let cc = ''; try { cc = JSON.parse(ppProps_().getProperty(ppK_('pp_place')) || '{}').cc || ''; } catch (e) {}
+  const cur = String(named(ss, 'LocalCur') || 'PHP').trim(), set = !!PP_PLACES[cc];
+  if (!set) { const m = Object.keys(PP_PLACES).filter(k => PP_PLACES[k][1] === cur); cc = cur === 'USD' ? 'US' : m.length === 1 ? m[0] : ''; }
+  return {cc: cc, name: cc ? PP_PLACES[cc][0] : '', cur: cur, sym: sym(cur).trim() || cur, tz: ppTz_(ss), set: set};
+}
+function ppPlaceName_(ss) { const n = ppPlace_(ss).name; return n ? ', ' + n : ''; }   // ", Japan" for map searches
+/* Write the country onto a trip sheet: time zone, trip currency (and its sign), each location's currency + zone.
+   Never called on the original (home) trip. */
+function ppApplyPlace_(ss, cc, tz) {
+  cc = String(cc || '').toUpperCase();
+  const P = PP_PLACES[cc]; if (!P) throw new Error('badcountry');
+  tz = P[2].indexOf(tz) >= 0 ? tz : P[2][0];
+  ss.setSpreadsheetTimeZone(tz);
+  const dv = SpreadsheetApp.newDataValidation().requireValueInList(Object.keys(CUR), true).setAllowInvalid(false).build();
+  ['HomeCur', 'LocalCur'].forEach(n => { const r = ss.getRangeByName(n); if (r) r.setDataValidation(dv); });   // copies carry an older currency list
+  const lc = ss.getRangeByName('LocalCur'), ls = ss.getRangeByName('LocalSym');
+  if (lc) lc.setValue(P[1]);
+  if (ls) ls.setValue(sym(P[1]).trim() || P[1]);
+  const loc = ss.getRangeByName('Locations');
+  if (loc) {
+    const v = loc.getValues(), cols = loc.offset(0, 4, v.length, 2);
+    cols.setValues(v.map(r => String(r[1]).trim() ? [P[1], tz] : [r[4], r[5]]));   // every listed place gets the trip's currency + zone
+  }
+  ppProps_().setProperty(ppK_('pp_place'), JSON.stringify({cc: cc}));
+  return tz;
+}
+/* Trip creator changes the country of the open trip (for trips made before countries existed). */
+function ppSetPlace_(a) {
+  if (!__PP_TRIP) throw new Error('notallowed');   // the original trip is the template for every new trip: leave it alone
+  const ss = srvSS_(), lock = ppLock_(); lock.waitLock(20000);
+  try { ppApplyPlace_(ss, a.country, a.tz); SpreadsheetApp.flush(); } finally { lock.releaseLock(); }
+  CacheService.getScriptCache().remove(ppK_('ppc_facts'));
+  return ppPlace_(ss);
+}
 
 /* ============================ web app ============================ */
 function legacyDoGet_() {
@@ -2405,19 +2476,18 @@ function ppBookings_(ss, days) {
 /* ============================ weather (Open-Meteo, no key) ============================ */
 function ppWeather_(ss, loc) {
   if (!loc) return null;
-  const cache = CacheService.getScriptCache(), key = 'pp_wx_' + loc.place;
+  const cc = ppPlace_(ss).cc, cache = CacheService.getScriptCache(), key = 'pp_wx_' + cc + '_' + loc.place;
   const hit = cache.get(key); if (hit) return JSON.parse(hit);
   try {
     const props = PropertiesService.getScriptProperties();
-    let geo = props.getProperty('pp_geo_' + loc.place);
+    let geo = props.getProperty('pp_geo_' + cc + '_' + loc.place);
     if (!geo) {
       const res = UrlFetchApp.fetch('https://geocoding-api.open-meteo.com/v1/search?count=10&language=en&name=' + encodeURIComponent(loc.place), {muteHttpExceptions: true});
       const list = (JSON.parse(res.getContentText()).results || []);
-      const cc = PP_COUNTRY[loc.cur || String(named(ss, 'LocalCur'))] || '';
       const g = list.find(x => cc && x.country_code === cc) || list[0];
       if (!g) return null;
       geo = JSON.stringify({lat: g.latitude, lon: g.longitude});
-      props.setProperty('pp_geo_' + loc.place, geo);
+      props.setProperty('pp_geo_' + cc + '_' + loc.place, geo);
     }
     const p = JSON.parse(geo);
     const url = 'https://api.open-meteo.com/v1/forecast?latitude=' + p.lat + '&longitude=' + p.lon +
@@ -2478,7 +2548,7 @@ function penpenHello() {
   }
   return {name: me || '', hi: hi, line: line, label: trip.label, mood: ppMood_(trip, wx, todayPlan && todayPlan.plan),
     weather: wx ? {place: wx.place, temp: wx.temp, label: wx.label} : (loc ? {place: loc.place} : null),
-    trip: trip.name, chips: ['Who owes who?', 'What’s the plan today?', 'Lunch 450 pesos, I paid', 'Undo']};
+    trip: trip.name, chips: ['Who owes who?', 'What’s the plan today?', 'Lunch 450 ' + curWord(ctx.local) + ', I paid', 'Undo']};
 }
 
 /* ============================ the brain ============================ */
@@ -2527,7 +2597,7 @@ function ppPrompt_(ss, text, ctx, me, trip) {
     'You are penpen, a cheerful penguin travel buddy inside a trip-expense app. Decide what the user wants and answer ONLY with JSON.',
     'Now: ' + Utilities.formatDate(trip.now, trip.tz, 'EEE yyyy-MM-dd HH:mm') + ' (' + trip.tz + '). Trip: ' + trip.name + ', ' + trip.start + ' to ' + trip.end + ' (' + trip.label + ').',
     'Travelers: ' + ctx.names.join(', ') + '. The speaker ("I", "me", "my") is: ' + (me || 'unknown') + '.',
-    'Currencies: home ' + ctx.home + ', local ' + ctx.local + '. "pesos" = PHP, "dollars"/"bucks" = USD. If no currency is said, use ' + ((loc && loc.cur) || ctx.local) + '.',
+    'Trip country: ' + (ppPlace_(ss).name || 'unknown') + '. Currencies: home ' + ctx.home + ', local ' + ctx.local + '. ' + ppCurSay_(ctx) + '. If no currency is said, use ' + ((loc && loc.cur) || ctx.local) + '.',
     '',
     'EXPENSES (row | date | what | category | amount | currency | paid by | for | paid? | status):',
     ex.map(r => 'r' + r.row + ' | ' + [r.date, r.what, r.cat, r.amt, r.cur, r.by || '-', r.forr, r.paid, r.status].join(' | ')).join('\n') || '(none yet)',
@@ -2542,7 +2612,7 @@ function ppPrompt_(ss, text, ctx, me, trip) {
     'WEATHER: ' + (wx ? wx.place + ' now ' + wx.temp + '°C ' + wx.label + ', today ' + wx.min + '–' + wx.max + '°C, rain chance ' + wx.rain + '%; tomorrow ' + wx.tomorrow.label + ' ' + wx.tomorrow.max + '°C, rain ' + wx.tomorrow.rain + '%' : 'unknown'),
     '',
     'Return {"actions":[...], "reply":"..."} using these action types:',
-    '- {"type":"add","expenses":[{"item":"","category":"","currency":"PHP","total":0,"payers":{"Name":0},"split":"Shared","date":"YYYY-MM-DD","quote":"","from_pocket":false,"not_paid_yet":false}]}',
+    '- {"type":"add","expenses":[{"item":"","category":"","currency":"' + ctx.local + '","total":0,"payers":{"Name":0},"split":"Shared","date":"YYYY-MM-DD","quote":"","from_pocket":false,"not_paid_yet":false}]}',
     '   Only real purchases with an amount. One record per separate purchase; never merge items or invent amounts. Ignore the story around it.',
     '   payers: who paid and how much, using traveler names (speaker unknown → key "I"); {} if nobody said. split: "Shared" (default), "<Name> only" if it was only for one person (also when someone paid for another person), or "EACH" if each paid their own.',
     '   category: exactly one of: ' + expCats_().join(' | ') + '. item: short clean label like "Lunch at Jollibee" (fix speech-to-text misspellings).',
@@ -2556,8 +2626,8 @@ function ppPrompt_(ss, text, ctx, me, trip) {
     '- {"type":"plan_delete","id":"p12"}  remove a plan stop.',
     '- {"type":"contact","name":"Harolds Hotel","changes":{"type":"Hotel|Tour|Transport|Emergency|Other","for":"traveler (emergency contacts only)","person":"","phone":"","messenger":"","email":"","place":"","notes":""}}  save or update a contact (hotel, tour guide, emergency contact…); reuse the existing contact name when it matches; only changed fields.',
     '- {"type":"undo"}  (undo / cancel the last thing penpen did)',
-    '- {"type":"settle","from":"Name","to":"Name","amount":0,"currency":"PHP"}  someone paid someone back money directly (not one specific covered item).',
-    '- {"type":"pocket","who":"Name","amount":0,"currency":"PHP"}  money put INTO the shared pocket money pot.',
+    '- {"type":"settle","from":"Name","to":"Name","amount":0,"currency":"' + ctx.local + '"}  someone paid someone back money directly (not one specific covered item).',
+    '- {"type":"pocket","who":"Name","amount":0,"currency":"' + ctx.local + '"}  money put INTO the shared pocket money pot.',
     '- {"type":"remind","to":"Name","message":"","when":"now"}  email reminder. "when" = "now" or "YYYY-MM-DD HH:mm" local time. "remind me" → to = the speaker.',
     '   Write "message" as a short friendly note to that person, e.g. "Hi Brad! Friendly reminder: you owe Kate ₱320 for the Grab. 🐧"',
     '- {"type":"answer"}  for questions and chat: answer in "reply" using the data above (balances, plans, weather, spending, ideas for food or things to do nearby).',
@@ -2590,7 +2660,7 @@ function penpenAsk(text) {
   });
   const reply = String(plan.reply || '').trim();
   if (reply && !out.confirm && (!out.replies.length || plan.actions.every(a => a.type === 'answer'))) out.replies.unshift(reply);
-  if (!out.replies.length && !out.confirm) out.replies.push('Hmm, I’m not sure what to do with that. Try “Lunch 450 pesos, I paid” or ask me a question.');
+  if (!out.replies.length && !out.confirm) out.replies.push('Hmm, I’m not sure what to do with that. Try “Lunch 450 ' + curWord(ctx.local) + ', I paid” or ask me a question.');
   return out;
 }
 
@@ -2640,7 +2710,7 @@ function ppCur_(ctx, c, trip, ss) {
 }
 
 function ppAdd_(ss, ctx, me, email, trip, list, text) {
-  if (!list.length) return {text: 'I didn’t hear an amount — try “Taxi 250 pesos, Brad paid”.'};
+  if (!list.length) return {text: 'I didn’t hear an amount — try “Taxi 250 ' + curWord(ctx.local) + ', I paid”.'};
   const lock = ppLock_(); lock.waitLock(25000);
   try {
     PP_TRACK = [];
@@ -2662,7 +2732,7 @@ function ppAdd_(ss, ctx, me, email, trip, list, text) {
 
 function ppPocket_(ss, ctx, me, a) {
   const who = ppWho_(ctx, me, a.who), amt = Number(a.amount) || 0;
-  if (!who || who === POCKET) return {text: 'Who put the money in? Say “Kate put 2,000 pesos in the pocket money”.'};
+  if (!who || who === POCKET) return {text: 'Who put the money in? Say “I put 2,000 ' + curWord(ctx.local) + ' in the pocket money”.'};
   if (!(amt > 0)) return {text: 'How much went into the pocket money?'};
   const cur = String(a.currency || '').toUpperCase() === ctx.home ? ctx.home : ctx.local;
   const p = ss.getSheetByName(PM), lock = ppLock_(); lock.waitLock(25000);
@@ -2679,7 +2749,7 @@ function ppPocket_(ss, ctx, me, a) {
 
 function ppSettle_(ss, ctx, me, email, trip, a) {
   const from = ppWho_(ctx, me, a.from), to = ppWho_(ctx, me, a.to), amt = Number(a.amount) || 0;
-  if (!from || !to || from === to || from === POCKET || to === POCKET) return {text: 'Who paid who back? Say “I paid Brad back 3,500 pesos”.'};
+  if (!from || !to || from === to || from === POCKET || to === POCKET) return {text: 'Who paid who back? Say “I paid ' + (ctx.names.find(n => n !== me) || 'them') + ' back 3,500 ' + curWord(ctx.local) + '”.'};
   if (!(amt > 0)) return {text: 'How much was paid back?'};
   const cur = ppCur_(ctx, a.currency, trip, ss), lock = ppLock_(); lock.waitLock(25000);
   try {
@@ -3033,7 +3103,7 @@ function ppMapUrl_(place) {
 }
 
 function ppEvents_(ss) {
-  const tz = ppTz_(ss), out = [], country = ' Philippines';
+  const tz = ppTz_(ss), out = [], country = ppPlaceName_(ss).slice(1);
   ppBookings_(ss).forEach(b => {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(b.day)) return;
     const m = (b.details || '').match(PP_TIME) || (b.what || '').match(PP_TIME);
@@ -3136,7 +3206,7 @@ function penpenToday() {
     if (row) { myBudget = Number(td.getRange(row, 6).getValue()) || 0; hidden = td.getRange(row, 7).getValue() === true; }
   }
   return {
-    hello: hello, me: me || '', people: people, ls: ls, cur: cur, home: ctx.home, rate: Number(named(ss, 'LiveRate')) || 0,
+    hello: hello, me: me || '', people: people, ls: ls, cur: cur, home: ctx.home, place: ppPlace_(ss), rate: Number(named(ss, 'LiveRate')) || 0,
     next: next, timelineDay: Utilities.formatDate(Utilities.parseDate(showDay || trip.today, tz, 'yyyy-MM-dd'), tz, 'EEE, MMM d'), timeline: timeline,
     look: ppLook_(ss), settle: settleText_(), balances: bal, pocket: pocket,
     budget: {group: {budget: gb, spent: spent, todo: todo, pct: gb ? spent / gb : 0, pace: pace(gb, spent), dayPct: len ? dayN / len : 0},
@@ -3369,9 +3439,9 @@ function ppItinerary_(ss) {
 /* ============================ geocoding (OpenStreetMap Nominatim, then Open-Meteo) ============================ */
 function ppGeo_(ss, place) {
   if (!place) return null;
-  const props = PropertiesService.getScriptProperties(), key = 'pp_pl_' + place.toLowerCase().slice(0, 200);
+  const cc = ppPlace_(ss).cc.toLowerCase();
+  const props = PropertiesService.getScriptProperties(), key = 'pp_pl_' + (cc ? cc + '_' : '') + place.toLowerCase().slice(0, 200);
   const hit = props.getProperty(key); if (hit) return JSON.parse(hit);
-  const cc = (PP_COUNTRY[String(named(ss, 'LocalCur'))] || '').toLowerCase();
   const tries = [place, place.split(',').slice(1).join(',').trim(), place.split(',').pop().trim()].filter((x, i, a) => x && a.indexOf(x) === i);
   let out = null;
   for (const q of tries) {
@@ -3420,7 +3490,7 @@ function penpenPlan() {
     stops: by[k].sort((a, b) => a.row - b.row)
       .map(s => ({row: s.row, time: s.time, what: s.what, place: s.place, notes: s.notes, lat: s.lat, lng: s.lng}))}));
   const start = days.find(d => d.day >= trip.today);
-  return {days: days, today: trip.today, open: trip.status === 'during' ? trip.today : (start ? start.day : (days[0] && days[0].day)), country: 'Philippines'};
+  return {days: days, today: trip.today, open: trip.status === 'during' ? trip.today : (start ? start.day : (days[0] && days[0].day)), country: ppPlace_(ss).name, place: ppPlace_(ss)};
 }
 
 /* ============================ write ============================ */
@@ -4253,7 +4323,7 @@ function ppPoint_(p) {
   if (!p || p.moving) return '';
   if (p.lat && p.lng) return p.lat + ',' + p.lng;
   const q = [p.name, p.place].filter(function (x) { return x; }).join(', ');
-  return q ? q + ', Philippines' : '';
+  return q ? q + ppPlaceName_(ss_()) : '';
 }
 
 /** Plan screen: day = 'yyyy-MM-dd', stops = [{name, place, lat, lng}] in order. */
@@ -4288,7 +4358,7 @@ function penpenTestDrive() {
 }
 
 
-/** Money screen: group spending (shared + paid) per category and currency. The app converts to pesos with the live rate. */
+/** Money screen: group spending (shared + paid) per category and currency. The app converts to the trip currency with the live rate. */
 function penpenMoneyCats() {
   const out = {};
   (ppExpenseRows_(ss_()) || []).forEach(function (x) {
@@ -4427,13 +4497,14 @@ function penpenChat(text, history, persona) {
   if (!key) return penpenAsk(text);
   var me = '';
   me = __PP_NAME || '';
+  var PL = ppPlace_(ss_());
   var sys =
     'You are penpen, a cute, cheerful baby penguin and the AI travel buddy of this group trip. ' +
     'You are talking with ' + (me || 'a traveller on the trip') + '. ' +
     'Personality: warm, playful, curious, a little silly (an occasional penguin pun or "waddle", never every message), genuinely helpful and smart. ' + (P.talk ? 'Character for this person (stay in it, but stay accurate and kind): ' + P.talk + ' ' : '') +
     'Talk like a friend in a chat: usually 1–3 short sentences, longer only when asked for details, lists or plans. Plain text, no markdown. One emoji at most. ' +
     'Be honest about what you can do. You CAN: answer questions, suggest places with Google Maps links, plan a route, log, edit and split expenses, say who owes who, read the itinerary and bookings, give phrases, and start a phone call. You CANNOT book, reserve or pay for anything yourself (hotels, flights, tours, tables, rides), send messages or emails, or check live prices or availability, because you are not connected to booking sites or payments yet. If asked for something you cannot do, say so warmly in your FIRST reply, in one short sentence, then do the closest helpful thing right away (for a booking: name the best 3 options with Maps links and their phone number so they can call, and suggest booking on the hotel site, Agoda or Booking.com). Never ask for dates, names or details for a task you cannot finish. ' +
-    'You know a lot: travel tips, Philippine food and culture, Cebuano/Bisaya and Tagalog phrases (give the phrase + simple pronunciation), packing, safety, weather sense, currency, ideas for things to do. ' +
+    'You know a lot: travel tips, the food and culture of ' + (PL.name || 'wherever the trip goes') + ', local phrases (give the phrase + simple pronunciation), packing, safety, weather sense, currency, ideas for things to do. ' +
     'Now and then (not every message) add a quick fun fact about the destination or ask one light question, never more than one. Adapt tips, food and phrases to wherever the trip is. ' +
     'Language: always speak English. Only switch if the person clearly asks you to speak another language. If what you hear sounds like another language (for example Spanish), treat it as English that was misheard and answer in English. Never answer in Spanish unless asked. Single words or noises like ok, sige, salamat, mhm, background chatter never count. ' +
     'Translator: when asked how to say something or to translate, give the phrase in that language, then an easy pronunciation, then carry on in English. ' +
@@ -4450,7 +4521,7 @@ function penpenChat(text, history, persona) {
     'logging an expense or payment, settling up, undo, budgets, writing in the diary, or questions like who owes who / totals / balances / how much did we spend. ' +
     'Otherwise "action": false and write the reply. Pick a mood from: ' + PPC_MOODS.join(', ') + '. ' +
     'Answer ONLY with JSON: {"action":boolean,"reply":string,"mood":string,"places":[{"name":string,"area":string}],"route":[{"name":string,"area":string}],"call":{"name":string,"phone":string}}.\n\nTRIP FACTS (today is ' +
-    Utilities.formatDate(new Date(), 'Asia/Manila', 'EEE d MMM yyyy, h:mm a') + ' in Manila):\n' + ppcFacts_();
+    ppcNow_(PL) + '):\n' + ppcFacts_();
   PPC_T.push('facts ' + (Date.now() - T0));
   var contents = [];
   history.forEach(function (h) {
@@ -4466,18 +4537,18 @@ function penpenChat(text, history, persona) {
   var replies = [String(j.reply || '').trim() || 'Hmm, say that again? 🐧'];
   (j.places || []).slice(0, 3).forEach(function (p) {
     if (!p || !p.name) return;
-    var q = String(p.name) + (p.area ? ', ' + p.area : '') + ', Philippines';
+    var q = String(p.name) + (p.area ? ', ' + p.area : '') + (PL.name ? ', ' + PL.name : '');
     replies.push('📍 ' + p.name + (p.area ? ' · ' + p.area : '') + '\nhttps://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(q));
   });
   var rt = (j.route || []).filter(function (p) { return p && p.name; }).slice(0, 9);
   if (rt.length > 1) {
-    var q = function (p) { return encodeURIComponent(String(p.name) + (p.area ? ', ' + p.area : '') + ', Philippines'); };
+    var q = function (p) { return encodeURIComponent(String(p.name) + (p.area ? ', ' + p.area : '') + (PL.name ? ', ' + PL.name : '')); };
     var last = rt[rt.length - 1], mid = rt.slice(0, -1);
     replies.push('🗺️ ' + rt.map(function (p) { return p.name; }).join(' → ') + '\nhttps://www.google.com/maps/dir/?api=1&destination=' + q(last) + '&waypoints=' + mid.map(q).join('%7C') + '&travelmode=driving');
   }
   if (j.call && j.call.phone) {
     var ph = String(j.call.phone).replace(/[^\d+]/g, '');
-    if (/^09\d{9}$/.test(ph)) ph = '+63' + ph.slice(1);
+    if (PL.cc === 'PH' && /^09\d{9}$/.test(ph)) ph = '+63' + ph.slice(1);   // Philippine mobile written locally (0917…)
     else if (/^63\d{10}$/.test(ph)) ph = '+' + ph;
     else if (/^\d{10}$/.test(ph)) ph = '+1' + ph;
     if (ph.replace(/\D/g, '').length >= 7) replies.push('📞 ' + (j.call.name || 'Call') + ' · ' + j.call.phone + '\ntel:' + ph);
@@ -4504,6 +4575,8 @@ function ppcGemini_(key, body) {
 }
 
 // Compact facts about the trip for penpen, cached for 10 minutes.
+// "today is Wed 25 Nov 2026, 3:00 PM where the trip is (Asia/Tokyo, Japan)"
+function ppcNow_(PL) { return 'today is ' + Utilities.formatDate(new Date(), PL.tz, 'EEE d MMM yyyy, h:mm a') + ' where the trip is (' + PL.tz + (PL.name ? ', ' + PL.name : '') + ')'; }
 function ppcFacts_() {
   var cache = CacheService.getScriptCache(), hit = cache.get(ppK_('ppc_facts'));
   if (hit) return hit;
@@ -4583,7 +4656,7 @@ function ppcInterpreter_(persona, lang) {
   });
   if (r.getResponseCode() !== 200) throw new Error('live ' + r.getResponseCode());
   var sys = 'You are a live voice interpreter between English and ' + lang + '. ' +
-    'When you hear English, say the same thing in natural, polite, everyday ' + lang + '. When you hear ' + lang + ' (or a local mix of it with English or Tagalog), say it in English. ' +
+    'When you hear English, say the same thing in natural, polite, everyday ' + lang + '. When you hear ' + lang + ' (or a local mix of it with English), say it in English. ' +
     'Translate only: do not answer questions yourself, do not add comments, greetings or explanations, do not say "they said". Keep names, places, numbers and prices exact. ' +
     'Only ever speak English or ' + lang + (lang === 'Spanish' ? '' : '; never Spanish or any third language') + (/bisaya|cebuano/i.test(lang) ? ' (Bisaya means Cebuano as spoken in Cebu and Mindanao)' : '') + '. ' +
     'If you could not hear clearly, ask briefly to repeat, in the language of the person who just spoke. ' +
@@ -4616,7 +4689,7 @@ function ppcLiveTalk_(persona) {
     'Use TRIP FACTS for anything about this trip and never invent bookings, times, prices or amounts. ' +
     'When they want to record or change something, or ask about money (log an expense, who paid, split, settle up, undo, who owes who, totals), ' +
     'call the penpen_action tool with their request in plain words, then tell them the result in one short sentence. ' +
-    '\n\nTRIP FACTS (now: ' + Utilities.formatDate(new Date(), 'Asia/Manila', 'EEE d MMM yyyy, h:mm a') + ' Manila time):\n' + ppcFacts_();
+    '\n\nTRIP FACTS (' + ppcNow_(ppPlace_(ss_())) + '):\n' + ppcFacts_();
   return { token: tok, voice: P.voice, system: sys };
 }
 
@@ -4634,7 +4707,7 @@ function penpenFindNumber(name, details) {
   if (!key) throw new Error('nokey');
   name = String(name || '').slice(0, 120); details = String(details || '').slice(0, 200);
   var q = 'Using Google Search, find the official public phone number of this business for travellers: "' + name + '"' +
-    (details ? ' (' + details + ')' : '') + '. The trip is in the Philippines (Dipolog and Cebu) unless the details say otherwise. ' +
+    (details ? ' (' + details + ')' : '') + '. ' + (ppPlace_(ss_()).name ? 'The trip is in ' + ppPlace_(ss_()).name + ' unless the details say otherwise. ' : '') +
     'If this is a private person (like someone\'s emergency contact or a family member), or you cannot find a reliable official number, answer with an empty phone. ' +
     'Reply with ONLY this JSON on one line: {"phone":"<number in international format, or empty>","source":"<website or page name>","url":"<page url>"}';
   var models = ['gemini-flash-latest', 'gemini-flash-lite-latest'], why = [];
@@ -4669,11 +4742,12 @@ function penpenReadBooking(dataUrl) {
   var m = String(dataUrl || '').match(/^data:(image\/[\w.+-]+);base64,(.+)$/);
   if (!m) throw new Error('badimage');
   if (m[2].length > 6000000) throw new Error('toobig');
+  var cw = curWord(String(named(ss_(), 'LocalCur') || 'PHP'));   // "yen", "pesos"… in the examples
   var q = 'This is a travel screenshot: a flight, ferry, bus or train booking, boarding pass, hotel or tour confirmation, or a receipt. ' +
-    'Write ONE plain English instruction for a trip-planner assistant. Today is ' + Utilities.formatDate(new Date(), 'Asia/Manila', 'd MMM yyyy') + '. Examples: ' +
+    'Write ONE plain English instruction for a trip-planner assistant. Today is ' + Utilities.formatDate(new Date(), ppTz_(ss_()), 'd MMM yyyy') + '. Examples: ' +
     '"Add flight PR 2555 Manila to Dipolog on Dec 4, departs 8:55 AM, arrives 10:30 AM, seat 36C, booking ref BMGDL2" or ' +
-    '"Add hotel Harolds Hotel Cebu, check in Dec 7 2 PM, check out Dec 10 12 PM, booking ref 12345, paid 6,500 pesos by Kate" or ' +
-    '"Lunch at Larsian 450 pesos, paid by Brad". Include every useful detail you can read (names, numbers, dates, times, places, seat, price, who paid if shown). ' +
+    '"Add hotel Harolds Hotel Cebu, check in Dec 7 2 PM, check out Dec 10 12 PM, booking ref 12345, paid 6,500 ' + cw + ' by Kate" or ' +
+    '"Lunch at Larsian 450 ' + cw + ', paid by Brad". Include every useful detail you can read (names, numbers, dates, times, places, seat, price, who paid if shown). ' +
     'Never guess details that are not visible. If it is not a travel booking or receipt, or unreadable, reply exactly: UNREADABLE';
   var models = ['gemini-flash-latest', 'gemini-flash-lite-latest'];
   for (var i = 0; i < models.length; i++) {

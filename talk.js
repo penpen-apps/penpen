@@ -47,21 +47,10 @@
   }
 
   var LANGS = ['Bisaya (Cebuano)', 'Tagalog', 'Thai', 'Vietnamese', 'Mandarin', 'Cantonese', 'Japanese', 'Korean', 'Bahasa Indonesia', 'Malay', 'Hindi', 'Arabic', 'Spanish', 'French', 'Italian', 'German', 'Portuguese', 'Turkish'];
-  // the phone's time zone follows you abroad, so it tells us the local language without asking for location
-  var TZ_LANG = { 'Asia/Manila': ['Bisaya (Cebuano)', 'Tagalog'], 'Asia/Bangkok': ['Thai'], 'Asia/Ho_Chi_Minh': ['Vietnamese'], 'Asia/Saigon': ['Vietnamese'],
-    'Asia/Shanghai': ['Mandarin'], 'Asia/Taipei': ['Mandarin'], 'Asia/Hong_Kong': ['Cantonese'], 'Asia/Macau': ['Cantonese'], 'Asia/Tokyo': ['Japanese'],
-    'Asia/Seoul': ['Korean'], 'Asia/Jakarta': ['Bahasa Indonesia'], 'Asia/Makassar': ['Bahasa Indonesia'], 'Asia/Kuala_Lumpur': ['Malay'], 'Asia/Singapore': ['Mandarin', 'Malay'],
-    'Asia/Kolkata': ['Hindi'], 'Asia/Dubai': ['Arabic'], 'Asia/Phnom_Penh': ['Khmer'], 'Asia/Vientiane': ['Lao'], 'Asia/Yangon': ['Burmese'], 'Asia/Kathmandu': ['Nepali'],
-    'Europe/Madrid': ['Spanish'], 'Europe/Paris': ['French'], 'Europe/Rome': ['Italian'], 'Europe/Berlin': ['German'], 'Europe/Lisbon': ['Portuguese'], 'Europe/Istanbul': ['Turkish'],
-    'Europe/Athens': ['Greek'], 'America/Mexico_City': ['Spanish'], 'America/Sao_Paulo': ['Portuguese'], 'America/Bogota': ['Spanish'], 'America/Lima': ['Spanish'], 'America/Argentina/Buenos_Aires': ['Spanish'] };
   // languages of where the trip goes (falls back to the phone's time zone)
   function myLang() { return localStorage.getItem('pp_tr_me') || 'English'; }
   function short(l) { return String(l).replace(/ \(.*\)/, ''); }
-  function suggested() {
-    var txt = ''; try { var c = window.ppTrips && window.ppTrips.current && window.ppTrips.current(); txt = JSON.stringify(c || '') + (localStorage.getItem('pp_c_penpenToday:[]') || '').slice(0, 4000); } catch (e) {}
-    if (/philippines|cebu|dipolog|manila|bohol|davao|palawan|siargao|dumaguete|iloilo|boracay/i.test(txt)) return TZ_LANG['Asia/Manila'];
-    try { return TZ_LANG[Intl.DateTimeFormat().resolvedOptions().timeZone] || []; } catch (e) { return []; }
-  }
+  function suggested() { return window.ppPlace().langs.slice(); }   // place.js works out the trip's country
   function open(opts) {
     opts = opts || {};
     if (S) return;
@@ -75,7 +64,8 @@
     S = { el: w, turns: [], inT: '', outT: '', muted: false, model: 0, nextAt: 0, sources: [], mode: opts.mode || 'talk', lang: opts.lang || '' };
     document.getElementById('pp-t-end').onclick = close;
     try { S.ctx = new (window.AudioContext || window.webkitAudioContext)(); S.ctx.resume(); } catch (e) {}
-    if (S.mode === 'translate' && !S.lang) S.lang = (Date.now() - (+localStorage.getItem('pp_tr_lang_t') || 0) < 6 * 36e5 && localStorage.getItem('pp_tr_lang')) || suggested()[0] || 'Tagalog';
+    if (S.mode === 'translate' && !S.lang) S.lang = (Date.now() - (+localStorage.getItem('pp_tr_lang_t') || 0) < 6 * 36e5 && localStorage.getItem('pp_tr_lang')) || suggested()[0] || '';
+    if (S.mode === 'translate' && !S.lang) return pickLang();   // no local language we know of (e.g. an English-speaking country): let them choose
     begin();
   }
   function pickLang(forMe) {
@@ -99,7 +89,7 @@
       var l = go ? (document.getElementById('pp-t-ol').value || '').trim() : b && b.dataset.l;
       if (!l) return;
       cap.onclick = null; cap.textContent = '';
-      if (forMe) { localStorage.setItem('pp_tr_me', l); if (l === S.lang) S.lang = l === 'English' ? (suggested()[0] || 'Tagalog') : 'English'; switchLang(S.lang, true); }
+      if (forMe) { localStorage.setItem('pp_tr_me', l); if (l === S.lang) S.lang = l === 'English' ? (suggested()[0] || localStorage.getItem('pp_tr_lang') || 'Spanish') : 'English'; switchLang(S.lang, true); }
       else switchLang(l);
     };
   }
@@ -188,7 +178,7 @@
           inputAudioTranscription: {}, outputAudioTranscription: {},
           tools: S.mode === 'translate' ? [] : [{ functionDeclarations: [{ name: 'penpen_action',
             description: 'Record or change something on the trip, or calculate money: log an expense or payment, split, settle up, undo, who owes who, totals.',
-            parameters: { type: 'OBJECT', properties: { request: { type: 'STRING', description: 'The request in plain words, e.g. "Lunch 450 pesos, Kate paid, split with Brad"' } }, required: ['request'] } }] }]
+            parameters: { type: 'OBJECT', properties: { request: { type: 'STRING', description: 'The request in plain words, e.g. "Lunch 450, Kate paid, split with Brad"' } }, required: ['request'] } }] }]
         } }));
       };
       ws.onmessage = function (e) {

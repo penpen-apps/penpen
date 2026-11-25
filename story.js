@@ -52,6 +52,8 @@
     '.pp-sheet .empty{text-align:center;color:var(--muted);padding:18px 8px}' +
     '.pp-sheet label{display:block;font:800 13px Nunito,-apple-system,sans-serif;margin:12px 2px 4px;color:var(--muted)}' +
     '.pp-sheet input{width:100%;box-sizing:border-box;border:1.5px solid var(--line);border-radius:14px;padding:12px;font:16px Nunito,-apple-system,sans-serif;background:var(--card);color:var(--ink)}' +
+    '.pp-sheet select{width:100%;box-sizing:border-box;border:1.5px solid var(--line);border-radius:14px;padding:12px;font:16px Nunito,-apple-system,sans-serif;background:var(--card);color:var(--ink)}' +
+    '.pp-sheet input:focus-visible,.pp-sheet select:focus-visible{outline:3px solid #237566;outline-offset:1px}' +
     '.pp-sheet .two{display:flex;gap:10px}.pp-sheet .two > div{flex:1}' +
     '.pp-sheet .go{display:block;width:100%;min-height:56px;margin-top:16px;border:0;border-radius:16px;background:#237566;color:#fff;font:800 17px Nunito,-apple-system,sans-serif;cursor:pointer}' +
     '.pp-sheet .go[disabled]{opacity:.6}.pp-sheet .note{font-size:13px;color:var(--muted);margin-top:8px;text-align:center}' +
@@ -157,7 +159,7 @@
     var html = '';
     if (I.days.length) {
       var td = ymd(new Date()), shown = 0, chapters = '';
-      if (I.phase === 'before') chapters += ch('now', '📦', 'Prologue · now', 'Getting ready', 'Passports · chargers · sunscreen · pesos');
+      if (I.phase === 'before') chapters += ch('now', '📦', 'Prologue · now', 'Getting ready', 'Passports · chargers · sunscreen · local cash');
       I.days.forEach(function (d, i) {
         var cls = d.day < td ? 'done' : d.day === td ? 'now' : '';
         if (cls === 'done' && I.phase !== 'after') return;    // past chapters fold away during the trip
@@ -198,14 +200,14 @@
         out.push({ id: 'go:' + d.day + ':' + s.what, ic: icon(s.what), t: (d.day === td ? 'Today' : 'Tomorrow') + (s.time ? ' · ' + s.time : ''), s: s.what + (s.place ? ' — ' + s.place : ''), go: 'Plan' });
       });
     });
-    var T = I.T, st = String(T.settle || ''), m = st.match(/^(.+?) owes (.+?) (₱?[\d,.]+)$/);
+    var T = I.T, st = String(T.settle || ''), m = st.match(/^(.+?) owes (.+?) (\D{0,4}\d[\d,.]*)$/);   // any currency sign
     if (m && I.me && (m[1] === I.me || m[2] === I.me)) {
       var amt = m[3].replace(/\.\d\d$/, '');
       out.push({ id: 'owe:' + st, ic: '💸', t: m[1] === I.me ? 'You owe ' + m[2] + ' ' + amt : m[1] + ' owes you ' + amt, s: 'Tap to settle up when you\'re ready', go: 'Money', todo: true });
     }
     var look = T.look; var n = Array.isArray(look) ? look.length : (look && (look.count || look.n)) || 0;
     if (n) out.push({ id: 'look:' + n, ic: '🔎', t: n + (n === 1 ? ' entry needs' : ' entries need') + ' a look', s: 'Quick check so the money adds up', go: 'Money', todo: true });
-    if (I.phase === 'before' && I.left !== null && I.left <= 3 && I.left >= 1) out.push({ id: 'soon:' + td, ic: '🎒', t: I.left === 1 ? 'Trip starts tomorrow!' : 'Trip in ' + I.left + ' days', s: 'Passport · charger · sunscreen · pesos', go: 'Plan' });
+    if (I.phase === 'before' && I.left !== null && I.left <= 3 && I.left >= 1) out.push({ id: 'soon:' + td, ic: '🎒', t: I.left === 1 ? 'Trip starts tomorrow!' : 'Trip in ' + I.left + ' days', s: 'Passport · charger · sunscreen · local cash', go: 'Plan' });
     if (window.ppFeed) { try { out = out.concat(window.ppFeed()); } catch (e) {} }   // app updates + what the crew logged this week
     return out;
   }
@@ -258,9 +260,15 @@
         var on = (x.id || '') === (cur || '') || (!cur && x.home);
         var dates = x.start ? x.start + (x.end ? ' → ' + x.end : '') : (x.home ? 'Your first trip' : '');
         return '<button type="button" class="it' + (on ? ' on' : '') + '" data-i="' + i + '"><span class="ic">' + (on ? '🧳' : '🗺️') + '</span><span><b>' + esc(x.name) + '</b><small>' + esc(dates) + ' · ' + esc(x.role) + '</small></span>' + (on ? '<span class="ok">✓</span>' : (!x.home && x.role === 'creator' ? '<span class="del" data-del="' + i + '">Delete</span>' : '')) + '</button>';
-      }).join('') + '<button type="button" class="go" data-new="1">＋ New trip</button>';
+      }).join('') + (function () {
+        var mine = l.filter(function (x) { return (x.id || '') === (cur || '') && !x.home && x.role === 'creator'; })[0], p = window.ppPlace();
+        if (!mine) return '';
+        return '<button type="button" class="it" data-place="1"><span class="ic">📍</span><span><b>Trip country: ' + esc(p.name || 'not set') + '</b><small>' +
+          (p.set ? esc(p.cur) + ' · ' + esc(window.ppPlace.zoneName(p.tz)) + ' time · tap to change' : 'Tap to set it, so money, times and the map are right') + '</small></span></button>';
+      })() + '<button type="button" class="go" data-new="1">＋ New trip</button>';
       bd.onclick = function (e) {
         if (e.target.closest('[data-new]')) return newTrip(s);
+        if (e.target.closest('[data-place]')) return placeSetting(s);
         var del = e.target.closest('.del');
         if (del) {
           e.stopPropagation();
@@ -276,20 +284,62 @@
       };
     }, function () { bd.innerHTML = '<div class="empty">Couldn\'t load your trips — check your connection.</div>'; });
   }
+  /* Country + time zone fields (new trip, and "Trip country" for the creator). The time zone only
+     shows for countries with more than one (US, Canada, Mexico, Australia, Indonesia). */
+  function placeFields(id, cc) {
+    return '<label for="' + id + '-cc">Country</label><select id="' + id + '-cc"><option value="">Choose a country</option>' +
+      window.ppPlace.list().map(function (c) { return '<option value="' + c.cc + '"' + (c.cc === cc ? ' selected' : '') + '>' + esc(c.name) + '</option>'; }).join('') + '</select>' +
+      '<div id="' + id + '-tzw" hidden><label for="' + id + '-tz">Time zone</label><select id="' + id + '-tz"></select></div>';
+  }
+  function wirePlace(id, tz) {
+    var cc = document.getElementById(id + '-cc'), tzs = document.getElementById(id + '-tz'), w = document.getElementById(id + '-tzw'), out = { touched: false };
+    function zones(keep) {
+      var c = window.ppPlace.info(cc.value), list = c ? c.tzs : [], phone = '';
+      try { phone = Intl.DateTimeFormat().resolvedOptions().timeZone; } catch (e) {}
+      var pick = list.indexOf(keep) >= 0 ? keep : list.indexOf(phone) >= 0 ? phone : list[0] || '';
+      tzs.innerHTML = list.map(function (z) { return '<option value="' + z + '"' + (z === pick ? ' selected' : '') + '>' + esc(window.ppPlace.zoneName(z)) + ' time</option>'; }).join('');
+      w.hidden = list.length < 2;
+    }
+    cc.onchange = function () { out.touched = true; zones(); };
+    out.set = function (k) { cc.value = k; zones(); };
+    zones(tz);
+    return out;
+  }
+  function placeSetting(s) {   // trip creator: fix the country of a trip made before trips had one
+    var p = window.ppPlace(), bd = s.querySelector('.bd');
+    s.querySelector('h2').firstChild.textContent = 'Trip country';
+    bd.innerHTML = '<p style="margin:0 0 4px">Sets the money, clock, map and emergency numbers for everyone on this trip.</p>' + placeFields('pp-tc', p.cc) +
+      '<button type="button" class="go" id="pp-tc-go">Save country</button>' +
+      '<div class="note">Expenses already logged keep their currency. If they\'re in a different one, fix them in Money afterwards.</div>';
+    bd.onclick = null;
+    wirePlace('pp-tc', p.tz);
+    var go = document.getElementById('pp-tc-go');
+    go.onclick = function () {
+      var cc = document.getElementById('pp-tc-cc').value; if (!cc) { document.getElementById('pp-tc-cc').focus(); return; }
+      go.disabled = true; go.textContent = 'Saving…';
+      window.ppTrips.setPlace({ country: cc, tz: document.getElementById('pp-tc-tz').value }).then(function () { go.textContent = 'Saved. Reloading…'; location.reload(); },
+        function (e) { go.disabled = false; go.textContent = 'Save country'; alert(e.message === 'notallowed' ? 'Only the trip creator can change the country.' : 'Couldn\'t save the country: ' + e.message); });
+    };
+  }
   function newTrip(s) {
     s.querySelector('h2').firstChild.textContent = 'New trip';
     var bd = s.querySelector('.bd');
-    bd.innerHTML = '<label>Trip name</label><input id="pp-nt-name" placeholder="e.g. Bohol with Mom" maxlength="60">' +
-      '<label>Where to?</label><input id="pp-nt-where" placeholder="e.g. Bohol" maxlength="80">' +
-      '<div class="two"><div><label>From</label><input id="pp-nt-start" type="date"></div><div><label>To</label><input id="pp-nt-end" type="date"></div></div>' +
+    bd.innerHTML = '<label for="pp-nt-name">Trip name</label><input id="pp-nt-name" placeholder="e.g. Bohol with Mom" maxlength="60">' +
+      '<label for="pp-nt-where">Where to?</label><input id="pp-nt-where" placeholder="e.g. Bohol" maxlength="80">' +
+      placeFields('pp-nt', '') +
+      '<div class="two"><div><label for="pp-nt-start">From</label><input id="pp-nt-start" type="date"></div><div><label for="pp-nt-end">To</label><input id="pp-nt-end" type="date"></div></div>' +
       '<button type="button" class="go" id="pp-nt-go">Start this trip 🐧</button><div class="note">You\'ll be the trip creator — invite your travel buddies right after.</div>';
     bd.onclick = null;
+    var pf = wirePlace('pp-nt');
+    // "Where to?" picks the country for you ("Tokyo" → Japan) until you choose one yourself
+    document.getElementById('pp-nt-where').oninput = function () { var k = window.ppPlace.fromText(this.value); if (k && !pf.touched) pf.set(k); };
     var go = document.getElementById('pp-nt-go');
     go.onclick = function () {
       var v = function (id) { return document.getElementById(id).value.trim(); };
       if (!v('pp-nt-name')) { document.getElementById('pp-nt-name').focus(); return; }
+      if (!v('pp-nt-cc')) { document.getElementById('pp-nt-cc').focus(); return; }
       go.disabled = true; go.textContent = '🐧 Packing your new trip… (up to a minute)';
-      window.ppTrips.create({ name: v('pp-nt-name'), where: v('pp-nt-where'), start: v('pp-nt-start'), end: v('pp-nt-end') }).then(function (t) {
+      window.ppTrips.create({ name: v('pp-nt-name'), where: v('pp-nt-where'), start: v('pp-nt-start'), end: v('pp-nt-end'), country: v('pp-nt-cc'), tz: v('pp-nt-tz') }).then(function (t) {
         go.textContent = '✨ Ready! Opening it…'; window.ppTrips.open(t.id, t.name);
       }, function (e) {
         go.disabled = false; go.textContent = 'Start this trip 🐧';

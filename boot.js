@@ -40,6 +40,7 @@
     }
     return ready().then(function () { return post('call', { fn: fn, args: args }); })
       .then(function (r) {
+        if (r && r.place && window.ppPlace) window.ppPlace.save(r.place);   // the trip's country, currency and time zone
         if (fn === 'penpenProfiles' && r) return fixInvite(r).then(function (x) { set(key, x); return x; });
         if (isRead) set(key, r);
         return r;
@@ -208,6 +209,7 @@
     list: function () { return post('trips', {}).then(function (r) { return (r && r.trips) || []; }); },
     open: function (id, name) { setTrip(id, name); location.reload(); },
     create: function (o) { return post('newTrip', o).then(function (r) { return r.trip; }); },
+    setPlace: function (o) { return post('setPlace', o).then(function (r) { if (window.ppPlace) window.ppPlace.save(r.place); clearCache(); return r.place; }); },
     remove: function (id) { return post('removeTrip', { id: id }).then(function (r) { return (r && r.trips) || []; }); }
   };
 

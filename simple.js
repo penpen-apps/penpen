@@ -45,7 +45,7 @@
       if (/\bacts\b/.test(k.className)) [].slice.call(k.children).forEach(function (b) { if (/ask penpen/i.test(txt(b))) b.classList.add('pp-ask'); });
       k.classList.toggle('pp-hide', !keep);
       if (/WHO OWES WHO/i.test(txt(k))) {
-        var m = txt(k).match(/WHO OWES WHO\s*(₱[\d,.]+)\s*(.+?)(?=POCKET|$)/i);
+        var m = txt(k).match(new RegExp('WHO OWES WHO\\s*(' + symRe() + '[\\d,.]+)\\s*(.+?)(?=POCKET|$)', 'i'));
         if (m) { owe = m[1]; oweWho = m[2].replace(/\s+owes\s+/i, ' → '); }
       }
     });
@@ -59,7 +59,7 @@
     // total spent so far; tap for who owes who and the details
     var T = null; try { T = JSON.parse(localStorage.getItem('pp_c_penpenToday:[]') || 'null'); } catch (e) {}
     var g = T && T.budget && T.budget.group, spent = g ? Math.round(g.spent || 0) : null;
-    var html = '<button type="button" data-a="money"><span class="ic">💸</span>' + (spent !== null ? '₱' + spent.toLocaleString('en-US') : 'Money') + '<small>' + (spent !== null ? 'spent so far · details ›' : 'tap to see') + '</small></button>' +
+    var html = '<button type="button" data-a="money"><span class="ic">💸</span>' + (spent !== null ? symHtml() + spent.toLocaleString('en-US') : 'Money') + '<small>' + (spent !== null ? 'spent so far · details ›' : 'tap to see') + '</small></button>' +
       '<button type="button" data-a="diary"><span class="ic">📔</span>Diary<small>add a memory</small></button>';
     if (tiles.dataset.h !== html) { tiles.innerHTML = html; tiles.dataset.h = html; }
     tiles.onclick = function (e) {
@@ -74,10 +74,10 @@
     var m = document.getElementById('money'); if (!m || !m.querySelector('.stats')) return;
     var total = m.querySelector('.stats > .card');
     if (total && !total.dataset.pp) {
-      // make the peso total the big number, the dollar amount small
+      // make the trip-currency total the big number, the home-currency amount small
       total.dataset.pp = '1';
-      var peso = [].slice.call(total.querySelectorAll('*')).filter(function (e) { return !e.children.length && /^₱/.test(txt(e)); })[0];
-      if (peso) peso.classList.add('pp-big');
+      var sym = window.ppPlace().sym, local = sym && [].slice.call(total.querySelectorAll('*')).filter(function (e) { return !e.children.length && txt(e).indexOf(sym) === 0; })[0];
+      if (local) local.classList.add('pp-big');
     }
     var needs = 0;
     [].slice.call(m.children).forEach(function (c) {
@@ -105,14 +105,17 @@
     var h = open ? 'Less ‹' : 'Details ›' + (n ? ' <span class="pp-badge">' + n + ' to check</span>' : '') + ' <small>who paid what · audit · receipt</small>';
     if (b.dataset.h !== h) { b.innerHTML = h; b.dataset.h = h; }
   }
+  // the trip's currency sign (¥, ₱, €…), for reading and writing amounts on screen
+  function symRe() { return window.ppPlace().sym.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+  function symHtml() { return window.ppPlace().sym.replace(/&/g, '&amp;').replace(/</g, '&lt;'); }
   var PAL = ['#237566', '#F4A62A', '#4A90C2', '#C8553D', '#8E7CC3', '#6BAF5C', '#E39BB6', '#7A8B99'];
   function compactCats(card) {
     if (card.dataset.pp === txt(card)) return;
-    var rows = [], re = /([A-Za-z&'\/ ]+?)\s*₱([\d,]+)\s*·\s*(\d+)%/g, t = txt(card).replace(/where the (group )?money went/i, ''), r;
+    var rows = [], re = new RegExp("([A-Za-z&'\\/ ]+?)\\s*" + symRe() + '([\\d,]+)\\s*·\\s*(\\d+)%', 'g'), t = txt(card).replace(/where the (group )?money went/i, ''), r;
     while ((r = re.exec(t))) rows.push({ n: r[1].trim(), v: r[2], p: +r[3] });
     if (!rows.length) return;
     var bar = rows.map(function (x, i) { return '<i style="width:' + Math.max(x.p, 2) + '%;background:' + PAL[i % PAL.length] + '"></i>'; }).join('');
-    var leg = rows.map(function (x, i) { return '<span><b style="background:' + PAL[i % PAL.length] + '"></b>' + x.n + ' <em>₱' + x.v + '</em></span>'; }).join('');
+    var leg = rows.map(function (x, i) { return '<span><b style="background:' + PAL[i % PAL.length] + '"></b>' + x.n + ' <em>' + symHtml() + x.v + '</em></span>'; }).join('');
     card.classList.add('pp-cats');
     card.innerHTML = '<div class="pp-cat-t">Where the money went</div><div class="pp-cat-bar">' + bar + '</div><div class="pp-cat-leg">' + leg + '</div>';
     card.dataset.pp = txt(card);

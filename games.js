@@ -293,24 +293,25 @@
   };
 
   /* ---------- Professor Pen's quiz: choose, fill in the blank, finish the sentence ---------- */
+  // ph: 1 = only on Philippine trips
   var QB = [
-    { t: 'mc', q: 'How many islands does the Philippines have?', o: ['About 7,641', 'About 700', 'About 70,000'], a: 0 },
+    { t: 'mc', q: 'How many islands does the Philippines have?', o: ['About 7,641', 'About 700', 'About 70,000'], a: 0, ph: 1 },
     { t: 'mc', q: 'Which is the biggest fish in the world?', o: ['Whale shark', 'Blue whale', 'Great white shark'], a: 0, why: 'Blue whales are bigger, but they’re mammals!' },
-    { t: 'fill', q: 'In Bisaya, “thank you” is ____.', a: ['salamat'], hint: 'Starts with S' },
-    { t: 'fill', q: 'The Philippine money is called the ____.', a: ['peso', 'piso'], hint: '₱' },
+    { t: 'fill', q: 'In Bisaya, “thank you” is ____.', a: ['salamat'], hint: 'Starts with S', ph: 1 },
+    { t: 'fill', q: 'The Philippine money is called the ____.', a: ['peso', 'piso'], hint: '₱', ph: 1 },
     { t: 'fill', q: 'A group of penguins on land is called a ____.', a: ['waddle', 'colony', 'rookery'], hint: 'How we walk 🐧' },
-    { t: 'fill', q: 'Cebu’s famous whole roast pig is called ____.', a: ['lechon', 'litson'], hint: 'L…' },
+    { t: 'fill', q: 'Cebu’s famous whole roast pig is called ____.', a: ['lechon', 'litson'], hint: 'L…', ph: 1 },
     { t: 'fill', q: 'Penguins can’t fly, but they can ____ really fast.', a: ['swim'], hint: '🌊' },
-    { t: 'complete', q: '“Lami kaayo!” means “So ____!”', o: ['delicious', 'expensive', 'hot'], a: 0 },
-    { t: 'complete', q: 'Magellan’s Cross in Cebu was planted in the year ____.', o: ['1521', '1898', '1946'], a: 0 },
-    { t: 'complete', q: 'In Oslob you can swim with ____.', o: ['whale sharks', 'dolphins', 'manatees'], a: 0 },
+    { t: 'complete', q: '“Lami kaayo!” means “So ____!”', o: ['delicious', 'expensive', 'hot'], a: 0, ph: 1 },
+    { t: 'complete', q: 'Magellan’s Cross in Cebu was planted in the year ____.', o: ['1521', '1898', '1946'], a: 0, ph: 1 },
+    { t: 'complete', q: 'In Oslob you can swim with ____.', o: ['whale sharks', 'dolphins', 'manatees'], a: 0, ph: 1 },
     { t: 'complete', q: 'Emperor penguins can dive deeper than ____ metres.', o: ['500', '50', '5'], a: 0 },
-    { t: 'mc', q: 'What does “Pila ni?” mean?', o: ['How much is this?', 'Where is this?', 'What time is it?'], a: 0 },
-    { t: 'mc', q: 'Which fruit is the national fruit of the Philippines?', o: ['Mango', 'Banana', 'Durian'], a: 0 },
-    { t: 'fill', q: 'To tell a jeepney driver to stop, say “____ lang!”', a: ['para'], hint: 'P…' },
-    { t: 'complete', q: 'Puso is rice cooked in woven ____ leaves.', o: ['palm', 'banana', 'mango'], a: 0 },
-    { t: 'mc', q: 'Where are the Chocolate Hills?', o: ['Bohol', 'Cebu', 'Palawan'], a: 0 },
-    { t: 'fill', q: 'Good morning in Bisaya is “Maayong ____”.', a: ['buntag'], hint: 'B…' },
+    { t: 'mc', q: 'What does “Pila ni?” mean?', o: ['How much is this?', 'Where is this?', 'What time is it?'], a: 0, ph: 1 },
+    { t: 'mc', q: 'Which fruit is the national fruit of the Philippines?', o: ['Mango', 'Banana', 'Durian'], a: 0, ph: 1 },
+    { t: 'fill', q: 'To tell a jeepney driver to stop, say “____ lang!”', a: ['para'], hint: 'P…', ph: 1 },
+    { t: 'complete', q: 'Puso is rice cooked in woven ____ leaves.', o: ['palm', 'banana', 'mango'], a: 0, ph: 1 },
+    { t: 'mc', q: 'Where are the Chocolate Hills?', o: ['Bohol', 'Cebu', 'Palawan'], a: 0, ph: 1 },
+    { t: 'fill', q: 'Good morning in Bisaya is “Maayong ____”.', a: ['buntag'], hint: 'B…', ph: 1 },
     { t: 'complete', q: 'Penguins drink seawater because a special gland removes the ____.', o: ['salt', 'sand', 'fish'], a: 0 }
   ];
   var PROF = '<g transform="translate(60 22)"><rect x="-22" y="-8" width="44" height="6" rx="2" fill="#1F2A36"/><path d="M-14 -2 L14 -2 L10 6 L-10 6 Z" fill="#1F2A36"/><path d="M18 -5 L24 10" stroke="#F2A33A" stroke-width="2.5"/><circle cx="24" cy="12" r="3" fill="#F2A33A"/></g><g fill="none" stroke="#1F2A36" stroke-width="2.4"><circle cx="51" cy="49" r="8"/><circle cx="69" cy="49" r="8"/><path d="M59 49 L61 49"/></g>';
@@ -392,7 +393,8 @@
   function quiz(host, award) {
     stop();
     var round = [], n = 0, right = 0, used = {};
-    while (round.length < 3) { var i = Math.floor(Math.random() * QB.length); if (!used[i]) { used[i] = 1; round.push(QB[i]); } }
+    var ph = window.ppPlace().cc === 'PH', qb = QB.filter(function (q) { return ph || !q.ph; });
+    while (round.length < 3) { var i = Math.floor(Math.random() * qb.length); if (!used[i]) { used[i] = 1; round.push(qb[i]); } }
     var inner = window.ppLook ? window.ppLook.svg('bubbly') : '';
     function prof(mood) { return '<div class="prof' + (mood ? ' ' + mood : '') + '"><svg viewBox="-7 -14 134 134" width="110" height="110" aria-hidden="true">' + inner + PROF + '</svg></div>'; }
     function show(msg, mood) {
