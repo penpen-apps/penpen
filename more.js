@@ -52,7 +52,7 @@
     if (label === 'Settings' && window.ppOpenSettings) { window.ppOpenSettings(); return true; }
     var id = TABS[label]; if (!id) return false; if (id === 'p-safety') view('crew'); window.ppNavGo(id); return true; };
   // Crew, Safety and Bookings share one page in the app; each gets its own view
-  var VIEWS = { crew: 'Crew', safety: 'Safety', book: 'Bookings' };
+  var VIEWS = { crew: 'Travel buddies', safety: 'Safety', book: 'Bookings' };
   function view(v) { document.body.setAttribute('data-ppv', v); var f = $('#p-safety .fred'); if (f && !f.children.length && f.textContent !== VIEWS[v]) f.textContent = VIEWS[v]; }
   window.ppNavGo = function (id) { var b = $('nav button[data-p="' + id + '"]'); if (!b) return; pass = true; try { b.click(); } finally { pass = false; } };
   function label(btn, txt) {
@@ -85,9 +85,9 @@
     var m = document.createElement('div'); m.id = 'pp-moremenu'; m.className = 'pp-page'; m.setAttribute('role', 'dialog'); m.setAttribute('aria-label', 'More');
     var OFF = '<em class="off">Works offline</em>';
     m.innerHTML = '<div class="top"><button class="back" type="button" aria-label="Back">‹</button><h2>More</h2></div><div class="wrap">' +
-      '<button type="button" class="newtrip" data-m="newtrip"><i>＋</i><span><b>Start a new trip</b><small>Plan it with penpen and invite your crew</small></span></button>' +
+      '<button type="button" class="newtrip" data-m="newtrip"><i>＋</i><span><b>Start a new trip</b><small>Plan it with penpen and invite your travel buddies</small></span></button>' +
       [
-        ['crew', '👥', 'Crew', 'Who’s on the trip · Invite', OFF],
+        ['crew', '👥', 'Travel buddies', 'Who’s on the trip · Invite', OFF],
         ['safety', '🛟', 'Safety', 'SOS · Nearby help · Emergency contacts', '<em class="off">SOS calls work offline</em>'],
         ['book', '🏨', 'Bookings', 'Hotels · Tours · Transport', OFF],
         ['diary', '📔', 'Diary', 'Memories · Photos · Notes', ''],
@@ -122,7 +122,7 @@
     ['💸', 'Log expenses', 'Say what you paid — penpen writes it down and splits it.', ['“Lunch 450, I paid”', '“Brad paid 1,200 for the van, shared”', '“Dinner 3,200, my treat”', '“Who owes who?”', '“Undo”']],
     ['🌐', 'Translate', 'On penpen’s chat, tap the big Translate bar. Hold your button to speak English, hold theirs for Bisaya or Tagalog.', []],
     ['🗺️', 'Itinerary', 'Every day of the trip with times, places and directions. Tell penpen to change it.', ['“Move canyoneering to 9 am”', '“Add dinner at Larsian on Dec 5 at 7 pm”']],
-    ['👥', 'Crew, Safety & Bookings', 'In More: who’s on the trip and the invite QR, SOS and nearby help, and your hotels, tours and transport.', []],
+    ['👥', 'Travel buddies, Safety & Bookings', 'In More: who’s on the trip and the invite QR, SOS and nearby help, and your hotels, tours and transport.', []],
     ['📔', 'Diary', 'Write, talk or add photos. Group diary is shared with everyone; Just me is only for you.', ['“Dear diary, today we swam with whale sharks…”']],
     ['🎮', 'Play', 'Look after penpen and play Belly Slide — even with no signal. Every expense you log earns a 🐟.', []],
     ['⚙️', 'Settings', 'Pick your guide, voice, scene and light/dark, and open the trip’s Google Sheet.', []]
@@ -214,7 +214,7 @@
     var I = get('pp_c_penpenDiaryInfo:[]') || {}, url = mine ? I.me : I.group;
     var h = mine
       ? '<b>🔒 Just me</b>Only you can read this. It’s saved to your own private Google Doc — nobody else on the trip gets the link.'
-      : '<b>👥 Group diary</b>Everyone on this trip can read it. It’s saved to one shared Google Doc for the whole crew.';
+      : '<b>👥 Group diary</b>Everyone on this trip can read it. It’s saved to one shared Google Doc for everyone on the trip.';
     h += url ? '<a href="' + url + '" target="_blank" rel="noopener">Open the doc ↗</a>' : '<em>The doc is made with your first entry — the link shows up here after that.</em>';
     var n = document.getElementById('pp-dnote');
     if (!n) { n = document.createElement('div'); n.id = 'pp-dnote'; seg.parentNode.insertBefore(n, seg.nextSibling); }
@@ -277,7 +277,7 @@
   var ROLES = ['Partner', 'Friend', 'Mom', 'Dad', 'Kid', 'Lolo / Lola', 'Tito / Tita', 'Solo traveler'];
   function editor() {
     var box = document.getElementById('start'); if (!box) return;
-    var kick = $$('.kick', box).filter(function (k) { return /job in the crew/i.test(k.textContent); })[0];
+    var kick = $$('.kick', box).filter(function (k) { return /job (on the trip|in the crew)/i.test(k.textContent); })[0];
     if (!kick) return;
     if (localStorage.getItem('pp_start') === 'done') { var d = $('.pp-dots', box); if (d) d.style.display = 'none'; }
     if (document.getElementById('pp-rolechips')) return;

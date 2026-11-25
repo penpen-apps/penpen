@@ -147,7 +147,7 @@
     if (g) return g;
     var st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
     g = document.createElement('div'); g.id = 'pp-gate';
-    g.innerHTML = PEN + '<h1>penpen</h1><p id="pp-gate-msg">Your trip, your crew, your money — in one place.</p><div class="b" id="pp-gbtn"></div><p id="pp-gate-sub">Sign in with the Google account you were invited with.</p>';
+    g.innerHTML = PEN + '<h1>penpen</h1><p id="pp-gate-msg">Your trip, your travel buddies, your money — in one place.</p><div class="b" id="pp-gbtn"></div><p id="pp-gate-sub">Sign in with the Google account you were invited with.</p>';
     document.body.appendChild(g);
     var off = document.createElement('div'); off.id = 'pp-off'; off.textContent = "You're offline — showing your last saved copy."; document.body.appendChild(off);
     return g;
