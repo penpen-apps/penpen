@@ -606,11 +606,6 @@
     if (p.joy < 25) return 'Bored. Rub my belly? 🥱';
     return pick(['Happy penpen! 🐧', 'Rub me to tickle! 🪶', 'Let’s slide! 🛷', 'I love this trip ✨']);
   }
-  function tabs() {
-    return '<div class="tabs">' + [['pet', '🐧', 'My penpen'], ['games', '🎮', 'Games'], ['quiz', '🎓', 'Quiz'], ['learn', '📚', 'Learn'], ['sing', '🎤', 'Sing'], ['shop', '🛍️', 'Shop']].map(function (t) {
-      return '<button data-tab="' + t[0] + '" class="' + (tab === t[0] ? 'on' : '') + '"><span>' + t[1] + '</span>' + t[2] + '</button>';
-    }).join('') + '</div>';
-  }
   // the garden's one menu: games and the other screens, plus stats, sleep, selfie and album (a native <details>, so it opens and closes with no extra code)
   function menu(p) {
     var n = album().length;
@@ -624,7 +619,8 @@
     var p = load(), wear = WEAR[p.wear] || WEAR.none;
     var coins = '<span class="coins">' + COIN + ' <b id="pp-coins">' + p.coins + '</b></span>';
     // the garden tab is the whole phone screen: only a back arrow, the meters, coins, sound and one menu button float on top
-    var h = tab === 'pet' || tab === 'igloo' ? '<div class="wrap">' : '<div class="top"><button class="back" aria-label="Back">‹</button><h2>' + { games: 'Games', slide: 'Belly Slide', quiz: 'Professor Pen’s quiz', learn: 'Learn with penpen', sing: 'Sing with penpen', shop: 'Shop' }[tab] + '</h2>' + coins + '</div><div class="wrap">' + tabs();
+    // every other screen fills the phone too: no title bar or tab row, just a floating back arrow and coins (the title stays for screen readers)
+    var h = tab === 'pet' || tab === 'igloo' ? '<div class="wrap">' : '<div class="ptop"><button class="back" aria-label="Back">‹</button><h2 class="sr">' + { games: 'Games', slide: 'Belly Slide', gym: 'Workout', quiz: 'Professor Pen’s quiz', learn: 'Learn with penpen', sing: 'Sing with penpen', shop: 'Shop' }[tab] + '</h2>' + coins + '</div><div class="wrap">';
     if (tab === 'igloo') h += iglooRoom(p);
     else if (tab === 'pet') {
       var face = (p.asleep ? SHUT : '') + JOY;
@@ -654,7 +650,8 @@
         '<h3>Outfits</h3><div class="shop">' + Object.keys(WEAR).map(function (k) { var own = p.own[k], on = p.wear === k; return '<button data-buy="w:' + k + '" class="' + (on ? 'on' : '') + '"><span>' + (WEAR[k].e || '🚫') + '</span>' + WEAR[k].n + '<small>' + (on ? 'wearing' : own ? 'wear' : WEAR[k].price ? COIN + ' ' + WEAR[k].price : 'free') + '</small></button>'; }).join('') + '</div>' +
         '<p class="tip">Earn coins in Games and Quiz. A 🔋 Battery perks him up when he’s sleepy.</p>';
     }
-    w.classList.toggle('imm', tab === 'pet' || tab === 'igloo');   // the garden fills the screen; other tabs scroll as before
+    w.classList.toggle('imm', tab === 'pet' || tab === 'igloo');   // the garden and igloo fill the screen; other screens scroll under the floating back arrow
+    w.classList.toggle('pg', tab !== 'pet' && tab !== 'igloo');
     w.innerHTML = h + '</div>';
     if (tab === 'pet') { petHooks(); startGarden(); }
     if (tab === 'igloo') iglooHooks();
@@ -1023,12 +1020,12 @@
 
   var css =
     '#pp-play{position:fixed;inset:0;z-index:99965;background:var(--bg);color:var(--ink);overflow:auto;padding:calc(14px + env(safe-area-inset-top)) 16px calc(30px + env(safe-area-inset-bottom));font:16px/1.4 ' + F + ';user-select:none;-webkit-user-select:none}' +
-    '#pp-play .top{display:flex;align-items:center;gap:10px;max-width:560px;margin:0 auto 10px}#pp-play h2{flex:1;margin:0;font:900 24px ' + F + '}' +
+    // the floating back arrow and coins on every screen but the garden and igloo; the page scrolls under them
+    '#pp-play.pg{padding-top:calc(60px + env(safe-area-inset-top))}#pp-play .ptop{position:fixed;top:calc(8px + env(safe-area-inset-top));left:8px;right:8px;z-index:60;display:flex;justify-content:space-between;align-items:center;pointer-events:none}#pp-play .ptop>*{pointer-events:auto;box-shadow:0 2px 8px rgba(19,50,74,.18)}' +
     '#pp-play .back{border:0;background:var(--card);color:var(--ink);border-radius:50%;width:40px;height:40px;font-size:24px;line-height:1;padding:0 0 3px;cursor:pointer}' +
     '#pp-play .coins{background:var(--card);border-radius:99px;padding:6px 12px;font-weight:900;display:flex;align-items:center;gap:6px}' +
     '.cn{display:inline-block;width:1.05em;height:1.05em;border-radius:50%;background:radial-gradient(circle at 35% 30%,#FFE58A,#F4C542 55%,#C9962B);box-shadow:inset 0 0 0 2px #E0AE36;vertical-align:-0.15em;position:relative}.cn::after{content:"' + COIN_SIGN + '";position:absolute;inset:0;display:grid;place-items:center;font:900 .62em/1 ' + F + ';color:#8A6516;font-style:normal}' +
     '#pp-play .wrap{max-width:560px;margin:0 auto}#pp-play h3{font:900 13px ' + F + ';letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:16px 4px 8px}#pp-play h3 small{text-transform:none;letter-spacing:0;font-weight:700}' +
-    '#pp-play .tabs{display:flex;gap:4px;background:var(--chip);border-radius:18px;padding:4px;margin-bottom:12px}#pp-play .tabs button{flex:1;border:0;background:none;border-radius:14px;padding:6px 2px;font:800 12px ' + F + ';color:var(--ink);cursor:pointer;display:flex;flex-direction:column;align-items:center}#pp-play .tabs span{font-size:20px}#pp-play .tabs .on{background:var(--card);box-shadow:0 2px 6px rgba(0,0,0,.08)}' +
     '#pp-play .stage{flex:1;background:linear-gradient(180deg,var(--accentSoft),var(--card));border-radius:24px;padding:12px 8px;text-align:center;position:relative;transition:background .4s}#pp-play .stage.night{background:linear-gradient(180deg,#24324F,#3C4C70)}' +
     '#pp-play .pen{position:relative;display:inline-block;animation:pppb 1.6s ease-in-out infinite alternate;touch-action:none;cursor:pointer}#pp-play .pen.zz{animation-duration:3s}' +
     '#pp-play .wear{position:absolute;left:50%;top:2px;transform:translateX(-50%);font-size:27px;pointer-events:none}#pp-play .fx{position:absolute;right:-6px;top:2px;font-size:20px;pointer-events:none}' +
