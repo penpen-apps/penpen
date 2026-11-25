@@ -161,14 +161,14 @@
       var label = b.innerHTML;
       var down = function (e) {
         e.preventDefault(); if (!S || !S.ready || S.ptt) return;
-        stopAudio(); S.ptt = S.lastWho = b.dataset.who; b.classList.add('on'); S.el.classList.add('holding');
+        stopAudio(); S.ptt = b.dataset.who; b.classList.add('on'); S.el.classList.add('holding');
         b.innerHTML = '🔴 Listening…<small>let go to send</small>';
         status(S.mode === 'translate' ? (b.dataset.who === 'me' ? '🙋 Listening to you…' : '🧑 Listening to them…') : '🔴 Listening… let go when done');
         try { S.ws.send(JSON.stringify({ realtimeInput: { activityStart: {} } })); } catch (x) {}
       };
       var up = function (e) {
         if (!S || S.ptt !== b.dataset.who) return; e.preventDefault();
-        S.ptt = null; b.classList.remove('on'); S.el.classList.remove('holding'); b.innerHTML = label;
+        S.ptt = null; S.turnWho = b.dataset.who; b.classList.remove('on'); S.el.classList.remove('holding'); b.innerHTML = label;
         status(S.mode === 'translate' ? '🌐 Translating…' : '💭 penpen is thinking…');
         try { S.ws.send(JSON.stringify({ realtimeInput: { activityEnd: {} } })); } catch (x) {}
       };
@@ -232,7 +232,7 @@
       if (S.inT.trim() && S.inT.indexOf('(The user just opened') < 0) S.turns.push(tIn = { who: 'me', t: S.inT.trim() });
       if (S.outT.trim()) S.turns.push(tOut = { who: 'pp', t: S.outT.trim() });
       // Translate: the local-language half also gets its script / English-letters twin (ありがとう + arigatou)
-      if (S.mode === 'translate' && NON_LATIN.test(S.lang)) twin(S.lastWho === 'them' ? tIn : tOut, S.lang);
+      if (S.mode === 'translate' && NON_LATIN.test(S.lang)) twin(S.turnWho === 'them' ? tIn : tOut, S.lang);   // who spoke this turn (set when they let go)
       S.inT = ''; S.outT = '';
       setTimeout(function () { if (S && !S.sources.length) { S.el.classList.remove('speaking'); status(idle()); } }, 300);
     }
