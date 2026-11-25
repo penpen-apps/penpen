@@ -194,6 +194,7 @@ nav .pen{width:70px;height:70px;margin-top:-32px;border-radius:999px;background:
 .ctb a,.ctb button{min-height:44px;padding:0 14px;border-radius:999px;border:2px solid var(--line);background:var(--card);color:var(--ink);font-size:14px;font-weight:600;display:inline-flex;align-items:center;text-decoration:none}
 .ctb a.p{background:var(--accent);border-color:var(--accent);color:var(--accentInk)}
 .missing{font-size:13px;color:var(--warn)}
+.ct .nocc{font-size:13px;color:var(--warn);margin-top:4px}
 /* diary */
 .ta{width:100%;min-height:140px;border-radius:16px;border:1px solid var(--line);background:var(--card);padding:12px;font:inherit;font-size:16px;line-height:1.45;resize:vertical}
 .phbtns{display:flex;gap:8px;margin:10px 0}
@@ -1171,10 +1172,13 @@ th .pp-qt{position:absolute;right:0;top:100%;width:210px;z-index:5;box-shadow:0 
   renderSos('');
   function tel(p) { return 'tel:' + String(p).replace(/[^\d+]/g, ''); }
   function msgUrl(m) { m = String(m || '').trim(); if (!m) return ''; if (/^https?:\/\//i.test(m)) return m; if (/^(m\.me|facebook\.com|fb\.com|www\.facebook\.com)\//i.test(m)) return 'https://' + m; return 'https://m.me/' + m.replace(/^@/, ''); }
-  function contactRow(c) {
+  function contactRow(c, home) {
     var r = el('div', 'ct');
     r.appendChild(el('div', 'n', c.name));
     var d = [c.person, c.phone, c.notes].filter(Boolean).join(' · '); if (d) r.appendChild(el('div', 'd', d));
+    // a number back home saved without its country code won't connect from abroad (penpen dials it exactly as saved)
+    if (home && c.phone && !/^\s*(\+|00)/.test(c.phone) && String(c.phone).replace(/\D/g, '').length >= 7)
+      r.appendChild(el('div', 'nocc', '\u26A0\uFE0F No country code, so this may not connect from abroad. Save it starting with + and the country code (+1 for the US).'));
     var b = el('div', 'ctb'), any = false;
     if (c.phone) { var a = el('a', 'p', 'Call'); a.href = tel(c.phone); b.appendChild(a); var t = el('a', '', 'Text'); t.href = 'sms:' + String(c.phone).replace(/[^\d+]/g, ''); b.appendChild(t); any = true; }
     if (c.msg) { var m = el('a', '', 'Messenger'); m.href = msgUrl(c.msg); m.target = '_blank'; m.rel = 'noopener'; b.appendChild(m); any = true; }
@@ -1207,7 +1211,7 @@ th .pp-qt{position:absolute;right:0;top:100%;width:210px;z-index:5;box-shadow:0 
     var em = $('emer'); em.innerHTML = ''; em.appendChild(el('div', 'kick', 'EMERGENCY CONTACTS AT HOME'));
     var es = s.contacts.filter(function (c) { return c.type === 'Emergency'; });
     if (!es.length) em.appendChild(el('div', 'muted', 'None yet.'));
-    es.forEach(function (c) { em.appendChild(contactRow(c)); });
+    es.forEach(function (c) { em.appendChild(contactRow(c, true)); });
     var tc = $('trip-ct'); tc.innerHTML = ''; tc.appendChild(el('div', 'kick', 'HOTELS, TOURS & TRANSPORT'));
     var ts = s.contacts.filter(function (c) { return c.type !== 'Emergency'; });
     if (!ts.length) tc.appendChild(el('div', 'muted', 'None yet.'));
