@@ -1043,7 +1043,7 @@
     '#pp-play .foods span,#pp-play .shop span{font-size:28px}#pp-play small{color:var(--muted);font-weight:700}#pp-play button[disabled]{opacity:.4}#pp-play .shop .on{border-color:var(--accent);background:var(--accentSoft)}' +
     '#pp-play .row2{display:flex;gap:8px;margin-top:12px}#pp-play .row2 button{flex:1;border:0;background:var(--accent);color:#fff;border-radius:14px;padding:12px 6px;font:800 14.5px ' + F + ';cursor:pointer}' +
     '#pp-play .tip{color:var(--muted);font-size:13px;text-align:center;margin-top:14px}' +
-    '#pp-play canvas{width:100%;height:auto;border-radius:20px;display:block;background:#BFE0F2}' +
+    '#pp-play .game canvas{width:100%;height:auto;border-radius:20px;display:block;background:#BFE0F2}' +
     '#pp-play .ghud{text-align:center;font-weight:900;margin:10px 0}' +
     '#pp-play .pad{display:flex;gap:10px;align-items:stretch}#pp-play .pad .go{flex:1.2}#pp-play .go{border:0;background:var(--accent);color:#fff;border-radius:16px;padding:14px;font:900 16px ' + F + ';cursor:pointer}' +
     '#pp-play .ctl{flex:1;border:0;background:var(--card);color:var(--ink);border-radius:18px;padding:16px 6px;font:900 18px ' + F + ';box-shadow:0 4px 0 var(--line);touch-action:none;cursor:pointer}#pp-play .ctl:active{transform:translateY(3px);box-shadow:0 1px 0 var(--line)}#pp-play .ctl.big{flex:2;font-size:22px}' +
