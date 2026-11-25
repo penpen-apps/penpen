@@ -66,7 +66,8 @@
   /* ---------- reading the trip ---------- */
   function info() {
     var T = load('penpenToday') || {}, P = load('penpenPlan') || {};
-    var h = T.hello || {}, label = String(h.label || ''), m;
+    // a label saved on an earlier day ("46 days to go") is out of date: work it out from the plan's dates instead
+    var h = T.hello || {}, label = !window.ppFromToday || window.ppFromToday('penpenToday') ? String(h.label || '') : '', m;
     var me = T.me || h.name || '', people = (T.people || []).filter(Boolean);
     var days = (P.days || []).map(function (d) { return { day: d.day, label: d.label, short: d.short, stops: d.stops || [] }; });
     var phase = 'before', left = null, dayNo = null;
