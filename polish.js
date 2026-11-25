@@ -298,7 +298,8 @@
   function chatHome() {
     var p = $('#p-chat'); if (!p) return;
     var on = p.classList.contains('on');
-    if (on && !chatWas) document.body.setAttribute('data-pph', 'home');
+    // open on the big-penpen home, unless a message was just sent from another screen (e.g. Money's Convert button): then show the chat
+    if (on && !chatWas) document.body.setAttribute('data-pph', $('#typing', p) ? 'log' : 'home');
     chatWas = on;
     var h = $('#pp-home', p);
     if (!h) {
