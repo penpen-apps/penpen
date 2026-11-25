@@ -197,7 +197,7 @@
     if (!S || !trip || role === 'viewer' || localStorage.getItem('pp_start_hide@' + trip)) return null;
     var creator = role === 'creator', prof = cached('penpenProfiles') || {}, steps = [];
     if (creator) steps.push({ k: 'country', ok: !!((T.place && T.place.set) || window.ppPlace().set), t: 'Set the trip\u2019s country', s: 'So money, times and the map are right' });
-    if (creator) steps.push({ k: 'crew', ok: (T.people || []).length > 1 || prof.tripType === 'solo' || !!localStorage.getItem('pp_start_solo@' + trip), t: 'Add your crew', s: 'Add friends by their Google email' });
+    if (creator) steps.push({ k: 'crew', ok: (T.people || []).length > 1 || prof.tripType === 'solo' || !!localStorage.getItem('pp_start_solo@' + trip), t: 'Add your travel buddies', s: 'Add them by their Google email' });
     steps.push({ k: 'stop', ok: S.stops > 0, t: 'Add your first stop', s: 'A hotel check-in, a tour, dinner\u2026' });
     steps.push({ k: 'contact', ok: S.emergency > 0, t: 'Add an emergency contact', s: 'Someone at home to call if something goes wrong' });
     steps.push({ k: 'money', ok: S.expenses > 0, t: 'Log your first expense', s: 'Tell penpen, e.g. \u201CLunch 450, I paid\u201D' });
