@@ -1573,7 +1573,7 @@ th .pp-qt{position:absolute;right:0;top:100%;width:210px;z-index:5;box-shadow:0 
         if (v > 0) { rows.push([k, v]); tot += v; }
       });
       var old = $('pp-cats'); if (old) old.remove();
-      if (!rows.length || !tot) return;
+      if (!rows.length || !tot) return oddCurrencies(c, rate);
       rows.sort(function (x, y) { return y[1] - x[1]; });
       var C = {'Accommodation': '#237566', 'Activities & Tours': '#F4A62A', 'Transportation': '#2E6F84', 'Food & Drinks': '#E46F5A', 'Shopping & Other': '#8A79C2'};
       var card = el('div', 'card pp-cats'); card.id = 'pp-cats';
@@ -1583,7 +1583,26 @@ th .pp-qt{position:absolute;right:0;top:100%;width:210px;z-index:5;box-shadow:0 
       }).join('');
       var box = $('money'), stats = box.querySelector('.stats');
       if (stats && stats.parentNode) stats.parentNode.insertBefore(card, stats.nextSibling); else box.insertBefore(card, box.firstChild);
+      oddCurrencies(c, rate);   // goes right under the totals, above this card
     }).withFailureHandler(function () {}).penpenMoneyCats();
+  }
+
+  // money in a currency the totals can't count (only pesos, and dollars once there's a rate) used to vanish as $0: say so and offer a fix
+  function oddCurrencies(c, rate) {
+    var odd = {}, old = $('pp-odd'); if (old) old.remove();
+    Object.keys(c).forEach(function (k) { Object.keys(c[k]).forEach(function (cur) { if (cur !== 'PHP' && !(cur === 'USD' && rate) && c[k][cur]) odd[cur] = (odd[cur] || 0) + c[k][cur]; }); });
+    var curs = Object.keys(odd); if (!curs.length) return;
+    var card = el('div', 'card'); card.id = 'pp-odd'; card.setAttribute('role', 'status');
+    card.appendChild(el('div', 'kick', '\u26A0\uFE0F NOT IN THE TOTALS YET'));
+    card.appendChild(el('div', '', curs.map(function (k) { return k + ' ' + Math.round(odd[k]).toLocaleString('en-US'); }).join(' \u00b7 ') + ' ' + (curs.length > 1 ? 'aren\u2019t' : 'isn\u2019t') + ' counted, because penpen only adds up pesos' + (rate ? ' and dollars' : '') + ' for now.'));
+    var f = el('div', 'fixes'); f.style.marginTop = '10px';
+    curs.forEach(function (k) {
+      var b = el('button', 'fix p', 'Convert ' + k + ' to pesos'); b.type = 'button'; b.onclick = function () { askPenpen('Convert my ' + k + ' expenses to PHP so they count in the totals'); }; f.appendChild(b);
+    });
+    var a = el('button', 'fix', 'Fix it in chat'); a.type = 'button'; a.onclick = function () { askPenpen('Change the currency of my ' + curs[0] + ' expense: '); }; f.appendChild(a);
+    card.appendChild(f);
+    var box = $('money'), stats = box.querySelector('.stats');
+    if (stats && stats.parentNode) stats.parentNode.insertBefore(card, stats.nextSibling); else box.insertBefore(card, box.firstChild);
   }
 
   /* ---------- Stage 5: money tidy + help, diary remove, QR invite, selfie ---------- */
