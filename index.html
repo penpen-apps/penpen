@@ -1566,12 +1566,32 @@ th .pp-qt{position:absolute;right:0;top:100%;width:210px;z-index:5;box-shadow:0 
     card.appendChild(el('div', '', curs.map(function (k) { return k + ' ' + Math.round(odd[k]).toLocaleString('en-US'); }).join(' \u00b7 ') + ' ' + (curs.length > 1 ? 'aren\u2019t' : 'isn\u2019t') + ' counted, because penpen only adds up ' + window.ppPlace().word + (rate ? ' and ' + HOME : '') + ' for now.'));
     var f = el('div', 'fixes'); f.style.marginTop = '10px';
     curs.forEach(function (k) {
-      var b = el('button', 'fix p', 'Convert ' + k + ' to ' + LOCAL); b.type = 'button'; b.onclick = function () { askPenpen('Convert my ' + k + ' expenses to ' + LOCAL + ' so they count in the totals'); }; f.appendChild(b);
+      var b = el('button', 'fix p', 'Convert ' + k + ' to ' + LOCAL); b.type = 'button'; b.onclick = function () { convertRate(k, odd[k], b, card, LOCAL); }; f.appendChild(b);
     });
     var a = el('button', 'fix', 'Fix it in chat'); a.type = 'button'; a.onclick = function () { askPenpen('Change the currency of my ' + curs[0] + ' expense: '); }; f.appendChild(a);
     card.appendChild(f);
     var box = $('money'), stats = box.querySelector('.stats');
     if (stats && stats.parentNode) stats.parentNode.insertBefore(card, stats.nextSibling); else box.insertBefore(card, box.firstChild);
+  }
+  // asking penpen to "convert" used to just swap the label (¥1,500 became ₱1,500): get today's rate (Frankfurter, free, no key),
+  // show it with the converted total, and only on "Convert at this rate" send penpen the exact rate (its Yes/No card still shows each change)
+  function convertRate(cur, amt, btn, card, to) {   // to = the trip's currency
+    var old = card.querySelector('.pp-rate'); if (old) old.remove();
+    var box = el('div', 'pp-rate'); box.style.marginTop = '10px'; card.appendChild(box);
+    function cash(v, c, dp) { try { return new Intl.NumberFormat('en-US', { style: 'currency', currency: c, maximumFractionDigits: dp }).format(v); } catch (e) { return c + ' ' + v.toLocaleString('en-US'); } }
+    btn.disabled = true; btn.textContent = 'Getting today’s rate…';
+    var ok = /^[A-Z]{3}$/.test(cur) && /^[A-Z]{3}$/.test(to) ? fetch('https://api.frankfurter.dev/v2/rate/' + cur + '/' + to, { signal: AbortSignal.timeout(8000) }) : Promise.reject(new Error('code'));
+    ok.then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }).then(function (d) {
+      var rate = Number(d && d.rate); if (!(rate > 0)) throw new Error('no rate');
+      box.appendChild(el('div', '', 'Today’s rate: ' + cash(1, cur) + ' = ' + cash(rate, to, 4) + ' (' + d.date + '). So ' + cash(amt, cur) + ' ≈ ' + cash(amt * rate, to) + '.'));
+      var f = el('div', 'fixes'); f.style.marginTop = '8px';
+      var go = el('button', 'fix p', 'Convert at this rate'); go.type = 'button';
+      go.onclick = function () { askPenpen('Convert my ' + cur + ' expenses to ' + to + ' at 1 ' + cur + ' = ' + rate + ' ' + to + ' (rate from ' + d.date + '): multiply each ' + cur + ' amount by ' + rate + ', round to 2 decimals and change its currency to ' + to + '. All together ' + cash(amt, cur) + ' should become ' + cash(amt * rate, to) + '.'); $('sayf').requestSubmit(); };
+      var no = el('button', 'fix', 'Cancel'); no.type = 'button'; no.onclick = function () { box.remove(); };
+      f.appendChild(go); f.appendChild(no); box.appendChild(f);
+    }).catch(function () {
+      box.appendChild(el('div', '', '⚠️ Couldn’t get today’s rate (no signal?). Try again, or tap “Fix it in chat” and tell penpen the rate.'));
+    }).then(function () { btn.disabled = false; btn.textContent = 'Convert ' + cur + ' to ' + to; });
   }
 
   /* ---------- Stage 5: money tidy + help, diary remove, QR invite, selfie ---------- */
