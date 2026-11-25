@@ -507,7 +507,10 @@
     if (n > 1) { if (box) box.remove(); return; }
     if (box) return;
     box = document.createElement('div'); box.id = 'pp-solo';
-    box.innerHTML = '<b>🧳 Travelling solo? Love that.</b><p>It’s just you and penpen for now. If a friend ever wants to tag along, you can share your invite. No pressure!</p><button type="button">📲 Share my invite</button>';
+    // trip type from setup: only call it solo when it is (or when no type was picked)
+    var kind = (cache('penpenProfiles') || {}).tripType, who = { couple: 'your partner', family: 'your family', friends: 'your friends' }[kind];
+    box.innerHTML = who ? '<b>🐧 Waiting for ' + who + '</b><p>It’s just you on this trip so far. Share your invite so they can join and make their penguins.</p><button type="button">📲 Share my invite</button>'
+      : '<b>🧳 Travelling solo? Love that.</b><p>It’s just you and penpen for now. If a friend ever wants to tag along, you can share your invite. No pressure!</p><button type="button">📲 Share my invite</button>';
     sc.insertBefore(box, sc.firstChild);
     $('button', box).onclick = function () { var x = $$('#crew .kick').filter(function (k) { return /^invite to this trip$/i.test(k.textContent.trim()); })[0]; if (x) (x.parentElement || x).scrollIntoView({ behavior: 'smooth', block: 'start' }); };
   }
