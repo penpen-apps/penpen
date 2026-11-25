@@ -42,6 +42,7 @@
       })
       .then(function (j) { if (!j.ok) throw new Error(j.error); return j.data; });
   }
+  var inflight = {};   // reads waiting on the server right now, by the same key as the saved copy
   function ready() { return new Promise(function (res) { if (valid() && ROLE) res(); else waiting.push(res); }); }
 
   function call(fn, args) {
@@ -54,13 +55,23 @@
       if (isRead && c !== undefined) return Promise.resolve(c);
       return Promise.reject(new Error("You're offline — this needs a connection."));
     }
-    return ready().then(function () { return post('call', { fn: fn, args: args }); })
-      .then(function (r) {
-        if (r && r.place && window.ppPlace) window.ppPlace.save(r.place);   // the trip's country, currency and time zone
-        if (fn === 'penpenProfiles' && r) return fixInvite(r).then(function (x) { set(key, x); stamp(key); return x; });
-        if (isRead) { set(key, r); stamp(key); }
-        return r;
-      })
+    // speed: if the same read is already on its way (two screens asking at once on start-up), share that one answer
+    var p = isRead && inflight[key], shared = !!p;
+    if (!p) {
+      p = ready().then(function () {
+        // the trip creator's invite link is fetched alongside the profiles, not after them
+        var inv = fn === 'penpenProfiles' && ROLE === 'creator' ? post('invite', {}).catch(function () { return null; }) : null;
+        return post('call', { fn: fn, args: args }).then(function (r) {
+          if (r && r.place && window.ppPlace) window.ppPlace.save(r.place);   // the trip's country, currency and time zone
+          if (fn === 'penpenProfiles' && r) return fixInvite(r, inv).then(function (x) { set(key, x); stamp(key); return x; });
+          if (isRead) { set(key, r); stamp(key); }
+          return r;
+        });
+      });
+      if (isRead) { inflight[key] = p; var done = function () { if (inflight[key] === p) delete inflight[key]; }; p.then(done, done); }
+    }
+    if (shared) p = p.then(function (r) { return r === undefined ? r : JSON.parse(JSON.stringify(r)); });   // own copy, so one screen can't change another's
+    return p
       .catch(function (e) {
         if (e.message === 'signin') { TOKEN = null; SESS = ''; set('pp_tok', null); localStorage.removeItem('pp_sess'); showSignin('Please sign in again.'); return call(fn, args); }
         var c = get(key, undefined);
@@ -72,9 +83,9 @@
       });
   }
   // invite QR should open this app with a join code, not the server address
-  function fixInvite(r) {
-    if (ROLE !== 'creator') { r.url = BASE; return Promise.resolve(r); }
-    return post('invite', {}).then(function (i) { r.url = BASE + '?join=' + i.code; return r; }, function () { r.url = BASE; return r; });
+  function fixInvite(r, inv) {
+    if (ROLE !== 'creator' || !inv) { r.url = BASE; return Promise.resolve(r); }
+    return inv.then(function (i) { r.url = i && i.code ? BASE + '?join=' + i.code : BASE; return r; });
   }
 
   function runner(o) {
