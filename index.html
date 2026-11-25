@@ -1686,7 +1686,7 @@ th .pp-qt{position:absolute;right:0;top:100%;width:210px;z-index:5;box-shadow:0 
       + '<div class="fred" style="font-size:19px;line-height:1.2">' + esc(t.name || 'Our trip') + '</div><div class="pp-sub">' + esc([t.dates, names].filter(function (x) { return x; }).join(' \u00b7 ')) + '</div>'
       + '<label class="sr" for="pp-link">penpen link</label><input class="in" id="pp-link" readonly value="' + esc(PROFS.url) + '" style="margin-top:8px;font-size:13px">'
       + '<button type="button" class="btn" data-copy="1" style="margin-top:8px;width:100%">Copy link</button></div></div>'
-      + '<p class="pp-note">Scan with a phone camera to open penpen. Whoever opens this link and signs in with Google joins as crew, so only share it with your crew.</p></div>';
+      + '<p class="pp-note">Scan with a phone camera to open penpen. Whoever opens this link and signs in with Google joins as a travel buddy, so only share it with your travel buddies.</p></div>';
   }
   /* ---------- Add a friend (trip creator only): by Google email, no sheet editing ---------- */
   var ADDED = null;   // the friend just added, so the "send them the link" card survives a redraw
@@ -1694,19 +1694,19 @@ th .pp-qt{position:absolute;right:0;top:100%;width:210px;z-index:5;box-shadow:0 
     if (!window.ppTrips || window.ppTrips.role() !== 'creator') return '';
     if (ADDED) {
       var who = esc(ADDED.added.name);
-      return '<div class="card pp-add pp-added" id="pp-add"><div class="kick">ADD A FRIEND</div><div class="fred" role="status">' + who + ' is on the trip</div>'
+      return '<div class="card pp-add pp-added" id="pp-add"><div class="kick">ADD A TRAVEL BUDDY</div><div class="fred" role="status">' + who + ' is on the trip</div>'
         + '<p class="pp-sub">Send them the app link. They sign in with <b>' + esc(ADDED.added.email) + '</b> and they\u2019re in.</p>'
         + (ADDED.full ? '<p class="pp-note">Who\u2019s coming is full, so ' + who + ' can use penpen but won\u2019t be in the cost split. Free a spot on the Trip Details tab if they should be.</p>' : '')
         + (ADDED.added.role === 'viewer' ? '<p class="pp-note">' + who + ' can look but not change anything, and isn\u2019t in the cost split.</p>' : '')
         + '<button type="button" class="btn p" data-addshare="1">Send them the app link</button><button type="button" class="btn" data-addmore="1">Add someone else</button></div>';
     }
-    return '<form class="card pp-add" id="pp-add" novalidate><div class="kick">ADD A FRIEND</div>'
+    return '<form class="card pp-add" id="pp-add" novalidate><div class="kick">ADD A TRAVEL BUDDY</div>'
       + '<p class="pp-sub">Add them with their Google email. They sign in with that account and they\u2019re in, no invite code needed.</p>'
       + '<label class="f" for="pp-add-name">NAME</label><input class="in" id="pp-add-name" name="name" required maxlength="40" autocomplete="off" placeholder="e.g. Kate">'
       + '<label class="f" for="pp-add-email">GOOGLE EMAIL</label><input class="in" id="pp-add-email" name="email" type="email" required maxlength="254" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="kate@gmail.com" aria-describedby="pp-add-eh">'
       + '<small class="h" id="pp-add-eh">The exact address they use to sign in to Google.</small>'
       + '<fieldset class="pp-roles"><legend class="f">WHAT CAN THEY DO?</legend>'
-      + '<label class="pp-rolet"><input type="radio" name="role" value="crew" checked><span><b>Crew</b><small>Adds costs, plans and diary entries, and shares the bills.</small></span></label>'
+      + '<label class="pp-rolet"><input type="radio" name="role" value="crew" checked><span><b>Travel buddy</b><small>Adds costs, plans and diary entries, and shares the bills.</small></span></label>'
       + '<label class="pp-rolet"><input type="radio" name="role" value="viewer"><span><b>Viewer</b><small>Sees the trip but can\u2019t change it. Not in the cost split. Good for family at home.</small></span></label></fieldset>'
       + '<button type="submit" class="btn p">Add to trip</button><div class="pp-addmsg" id="pp-addmsg" role="alert"></div></form>';
   }
