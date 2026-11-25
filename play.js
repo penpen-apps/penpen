@@ -234,6 +234,7 @@
     el.style.transitionDuration = secs + 's'; if (x !== x0) el.classList.toggle('l', x < x0); el.classList.add('walking');
     el.style.left = x + '%'; el.style.bottom = y + '%'; el.style.zIndex = String(40 - Math.round(y)); el.style.setProperty('--d', (1 - y / (deep || 160)).toFixed(3));
     clearTimeout(el.ppStop); el.ppStop = setTimeout(function () { el.classList.remove('walking'); }, secs * 1000);
+    if (el.id === 'pp-walk' && Math.random() < 0.2 && now() - PEEP > 10000) { PEEP = now(); setTimeout(function () { sfx('peep'); }, secs * 400); }   // now and then a soft chirp as he sets off
     return secs;
   }
   // walk to a random spot, then rest a bit (unless he's busy playing)
@@ -359,7 +360,7 @@
   }
 
   /* ---------- sounds and music, made in code (no files) ---------- */
-  var AC = null, MU = null;
+  var AC = null, MU = null, PEEP = 0;
   function soundOn() { try { return localStorage.getItem('pp_sound') !== 'off'; } catch (e) { return true; } }
   function ac() { try { AC = AC || new (window.AudioContext || window.webkitAudioContext)(); if (AC.state === 'suspended') AC.resume(); return AC; } catch (e) { return null; } }
   function tone(c, f, f2, t, len, vol, type, out, att) {
@@ -371,19 +372,51 @@
     if (!soundOn()) return; var c = ac(); if (!c) return; var t = c.currentTime;
     if (kind === 'chomp') { [0, 0.17, 0.34].forEach(function (d) { tone(c, 230, 110, t + d, 0.09, 0.22, 'triangle'); }); tone(c, 880, 1320, t + 0.58, 0.16, 0.1); tone(c, 1175, 1760, t + 0.76, 0.2, 0.09); }
     else if (kind === 'la') [784, 988, 1175].forEach(function (f, i) { tone(c, f, 0, t + i * 0.22, 0.25, 0.09); });
+    else if (kind === 'giggle') giggle(c, t);
+    else if (kind === 'peep') { tone(c, 900, 1500, t, 0.07, 0.09); tone(c, 1400, 1000, t + 0.09, 0.1, 0.07); }   // penpen's own soft chirp
     else tone(c, 660, 990, t, 0.15, 0.08);
   }
+  // a giggle: five quick "hee"s that bounce down in pitch, each with a little sparkle on top
+  function giggle(c, t) {
+    var f = 620 + Math.random() * 140;
+    for (var i = 0; i < 5; i++) { var s = t + i * 0.11 + Math.random() * 0.02, p = f * (1 - i * 0.06); tone(c, p * 1.3, p, s, 0.08, 0.16, 'triangle'); tone(c, p * 2.6, p * 2, s, 0.06, 0.04); }
+  }
+  // a garden bird somewhere off to one side: a few quick whistles, a trill or a rising call
+  function bird(c, t, out) {
+    var o = out, f = 2200 + Math.random() * 1400, k = Math.floor(Math.random() * 3), i, n;
+    if (c.createStereoPanner) { o = c.createStereoPanner(); o.pan.value = Math.random() * 1.6 - 0.8; o.connect(out); }
+    if (k === 0) for (i = 0, n = 2 + Math.floor(Math.random() * 3); i < n; i++) tone(c, f, f * 1.35, t + i * 0.14, 0.07, 0.45, 'sine', o);
+    else if (k === 1) for (i = 0; i < 7; i++) tone(c, f * 1.2, f, t + i * 0.045, 0.035, 0.32, 'sine', o);
+    else { tone(c, f * 0.8, f * 1.3, t, 0.18, 0.45, 'sine', o); tone(c, f * 1.3, f * 0.9, t + 0.22, 0.12, 0.34, 'sine', o); }
+  }
+  // gentle running water: soft filtered noise that swells slowly, with the odd little bubble
+  function water(c, out) {
+    var b = c.createBuffer(1, c.sampleRate * 2, c.sampleRate), d = b.getChannelData(0), i;
+    for (i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    var src = c.createBufferSource(), lo = c.createBiquadFilter(), hi = c.createBiquadFilter(), g = c.createGain(), lfo = c.createOscillator(), dep = c.createGain();
+    src.buffer = b; src.loop = true; lo.type = 'lowpass'; lo.frequency.value = 900; hi.type = 'highpass'; hi.frequency.value = 250;
+    g.gain.value = 0.3; lfo.frequency.value = 0.15; dep.gain.value = 0.15; lfo.connect(dep); dep.connect(g.gain);
+    src.connect(lo); lo.connect(hi); hi.connect(g); g.connect(out); src.start(); lfo.start();
+    return [src, lfo];
+  }
   var NOTES = [523.25, 587.33, 659.25, 783.99, 880, 1046.5], PADS = [[130.81, 196, 329.63], [110, 164.81, 261.63], [174.61, 220, 349.23], [146.83, 220, 293.66]];
+  // the music: soft pads with a few floaty notes and a slow echo. In the garden, add running water, birds and little bubbles
   function music(on) {
-    if (MU) { if (MU.el) MU.el.pause(); clearInterval(MU.iv); if (MU.g) MU.g.disconnect(); MU = null; }
+    if (MU) { if (MU.el) MU.el.pause(); clearInterval(MU.iv); (MU.src || []).forEach(function (x) { x.stop(); }); if (MU.g) MU.g.disconnect(); if (MU.nat) MU.nat.disconnect(); MU = null; }
     if (!on || !soundOn() || !w || (tab !== 'pet' && tab !== 'igloo')) return;
     if (MUSIC_FILE) { var el = new Audio(MUSIC_FILE), pr; el.loop = true; el.volume = 0.35; pr = el.play(); if (pr && pr.catch) pr.catch(function () {}); MU = { el: el }; return; }
     var c = ac(); if (!c) return;
-    var g = c.createGain(), n = 0; g.gain.value = 0.05; g.connect(c.destination);
-    MU = { g: g, iv: setInterval(function () {
+    try { garden(c); } catch (e) { music(false); }   // a browser missing a sound part plays no music rather than breaking the garden
+  }
+  function garden(c) {
+    var g = c.createGain(), nat = c.createGain(), mel = c.createGain(), echo = c.createDelay(1), fb = c.createGain(), n = 0, out = tab === 'pet';
+    g.gain.value = 0.05; g.connect(c.destination); nat.gain.value = 0.25; nat.connect(c.destination); mel.connect(g); mel.connect(echo); echo.delayTime.value = 0.45; fb.gain.value = 0.35; echo.connect(fb); fb.connect(echo); echo.connect(g);
+    MU = { g: g, nat: nat, src: out ? water(c, nat) : [], iv: setInterval(function () {
       var t = c.currentTime + 0.05;
       if (n % 8 === 0) PADS[(n / 8) % 4].forEach(function (f) { tone(c, f, 0, t, 5, 0.45, 'sine', g, 1.4); });
-      if (Math.random() < 0.65) tone(c, pick(NOTES), 0, t, 1.5, 0.55, 'sine', g);
+      if (Math.random() < 0.65) tone(c, pick(NOTES), 0, t, 1.5, 0.55, 'sine', mel);
+      if (out && Math.random() < 0.12) bird(c, t + Math.random() * 0.4, nat);
+      if (out && Math.random() < 0.3) tone(c, 300 + Math.random() * 300, 700 + Math.random() * 500, t + Math.random() * 0.5, 0.06, 0.12, 'sine', nat);   // a bubble in the brook
       n++;
     }, 600) };
   }
@@ -771,7 +804,7 @@
       if (p.asleep) { say('Zzz… *giggles in his sleep* 💤'); return; }
       hearts(e.clientX, e.clientY - 20, 1, pick(['😂', '🤣', '💕']));
       pen.classList.remove('tk'); void pen.offsetWidth; pen.classList.add('tk'); clearTimeout(pen.ppTk); pen.ppTk = setTimeout(function () { pen.classList.remove('tk'); }, 650);
-      if (now() - last > 700) { last = now(); cheer(document.getElementById('pp-walk')); p.joy = clamp(p.joy + 4); p.xp += 1; save(p); say(pick(['Hahaha stop it!! 🤣', 'Not the flippers! 😂', 'Hehehe… again! 🪶', 'I’m… so… ticklish 🤭'])); sfx('hi'); refreshBats(p); }
+      if (now() - last > 700) { last = now(); cheer(document.getElementById('pp-walk')); p.joy = clamp(p.joy + 4); p.xp += 1; save(p); say(pick(['Hahaha stop it!! 🤣', 'Not the flippers! 😂', 'Hehehe… again! 🪶', 'I’m… so… ticklish 🤭'])); sfx('giggle'); refreshBats(p); }
     }
     // drag food onto penpen
     [].slice.call(w.querySelectorAll('[data-feed]')).forEach(function (b) {
