@@ -125,7 +125,7 @@
 
 
   /* ---------- sign in ---------- */
-  var css = '#pp-gate{position:fixed;inset:0;z-index:99999;background:#F6EEDF;display:none;flex-direction:column;align-items:center;justify-content:safe center;overflow-y:auto;text-align:center;padding:24px;font:16px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#2B2A28}' +
+  var css = '#pp-gate{position:fixed;inset:0;z-index:99999;background:#F6EEDF;display:none;flex-direction:column;align-items:center;justify-content:center;justify-content:safe center;overflow-y:auto;text-align:center;padding:24px;font:16px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#2B2A28}' +
     '#pp-gate h1{font-size:28px;margin:10px 0 4px}#pp-gate p{color:#5C574C;max-width:320px;margin:6px auto}#pp-gate .b{margin:20px 0}' +
     '#pp-gate ul{list-style:none;margin:14px auto 0;padding:0;max-width:300px;text-align:left}#pp-gate li{display:flex;gap:12px;align-items:center;padding:7px 0;color:#2B2A28;font-weight:600;font-size:15px}#pp-gate li span{font-size:22px;width:28px;text-align:center;flex:none}' +
     '#pp-ask{max-width:320px;margin:6px auto 0;padding-top:14px;border-top:1.5px dashed #E3D6BE}#pp-ask p{margin:0}#pp-ask b{color:#2B2A28}#pp-ask-ok{font-size:14px;margin-top:8px!important;color:#1D5E52!important}#pp-ask-ok:empty{display:none}' +
@@ -162,7 +162,7 @@
       if (navigator.clipboard) navigator.clipboard.writeText(text + ' ' + BASE).then(done, function () { ok.textContent = text + ' ' + BASE; });
       else ok.textContent = text + ' ' + BASE;
     };
-    if (navigator.share) navigator.share({ title: 'penpen', text: text, url: BASE }).catch(function (e) { if (!e || e.name !== 'AbortError') copy(); });
+    if (navigator.share) navigator.share({ title: 'penpen', text: text + ' ' + BASE }).catch(function (e) { if (!e || e.name !== 'AbortError') copy(); });
     else copy();
   }
   function showSignin(msg) {
@@ -223,7 +223,7 @@
       var q = waiting; waiting = []; q.forEach(function (f) { f(); });
       if (window.ppRefreshTheme) setTimeout(window.ppRefreshTheme, 1500);
     }).catch(function (e) {
-      if (e.message === 'badinvite') return showSignin('That invite link has expired — ask for a new one.');
+      if (e.message === 'badinvite') { joinCode = null; history.replaceState(null, '', location.pathname); return showSignin('That invite link has expired — ask for a new one.'); }
       if (e.message === 'signin') { SESS = ''; localStorage.removeItem('pp_sess'); return showSignin('Please sign in again.'); }
       if (!navigator.onLine) return;
       showSignin("Couldn't reach penpen — check your connection and try again.");
