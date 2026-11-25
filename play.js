@@ -247,7 +247,7 @@
   }
   // a friend wades into the race pond, bobs and paddles about for a while, then climbs out and wanders off
   function swim(el, key) {
-    function spot() { return artAt(el, POND.x + 30 + (Math.random() * 2 - 1) * 46, POND.y + 1 + Math.random() * 5); }   // the open water, clear of the dock
+    function spot() { return artAt(el, POND.x + 40 + (Math.random() * 2 - 1) * 40, POND.y + 1 + Math.random() * 5); }   // the open water, clear of the dock
     var a = spot(); if (!a) return false;
     el.ppSwim = true;
     function next(ms, f) { clearTimeout(GD.t[key]); GD.t[key] = setTimeout(function () { if (el.isConnected) f(); }, ms); }
