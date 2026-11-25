@@ -139,7 +139,7 @@
     if (tab === 'pet') {
       h += '<div class="petrow"><div class="bats">' + battery(p.food, '🍽️', 'Full') + battery(p.joy, '💛', 'Happy') + '</div><div class="stage' + (p.asleep ? ' night' : '') + '"><div class="pen' + (p.ghost ? ' ghost' : sick(p) ? ' sick' : p.asleep ? ' zz' : '') + '" id="pp-petpen">' +
         (p.ghost ? ghostSvg() : '<svg viewBox="-7 -14 134 134" width="160" height="160" aria-hidden="true">' + inner() + (p.asleep ? '<path class="shut" d="M45 49 Q51 54 57 49 M63 49 Q69 54 75 49" fill="none" stroke="#1F2A36" stroke-width="3" stroke-linecap="round"/>' : '') + '</svg>' + (wear.e ? '<span class="wear">' + wear.e + '</span>' : '') + (sick(p) ? '<span class="fx">🤒</span>' : p.asleep ? '<span class="fx">💤</span><span class="bed">🛏️</span>' : '')) +
-        '</div><div class="say" id="pp-say">' + (msg || mood(p)) + '</div></div>' +
+        '</div><div class="say" id="pp-say">' + (msg || mood(p)) + '</div>' +
         (p.ghost ? '' : p.asleep ? '<button data-act="wake" class="zbtn">☀️ Wake</button>' : '<button data-act="sleep" class="zbtn">💤 Sleep</button>') +
         '</div><div class="bats">' + battery(p.energy, '⚡', 'Energy') + battery(p.hp, '❤️', 'Health') + '</div></div>' +
         '<div class="lv">Level ' + level(p) + '</div>';
