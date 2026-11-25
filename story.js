@@ -19,6 +19,18 @@
   }
 
   var css =
+    '#pp-story-start{margin:10px 0 0;background:var(--card);border-radius:22px;padding:14px 14px 8px;box-shadow:0 1px 0 var(--line),0 8px 20px rgba(19,50,74,.07)}#pp-story-start:empty{display:none}' +
+    '#pp-story-start h3{margin:0 4px;font:900 18px/1.2 Nunito,-apple-system,sans-serif;color:var(--ink)}' +
+    '#pp-story-start .sub{margin:3px 4px 10px;font:700 13.5px Nunito,-apple-system,sans-serif;color:var(--muted)}' +
+    '#pp-story-start .bar{display:flex;gap:4px;margin:0 4px 6px}#pp-story-start .bar i{flex:1;height:6px;border-radius:3px;background:var(--chip)}#pp-story-start .bar i.on{background:var(--accent)}' +
+    '#pp-story-start .row{display:flex;align-items:center;gap:8px;border-top:1px solid var(--line)}#pp-story-start .row:first-of-type{border-top:0}' +
+    '#pp-story-start .go{flex:1;min-width:0;display:flex;align-items:center;gap:12px;min-height:56px;padding:6px 4px;border:0;background:none;color:var(--ink);text-align:left;font:inherit;cursor:pointer;border-radius:12px}' +
+    '#pp-story-start .dot{flex:none;width:26px;height:26px;border-radius:50%;border:2px solid var(--line);display:flex;align-items:center;justify-content:center;font:900 14px Nunito,sans-serif;color:#fff}' +
+    '#pp-story-start .done .dot{background:var(--accent);border-color:var(--accent)}' +
+    '#pp-story-start .tx{flex:1;min-width:0}#pp-story-start b{display:block;font:800 15.5px/1.25 Nunito,-apple-system,sans-serif}#pp-story-start small{display:block;font-size:13px;color:var(--muted);line-height:1.3}' +
+    '#pp-story-start .done b{color:var(--muted)}#pp-story-start .chev{color:var(--muted);font-size:20px}' +
+    '#pp-story-start .solo{flex:none;min-height:36px;border:1.5px solid var(--line);background:var(--card);color:var(--ink);border-radius:99px;padding:0 12px;font:800 13px Nunito,-apple-system,sans-serif;cursor:pointer}' +
+    '#pp-story-start .hide{display:block;margin:4px auto 2px;min-height:40px;border:0;background:none;color:var(--accentText);font:800 13.5px Nunito,-apple-system,sans-serif;cursor:pointer}' +
     '#pp-story-hero{position:relative;margin:4px 0 0;border-radius:24px;padding:18px 18px 16px;background:linear-gradient(135deg,#237566,#2F8F7C 55%,#F4A62A 140%);color:#fff;overflow:hidden}' +
     '#pp-story-hero .n{font:900 64px/0.9 Nunito,-apple-system,sans-serif;letter-spacing:-2px}' +
     '#pp-story-hero .l{font:800 19px/1.2 Nunito,-apple-system,sans-serif;margin-top:4px}' +
@@ -146,6 +158,8 @@
       '<button type="button" class="trip">🧳 ' + esc(I.trip) + ' ▾</button>';
     put(t, 'pp-story-hero', 'div', hero, t.firstChild);
     document.querySelector('#pp-story-hero .trip').onclick = openTrips;
+    var hero = document.getElementById('pp-story-hero'), sl = put(t, 'pp-story-start', 'div', startList(), hero.nextSibling);
+    sl.onclick = startClick;
     // who's coming
     // nobody else yet: use the trip type picked in setup, so a Friends trip isn't called solo
     var kind = (cached('penpenProfiles') || {}).tripType, WAIT = { couple: '💑 Couple trip · invite your partner', family: '👨‍👩‍👧 Family trip · invite your family', friends: '🐧 Friends trip · invite your friends' };
@@ -175,6 +189,43 @@
     var st = put(t, 'pp-story', 'div', html, null);
     st.onclick = function (e) { if (e.target.closest('button')) nav('Plan'); };
     bell();
+  }
+  /* ---------- "Get your trip ready": a short checklist for new trips (the server decides which trips count as new,
+     and never the home trip). Steps tick themselves off from real data; viewers don't see it. ---------- */
+  function startSteps() {
+    var T = cached('penpenToday') || {}, S = T.setup, trip = window.ppTrips && window.ppTrips.current(), role = window.ppTrips ? window.ppTrips.role() : '';
+    if (!S || !trip || role === 'viewer' || localStorage.getItem('pp_start_hide@' + trip)) return null;
+    var creator = role === 'creator', prof = cached('penpenProfiles') || {}, steps = [];
+    if (creator) steps.push({ k: 'country', ok: !!((T.place && T.place.set) || window.ppPlace().set), t: 'Set the trip\u2019s country', s: 'So money, times and the map are right' });
+    if (creator) steps.push({ k: 'crew', ok: (T.people || []).length > 1 || prof.tripType === 'solo' || !!localStorage.getItem('pp_start_solo@' + trip), t: 'Add your crew', s: 'Add friends by their Google email' });
+    steps.push({ k: 'stop', ok: S.stops > 0, t: 'Add your first stop', s: 'A hotel check-in, a tour, dinner\u2026' });
+    steps.push({ k: 'contact', ok: S.emergency > 0, t: 'Add an emergency contact', s: 'Someone at home to call if something goes wrong' });
+    steps.push({ k: 'money', ok: S.expenses > 0, t: 'Log your first expense', s: 'Tell penpen, e.g. \u201CLunch 450, I paid\u201D' });
+    return steps;
+  }
+  function startList() {
+    var steps = startSteps(); if (!steps) return '';
+    var done = steps.filter(function (x) { return x.ok; }).length; if (done === steps.length) return '';
+    return '<h3>Get your trip ready</h3><p class="sub">Before chapter one \u00b7 ' + done + ' of ' + steps.length + ' done</p>'
+      + '<div class="bar" aria-hidden="true">' + steps.map(function (x) { return '<i' + (x.ok ? ' class="on"' : '') + '></i>'; }).join('') + '</div>'
+      + steps.map(function (x) {
+        var inner = '<span class="dot" aria-hidden="true">' + (x.ok ? '\u2713' : '') + '</span><span class="tx"><b>' + esc(x.t) + '</b><small>' + (x.ok ? 'Done' : esc(x.s)) + '</small></span>';
+        return '<div class="row' + (x.ok ? ' done' : '') + '">' + (x.ok ? '<div class="go" role="group" aria-label="' + esc(x.t) + ', done">' + inner + '</div>'
+          : '<button type="button" class="go" data-start="' + x.k + '">' + inner + '<span class="chev" aria-hidden="true">\u203A</span></button>'
+            + (x.k === 'crew' ? '<button type="button" class="solo" data-start="solo">Just me</button>' : '')) + '</div>';
+      }).join('') + '<button type="button" class="hide" data-start="hide">Hide this list</button>';
+  }
+  function startClick(e) {
+    var b = e.target.closest('[data-start]'); if (!b) return;
+    var k = b.dataset.start, trip = window.ppTrips.current();
+    if (k === 'country') return placeSetting(sheet('Trip country', '', b, 'left'));
+    if (k === 'crew') { nav('Crew'); return setTimeout(function () { var n = document.getElementById('pp-add-name'); if (n) { n.scrollIntoView({ block: 'center', behavior: 'smooth' }); n.focus({ preventScroll: true }); } }, 500); }
+    if (k === 'solo') { localStorage.setItem('pp_start_solo@' + trip, '1'); window.ppCall('penpenSaveProfile', [{ tripType: 'solo' }]).catch(function () {}); return paint(); }
+    if (k === 'hide') { localStorage.setItem('pp_start_hide@' + trip, '1'); return paint(); }
+    if (!window.ppStart) return;
+    if (k === 'stop') return window.ppStart.addStop();
+    if (k === 'contact') return window.ppStart.addContact('Emergency');
+    if (k === 'money') return window.ppStart.say('');
   }
   function ch(cls, ic, k, title, sub) {
     return '<button type="button" class="ch ' + cls + '"><span class="rail"><b>' + ic + '</b><i></i></span><span class="bd"><span class="k">' + esc(k) + '</span><div class="t">' + esc(title) + '</div>' + (sub ? '<div class="s">' + esc(sub) + '</div>' : '') + '</span></button>';
