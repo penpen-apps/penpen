@@ -392,11 +392,11 @@
     var c = $('.card.pp-tour'); if (!c || c.getAttribute('data-pp')) return;
     c.setAttribute('data-pp', '1');
     var h = c.previousElementSibling; if (h && /quick tour/i.test(h.textContent)) h.textContent = 'You’re all set! 🎉';
-    c.innerHTML = '<button type="button" class="stbtn pri" data-st="invite">📲 Invite your travel buddies<small>Send a link or show a QR code</small></button><button type="button" class="stbtn" data-st="tour">▶ Quick tour<small>penpen shows you around in 30 seconds</small></button><button type="button" class="stbtn" data-st="solo">🧳 I’m travelling solo<small>Skip inviting for now</small></button>';
+    // two optional extras; "Start the trip" below is the one main button (travelling solo = just tap Start)
+    c.innerHTML = '<button type="button" class="stbtn" data-st="invite">📲 Invite your crew<small>Send a link or show a QR code</small></button><button type="button" class="stbtn" data-st="tour">▶ Quick tour<small>penpen shows you around in 30 seconds</small></button>';
     c.onclick = function (e) {
       var b = e.target.closest('[data-st]'); if (!b) return;
       if (b.dataset.st === 'tour') return window.ppTour();
-      if (b.dataset.st === 'solo') { var t = document.querySelector('nav button[data-p="p-today"]'); if (t) t.click(); return; }
       if (window.ppGoTab) window.ppGoTab('Crew');
       setTimeout(function () { var x = [].slice.call(document.querySelectorAll('#p-safety button')).filter(function (y) { return /invite/i.test(y.textContent) && y.offsetParent; })[0]; if (x) x.click(); }, 500);
     };
@@ -503,7 +503,6 @@
   }
   function solo() {
     var sc = $('#crew'); if (!sc) return;
-    $$('#crew .kick').forEach(function (k) { if (/^your crew$/i.test(k.textContent.trim())) k.textContent = 'YOUR TRAVEL BUDDIES'; });
     var T = cache('penpenToday') || {}, n = (T.people || []).length, box = $('#pp-solo');
     if (n > 1) { if (box) box.remove(); return; }
     if (box) return;

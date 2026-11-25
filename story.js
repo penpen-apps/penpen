@@ -147,7 +147,7 @@
     // who's coming
     // nobody else yet: use the trip type picked in setup, so a Friends trip isn't called solo
     var kind = (cached('penpenProfiles') || {}).tripType, WAIT = { couple: '💑 Couple trip · invite your partner', family: '👨‍👩‍👧 Family trip · invite your family', friends: '🐧 Friends trip · invite your friends' };
-    var o = others(I), crew = !o.length ? (WAIT[kind] || '🧳 Solo trip · just you & penpen') : o.length === 1 ? '👫 You & ' + esc(o[0]) + ' · travel buddies' : '🐧 Your crew · ' + (o.length + 1) + ' travel buddies';
+    var o = others(I), crew = !o.length ? (WAIT[kind] || '🧳 Solo trip · just you & penpen') : o.length === 1 ? '👫 You & ' + esc(o[0]) + ' · your crew' : '🐧 Your crew of ' + (o.length + 1);
     put(t, 'pp-story-crew', 'div', crew, sc);
     // penpen's line now pops up over his head when you tap him (me.js)
     var old = document.getElementById('pp-story-say'); if (old) old.remove();
@@ -285,7 +285,7 @@
     bd.innerHTML = '<label>Trip name</label><input id="pp-nt-name" placeholder="e.g. Bohol with Mom" maxlength="60">' +
       '<label>Where to?</label><input id="pp-nt-where" placeholder="e.g. Bohol" maxlength="80">' +
       '<div class="two"><div><label>From</label><input id="pp-nt-start" type="date"></div><div><label>To</label><input id="pp-nt-end" type="date"></div></div>' +
-      '<button type="button" class="go" id="pp-nt-go">Start this trip 🐧</button><div class="note">You\'ll be the trip creator — invite your travel buddies right after.</div>';
+      '<button type="button" class="go" id="pp-nt-go">Start this trip 🐧</button><div class="note">You\'ll be the trip creator — invite your crew right after.</div>';
     bd.onclick = null;
     var go = document.getElementById('pp-nt-go');
     go.onclick = function () {

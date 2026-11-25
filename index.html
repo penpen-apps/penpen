@@ -1502,7 +1502,7 @@ th .pp-qt{position:absolute;right:0;top:100%;width:210px;z-index:5;box-shadow:0 
       [guideMine() ? 'Your penguin (middle button)' : 'penpen (middle button)', 'Talk or type: add an expense, change the plan, ask anything.'],
       ['Money', 'Who paid what, and what still needs paying.'], ['Crew', 'Everyone\u2019s profiles and numbers, plus a one-tap SOS call.'],
       ['\uD83D\uDCD4 Diary (top)', 'Write about the day and add photos.'], ['\uD83D\uDD0A Speaker (top)', 'Turns the spoken replies on or off.']];
-    return '<div class="fred pp-h1">Quick tour</div><div class="card pp-tour">' + rows.map(function (x) { return '<div class="pp-trow"><b>' + x[0] + '</b><span>' + x[1] + '</span></div>'; }).join('') + '</div><p class="pp-sub" style="margin-bottom:6px">Tip: tap your penguin on Today any time to change how you look. Themes and dark mode are in Crew \u2192 your profile.</p>';
+    return '<div class="fred pp-h1">Quick tour</div><div class="card pp-tour">' + rows.map(function (x) { return '<div class="pp-trow"><b>' + x[0] + '</b><span>' + x[1] + '</span></div>'; }).join('') + '</div><p class="pp-sub" style="margin-bottom:6px">Tip: tap your penguin on Today any time to change how you look. Scenes and dark mode are in More \u2192 Settings.</p>';
   }
   function sceneKind() { var s = PREFS.scene || 'auto'; if (s !== 'auto') return s; return CUR_MOOD === 'cold' ? 'mountain' : 'beach'; }
   function sceneBg() {
