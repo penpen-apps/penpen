@@ -27,17 +27,17 @@
   function pick(a) { return a[Math.floor(Math.random() * a.length)]; }
   function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
 
-  /* penpen sprite in the chosen guide's look */
-  var sprite = null, spriteG = '';
+  /* the garden penpen you designed (play.js), drawn as a sprite for the games */
+  function gamePen() { return window.ppGamePen ? window.ppGamePen() : ''; }
+  var sprite = null;   // made once per game (stop() clears it), so a new look shows in the next game
   function penImg() {
-    var g = 'bubbly';
-    if (sprite && spriteG === g) return sprite;
-    var inner = window.ppLook ? window.ppLook.svg(g) : '';
+    if (sprite) return sprite;
+    var inner = gamePen();
     if (!inner && window.ppFrontPen) inner = window.ppFrontPen();
     if (!inner) { var n = document.querySelector('#navpen svg'); inner = n ? (n.getAttribute('data-orig') || n.innerHTML) : ''; }
     var img = new Image();
     img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="-7 -14 134 134" width="268" height="268">' + inner + '</svg>');
-    sprite = img; spriteG = g; return img;
+    sprite = img; return img;
   }
   function drawPen(c, x, y, s, rot) {
     var im = penImg(); c.save(); c.translate(x, y); if (rot) c.rotate(rot);
@@ -161,7 +161,7 @@
     e.preventDefault(); if (!cur.keys[k] && cur.game.press) cur.game.press(k); cur.keys[k] = true;
   });
   document.addEventListener('keyup', function (e) { if (!cur) return; var k = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down', ' ': 'honk' }[e.key]; if (k) cur.keys[k] = false; });
-  function stop() { if (cur) { cur.on = false; cancelAnimationFrame(cur.raf); } cur = null; if (song) song.stop(); }
+  function stop() { if (cur) { cur.on = false; cancelAnimationFrame(cur.raf); } cur = null; sprite = null; if (song) song.stop(); }
 
   var MAKERS = {}, actx = null;
   function honkSound() {
@@ -464,7 +464,7 @@
     var round = [], n = 0, right = 0, used = {};
     var ph = window.ppPlace().cc === 'PH', qb = QB.filter(function (q) { return ph || !q.ph; });
     while (round.length < 3) { var i = Math.floor(Math.random() * qb.length); if (!used[i]) { used[i] = 1; round.push(qb[i]); } }
-    var inner = window.ppLook ? window.ppLook.svg('bubbly') : '';
+    var inner = gamePen();
     function prof(mood) { return '<div class="prof' + (mood ? ' ' + mood : '') + '"><svg viewBox="-7 -14 134 134" width="110" height="110" aria-hidden="true">' + inner + PROF + '</svg></div>'; }
     function show(msg, mood) {
       if (n >= round.length) {
@@ -519,7 +519,7 @@
   var song = null;
   function sing(host) {
     stop();
-    var inner = window.ppLook ? window.ppLook.svg('bubbly') : '';
+    var inner = gamePen();
     host.innerHTML = '<div class="sg"><div class="sgpen"><svg viewBox="-7 -14 134 134" width="130" height="130" aria-hidden="true">' + inner + '</svg><span class="sgm">🎤</span></div>' +
       '<div class="sglist">' + SONGS.map(function (s, i) { return '<button type="button" data-s="' + i + '"><b>▶ ' + s.t + '</b><small>' + s.note + '</small></button>'; }).join('') + '</div>' +
       '<div class="sglyr" hidden></div><p class="tip">penpen’s own songs, played on your phone — they work with no signal. Sing along! 🎶 More songs for every country you visit are coming.</p></div>';

@@ -2,7 +2,8 @@
    penpen gets hungry, bored and sleepy over time. Look after him and he levels up.
    No-fail: he never dies or runs away, games are always open, and while you're away he only
    gets a bit hungry and bored (never below 20) and naps, so he's always fine when you come back.
-   Tabs: penpen (feed, rub belly, sleep, medicine) · Slide (snowy downhill run) · Exercise (jumping jacks) · Quiz · Shop.
+   A new game starts with an egg: tap it to hatch, then pick his name, colours, eyes and outfit (change them later in Wardrobe).
+   Tabs: penpen (feed, rub belly, sleep) · Games · Quiz · Learn · Sing · Shop.
    Every expense you log on the trip earns a 🐟. Everything is saved on this phone. */
 (function () {
   var F = 'Nunito,-apple-system,BlinkMacSystemFont,sans-serif';
@@ -12,8 +13,7 @@
     fish:   { e: '🐟', n: 'Fish', food: 18, joy: 4, en: 4, price: 0 },
     mango:  { e: '🥭', n: 'Mango', food: 15, joy: 10, en: 8, price: 10 },
     sushi:  { e: '🍣', n: 'Sushi', food: 30, joy: 15, en: 10, price: 20 },
-    bat:    { e: '🔋', n: 'Battery', food: 0, joy: 2, en: 45, price: 25 },
-    meds:   { e: '💊', n: 'Medicine', food: 0, joy: 0, hp: 45, price: 12 }
+    bat:    { e: '🔋', n: 'Battery', food: 0, joy: 2, en: 45, price: 25 }
   };
   var WEAR = {
     none:   { e: '', n: 'Nothing', price: 0 },
@@ -45,24 +45,20 @@
   var COIN_SIGN = (function (y) { var m = y.match(/\p{Sc}/u), c = m ? m[0] : y.charAt(0); return /^[\p{L}\p{Sc}]$/u.test(c) ? c : '$'; })(window.ppPlace().sym || '');
   function now() { return Date.now(); }
   var FLOOR = 20;   // how low hunger and happiness can drop while you're away
-  function fresh() { return { food: 80, joy: 75, energy: 80, hp: 100, xp: 0, fit: 0, coins: 20, best: 0, bag: { fish: 3, meds: 1 }, own: { none: 1, hat: 1 }, wear: 'none', t: now(), exp: -1, asleep: false, born: now() }; }
+  // V: the save's version. A save from before eggs (no v, or an older one) starts fresh once with a new egg; travel data is never touched.
+  var V = 2;
+  function fresh() { return { v: V, egg: true, name: 'penpen', food: 80, joy: 75, energy: 80, xp: 0, fit: 0, coins: 20, best: 0, bag: { fish: 3 }, own: { none: 1, hat: 1 }, wear: 'none', t: now(), exp: -1, asleep: false, born: now() }; }
   function away(v, drop) { return v > FLOOR ? Math.max(FLOOR, v - drop) : v; }
   function load() {
     var p = null; try { p = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) {}
-    p = p || fresh();
-    if (p.hp == null) { p.hp = 100; p.fit = 0; p.bag.meds = p.bag.meds || 1; }
-    if (p.ghost) {   // older versions could turn penpen into a ghost: bring him back, keep everything he had
-      delete p.ghost; p.asleep = false; p.hi = 1;
-      p.food = Math.max(p.food, 50); p.joy = Math.max(p.joy, 50); p.energy = Math.max(p.energy, 60); p.hp = Math.max(p.hp, 60);
-    }
+    if (!p || p.v !== V) p = fresh();
     var hrs = Math.max(0, (now() - (p.t || now())) / 36e5);
     if (hrs > 0.01) {
-      // life goes on while you're away, gently: a bit hungry and bored, never sick, and he naps
+      // life goes on while you're away, gently: a bit hungry and bored, and he naps
       p.food = away(p.food, hrs * (p.asleep ? 1.5 : 3));
       p.joy = away(p.joy, hrs * (p.asleep ? 0.5 : 2));
       p.energy = clamp(p.energy + hrs * (p.asleep ? 60 : 10));
       if (p.asleep && p.energy >= 100) p.asleep = false;
-      p.hp = clamp(p.hp + hrs * 3);
       p.t = now();
     }
     return p;
@@ -71,7 +67,6 @@
   function save(p) { p.t = now(); try { localStorage.setItem(KEY, JSON.stringify(p)); } catch (e) {} }
   function level(p) { return 1 + Math.floor(Math.sqrt(p.xp / 20)); }
   function speedSkill(p) { return Math.min(10, 1 + Math.floor(level(p) / 3) + Math.floor((p.fit || 0) / 40)); }
-  function sick(p) { return p.hp < 30; }
   function pick(a) { return a[Math.floor(Math.random() * a.length)]; }
 
   // one fish for every expense logged on the trip
@@ -94,22 +89,35 @@
     setTimeout(function () { d.classList.add('out'); setTimeout(function () { d.remove(); }, 400); }, 3000);
   }
 
-  function inner() {
-    var g = 'bubbly', L = window.ppLook, s = L && L.svg(g);
-    if (!s && window.ppFrontPen) s = window.ppFrontPen();
-    if (!s) { var n = document.querySelector('#navpen svg'); s = n ? (n.getAttribute('data-orig') || n.innerHTML) : ''; }
-    return s;
+  /* ---------- his look: your own design, made when he hatches (separate from your travel avatar) ---------- */
+  // only these values are ever saved or drawn, so nothing typed can get into the drawing
+  var PAL = {
+    body: [['#1E2B4A', 'Navy'], ['#5DA9E9', 'Sky blue'], ['#1F8FA6', 'Teal'], ['#3D7A4B', 'Green'], ['#7C6BB8', 'Purple'], ['#E87EA1', 'Pink'], ['#E46F5A', 'Coral'], ['#F4A62A', 'Gold'], ['#17181C', 'Black']],
+    eyes: [['dots', 'Dots'], ['shine', 'Shiny'], ['happy', 'Happy'], ['lashes', 'Lashes'], ['wink', 'Wink']],
+    beak: [['#F4A62A', 'Orange'], ['#F4D03F', 'Yellow'], ['#F28AA5', 'Pink'], ['#D9534F', 'Red'], ['#9AA7B4', 'Grey']]
+  };
+  PAL.feet = PAL.beak;
+  function okVal(k, v) { return PAL[k].some(function (o) { return o[0] === v; }); }
+  function look(p) {
+    var l = p.look || {}, out = {};
+    Object.keys(PAL).forEach(function (k) { out[k] = okVal(k, l[k]) ? l[k] : PAL[k][0][0]; });
+    return out;
   }
-  function bodyColor() {
-    var g = window.ppGuideNow ? window.ppGuideNow() : 'bubbly', m = window.ppLook && window.ppLook.svg(g).match(/rx="36" ry="44" fill="([^"]+)"/);
-    return m ? m[1] : '#1E2B4A';
-  }
+  function inner(p) { return window.ppLook ? window.ppLook.svg(look(p || load())) : ''; }
+  // the games draw your garden penpen too
+  window.ppGamePen = function () { return inner(); };
+  function esc(t) { return String(t).replace(/[&<>"']/g, function (c) { return '&#' + c.charCodeAt(0) + ';'; }); }
+  function nameOf(p) { return p.name || 'penpen'; }
 
   /* ---------- garden: drawn in code. To use a picture instead, swap gardenArt() for an <img> ---------- */
   var PALS = ['sweet', 'surfer', 'sunny', 'buddy', 'goofydad', 'grandma'];   // penguin friends who wander the garden (ids from guides.js)
   var START = [[20, 22], [80, 16], [32, 30], [68, 28], [12, 8], [88, 6]];   // where each friend stands when the garden opens (% across, % up)
   var MUSIC_FILE = '';              // set to a music file (e.g. 'audio/garden.m4a') to play it instead of the code-made tune
   var SHUT = '<path class="shut" d="M45 49 Q51 54 57 49 M63 49 Q69 54 75 49" fill="none" stroke="#1F2A36" stroke-width="3" stroke-linecap="round"/>';
+  // the egg a new game starts with; its cracks show one by one as you tap
+  var EGG = '<ellipse cx="60" cy="112" rx="24" ry="4" fill="#13324A" opacity=".14"/><path d="M60 20 C80 20 92 56 92 78 C92 98 78 110 60 110 C42 110 28 98 28 78 C28 56 40 20 60 20 Z" fill="#FFF8EE" stroke="#C9DCEA" stroke-width="2"/>' +
+    '<g fill="#8FCFF2"><circle cx="48" cy="52" r="6"/><circle cx="72" cy="44" r="4.5"/><circle cx="76" cy="84" r="7"/><circle cx="44" cy="92" r="5"/><circle cx="60" cy="70" r="3.5"/></g>' +
+    '<g fill="none" stroke="#5B7A99" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path class="ck ck1" d="M36 66 L46 72 L52 64 L60 72"/><path class="ck ck2" d="M60 72 L68 64 L76 72 L86 66"/></g>';
   var JOY = '<path class="joy" d="M45 51 Q51 44 57 51 M63 51 Q69 44 75 51" fill="none" stroke="#1F2A36" stroke-width="3.2" stroke-linecap="round"/>';
   /* ---------- livelier penguins: a side view for walking, blinking eyes, sad brows, an open beak, flappy flippers ---------- */
   var SKIN = '#FFF9F2';
@@ -120,23 +128,12 @@
       '<path class="brow" d="M' + (x1 - 6) + ' ' + (y - 8) + ' L' + (x1 + 4) + ' ' + (y - 12) + ' M' + (x2 + 6) + ' ' + (y - 8) + ' L' + (x2 - 4) + ' ' + (y - 12) + '" fill="none" stroke="#1F2A36" stroke-width="2.4" stroke-linecap="round"/>' +
       '<path class="mouth" d="M55.5 60 Q60 68 64.5 60 Z" fill="#B8502A"/>';
   }
-  // your penpen's flippers get a class so they can flap (the friends' already have one)
-  function flippers(s) { return s.replace(/(<ellipse[^>]*rotate\(20 24 75\)[^>]*\/>)/, '<g class="fl-l">$1</g>').replace(/(<ellipse[^>]*rotate\(-20 96 75\)[^>]*\/>)/, '<g class="fl-r">$1</g>'); }
-  // your penpen from the side: body colour from his drawing, hair colour from his saved look (only if his drawing uses it)
-  function penSide(front) {
-    var m = /id="ppb([0-9a-fA-F]{3,8})"/.exec(front), hc = null;
-    try {
-      var P = JSON.parse(localStorage.getItem('pp_c_penpenProfiles:[]') || 'null'), me = P && P.people ? P.people.filter(function (x) { return x.isMe; })[0] : null, a = me && me.avatar;
-      if (a && a.hair && a.hair !== 'none' && a.hair !== 'tuft' && a.hairColor && front.indexOf('"' + a.hairColor + '"') > -1) hc = a.hairColor;
-    } catch (e) { hc = null; }   // no saved look: plain side view
-    return window.ppLook && window.ppLook.side ? window.ppLook.side('bubbly', m ? '#' + m[1] : '#1E2B4A', hc) : front;
-  }
   // front view, plus the side view that shows while walking
   function views(front, side) {
     var v = ' viewBox="-7 -14 134 134" width="74" height="74" aria-hidden="true">';
     return '<svg class="fv"' + v + front + '</svg><svg class="sv"' + v + side + '</svg>';
   }
-  function sad(p) { return !p.asleep && (sick(p) || p.food < 25 || p.joy < 25); }
+  function sad(p) { return !p.asleep && !p.egg && (p.food < 25 || p.joy < 25); }
   // a happy moment: open beak and flappy flippers for a bit
   function cheer(el, ms) { if (!el) return; el.classList.add('yay'); clearTimeout(el.ppYay); el.ppYay = setTimeout(function () { el.classList.remove('yay'); }, ms || 1400); }
   function gardenArt() {
@@ -202,7 +199,7 @@
     var me = document.getElementById('pp-walk'), pals = w ? [].slice.call(w.querySelectorAll('#pp-garden .walker.pal')) : [];
     if (!me || !me.isConnected) return;
     if (load().asleep || still() || document.hidden || GD.hold > now() || !pals.length) return playSoon();
-    var f = pick(pals), nm = window.ppLook ? window.ppLook.name(f.dataset.pal) : 'his friend', who = [me].concat(pals), game = pick(['meet', 'tag', 'dance', 'ball']);
+    var f = pick(pals), nm = window.ppLook ? window.ppLook.name(f.dataset.pal) : 'his friend', mine = nameOf(load()), who = [me].concat(pals), game = pick(['meet', 'tag', 'dance', 'ball']);
     function done(ms) { step(ms, function () { endPlay(); playSoon(); }); }
     (game === 'dance' ? who : [me, f]).forEach(function (el) { el.ppBusy = true; });
     if (game === 'meet') {
@@ -210,7 +207,7 @@
       var walk = Math.max(go(me, mx - 11, my), go(f, mx + 11, my)) * 1000;
       step(walk + 100, function () {
         face(me, f); hop(me.querySelector('.pen')); hop(f.querySelector('.pen')); pop(me, pick(['✋', '💛', '🤗'])); sfx('hi');
-        tell('penpen and ' + nm + ' ' + pick(['high-five! ✋', 'share a hug 🤗', 'are best buds 💛']));
+        tell(mine + ' and ' + nm + ' ' + pick(['high-five! ✋', 'share a hug 🤗', 'are best buds 💛']));
       });
       return done(walk + 1800);
     }
@@ -218,7 +215,7 @@
       tell(nm + ' is it! Tag! 🏃');
       (function leg(n) {
         var at = pos(f), nx = at[0] < 50 ? 60 + Math.random() * 30 : 10 + Math.random() * 30;
-        if (!n) { var t = go(me, at[0] + (pos(me)[0] < at[0] ? -9 : 9), at[1], 30); step(t * 1000 + 50, function () { face(me, f); hop(f.querySelector('.pen')); pop(f, '😆'); sfx('hi'); tell('Tagged! penpen got ' + nm + ' 😆'); }); return done(t * 1000 + 1600); }
+        if (!n) { var t = go(me, at[0] + (pos(me)[0] < at[0] ? -9 : 9), at[1], 30); step(t * 1000 + 50, function () { face(me, f); hop(f.querySelector('.pen')); pop(f, '😆'); sfx('hi'); tell('Tagged! ' + mine + ' got ' + nm + ' 😆'); }); return done(t * 1000 + 1600); }
         step(Math.max(go(f, nx, 3 + Math.random() * Y, 32), go(me, at[0], at[1], 26)) * 1000 + 150, function () { leg(n - 1); });
       })(2);
       return;
@@ -237,7 +234,7 @@
     var x1 = 18 + Math.random() * 12, x2 = 66 + Math.random() * 14, by = 4 + Math.random() * Y * 0.5, g = document.getElementById('pp-garden');
     var reach = Math.max(go(me, x1, by), go(f, x2, by)) * 1000;
     step(reach + 100, function () {
-      face(me, f); tell('penpen and ' + nm + ' play catch 🏐');
+      face(me, f); tell(mine + ' and ' + nm + ' play catch 🏐');
       var ball = document.createElement('span'), i = document.createElement('i'); ball.className = 'ball'; i.textContent = '🏐'; ball.appendChild(i);
       ball.style.left = (x1 + 6) + '%'; ball.style.bottom = (by + 9) + '%'; g.appendChild(ball);
       [0, 1, 2, 3].forEach(function (k) {
@@ -290,7 +287,7 @@
   function open() {
     if (document.getElementById('pp-play')) return;
     w = document.createElement('div'); w.id = 'pp-play'; w.setAttribute('role', 'dialog'); w.setAttribute('aria-label', 'Garden');
-    document.body.appendChild(w); tab = 'pet';
+    document.body.appendChild(w); tab = 'pet'; GD.cracks = 0;
     var p = load(), a = rewardExpenses(p), hi = p.hi; delete p.hi; save(p);
     paint(hi ? 'I’m back! 🐣 Missed you' : a ? '+' + a + ' 🐟 for the expenses you logged!' : '');
     w.addEventListener('click', click);
@@ -305,14 +302,14 @@
       return '<button type="button" class="mtr" data-act="stats" aria-label="' + m[2] + ' ' + Math.round(m[0]) + '%. Open stats"><b>' + m[1] + '</b><i><u style="width:' + Math.round(m[0]) + '%;background:' + tint(m[0]) + '"></u></i></button>';
     }).join('');
   }
-  function bats4(p) { return battery(p.food, '🍽️', 'Full') + battery(p.joy, '💛', 'Happy') + battery(p.energy, '⚡', 'Energy') + battery(p.hp, '❤️', 'Health'); }
+  function bats4(p) { return battery(p.food, '🍽️', 'Full') + battery(p.joy, '💛', 'Happy') + battery(p.energy, '⚡', 'Energy'); }
   function battery(n, ic, label) {
     var c = tint(n);
     return '<button type="button" class="bat" data-bat="' + label + '" title="' + label + ' ' + Math.round(n) + '%"><span class="tip"></span><span class="cell"><u style="height:' + Math.round(n) + '%;background:' + c + '"></u></span><b>' + ic + '</b><small>' + label + '</small></button>';
   }
   function mood(p) {
+    if (p.egg) return 'An egg! 🥚 Tap it to hatch';
     if (p.asleep) return 'Zzz… 💤 (tap Wake up when he’s rested)';
-    if (sick(p)) return 'I don’t feel well 🤒 Medicine please?';
     if (p.food < 25) return 'Hungry… 🥺 drag me some food!';
     if (p.energy < 20) return 'So sleepy… 😪';
     if (p.joy < 25) return 'Bored. Rub my belly? 🥱';
@@ -328,7 +325,7 @@
     var n = album().length;
     return '<details class="gmenu"><summary class="gbtn" aria-label="Menu: games, quiz, learn, sing, shop and more">☰</summary><div class="gm"><b class="gm-lv">Level ' + level(p) + '</b>' +
       [['games', '🎮', 'Games'], ['quiz', '🎓', 'Quiz'], ['learn', '📚', 'Learn'], ['sing', '🎤', 'Sing'], ['shop', '🛍️', 'Shop']].map(function (t) { return '<button data-tab="' + t[0] + '"><span>' + t[1] + '</span>' + t[2] + '</button>'; }).join('') +
-      '<button data-act="stats" aria-haspopup="dialog"><span>📊</span>Stats</button>' + (p.asleep ? '' : '<button data-act="sleep"><span>💤</span>Sleep</button>') +
+      (p.egg ? '' : '<button data-act="make" aria-haspopup="dialog"><span>🎨</span>Wardrobe</button>') + '<button data-act="stats" aria-haspopup="dialog"><span>📊</span>Stats</button>' + (p.asleep ? '' : '<button data-act="sleep"><span>💤</span>Sleep</button>') +
       '<button data-act="selfie"><span>📸</span>Selfie</button><button data-act="album"><span>🖼</span>Album' + (n ? ' (' + n + ')' : '') + '</button></div></details>';
   }
   function paint(msg) {
@@ -341,12 +338,13 @@
       h += '<div class="garden' + (p.asleep ? ' night' : '') + '" id="pp-garden">' + gardenArt() +
         '<div class="gtop"><button class="back" aria-label="Back">‹</button><span class="meters">' + meters(p) + '</span>' + coins + '<button type="button" data-act="sound" class="gbtn" aria-pressed="' + soundOn() + '" aria-label="Music and sounds">' + (soundOn() ? '🔊' : '🔇') + '</button>' + menu(p) + '</div>' +
         (window.ppLook ? PALS.map(function (id, i) { return '<button type="button" class="walker pal" data-pal="' + id + '" aria-label="' + window.ppLook.name(id) + ', penpen’s friend" style="left:' + START[i][0] + '%;bottom:' + START[i][1] + '%;--d:' + (1 - START[i][1] / 160).toFixed(3) + '"><span class="pen' + (p.asleep ? ' zz' : '') + '">' + views(window.ppLook.svg(id) + faceBits(51, 69, 49, 6) + (p.asleep ? SHUT : ''), window.ppLook.side(id)) + '</span></button>'; }).join('') : '') +
-        '<div class="walker' + (sad(p) ? ' sad' : '') + '" id="pp-walk" style="left:50%;bottom:8%"><div class="pen' + (sick(p) ? ' sick' : p.asleep ? ' zz' : '') + '" id="pp-petpen">' +
-        views(flippers(inner()) + faceBits(48.5, 71.5, 50, 8) + face, penSide(inner())) + (wear.e ? '<span class="wear">' + wear.e + '</span>' : '') + (sick(p) ? '<span class="fx">🤒</span>' : p.asleep ? '<span class="fx">💤</span><span class="bed">🛏️</span>' : '') +
-        '</div></div><div class="say" id="pp-say">' + (msg || mood(p)) + '</div>' +
+        (p.egg ? '<button type="button" class="egg" id="pp-egg" data-act="hatch" aria-label="Your egg. Tap to hatch it"><svg viewBox="-7 -14 134 134" width="84" height="84" aria-hidden="true">' + EGG + '</svg></button>' :
+        '<div class="walker' + (sad(p) ? ' sad' : '') + '" id="pp-walk" style="left:50%;bottom:8%"><div class="pen' + (p.asleep ? ' zz' : '') + '" id="pp-petpen" aria-label="' + esc(nameOf(p)) + '">' +
+        views(inner(p) + faceBits(51, 69, 49, 6) + face, window.ppLook ? window.ppLook.side(look(p)) : '') + (wear.e ? '<span class="wear">' + wear.e + '</span>' : '') + (p.asleep ? '<span class="fx">💤</span><span class="bed">🛏️</span>' : '') +
+        '</div></div>') + '<div class="say" id="pp-say">' + (msg || mood(p)) + '</div>' +
         (p.asleep ? '<button data-act="wake" class="zbtn">☀️ Wake</button>' : '') +
-        // food: just the pictures with a small count; drag one to penpen, or tap it
-        '<div class="foods" aria-label="Food: drag to penpen, or tap">' + Object.keys(FOODS).map(function (k) { var n = p.bag[k] || 0; return '<button data-feed="' + k + '"' + (n ? '' : ' disabled') + ' title="' + FOODS[k].n + '"><span aria-hidden="true">' + FOODS[k].e + '</span><i class="sr">' + FOODS[k].n + '</i><small>×' + n + '</small></button>'; }).join('') + '</div></div>';
+        // food: just the pictures with a small count; drag one to penpen, or tap it (hidden until he hatches)
+        (p.egg ? '' : '<div class="foods" aria-label="Food: drag to penpen, or tap">' + Object.keys(FOODS).map(function (k) { var n = p.bag[k] || 0; return '<button data-feed="' + k + '"' + (n ? '' : ' disabled') + ' title="' + FOODS[k].n + '"><span aria-hidden="true">' + FOODS[k].e + '</span><i class="sr">' + FOODS[k].n + '</i><small>×' + n + '</small></button>'; }).join('') + '</div>') + '</div>';
     } else if (tab === 'slide') {
       h += '<div class="game"><canvas id="pp-slide" width="360" height="230"></canvas><div class="ghud" id="pp-ghud">Jump over rocks & snowmen, duck under snowballs ❄️</div>' +
         '<div class="pad"><button class="go" data-act="start">▶ Start</button><button class="ctl" id="pp-duck" aria-label="Duck">⬇ Duck</button><button class="ctl" id="pp-jump" aria-label="Jump">⬆ Jump</button></div></div>';
@@ -376,12 +374,64 @@
   }
   function showStats() {
     var p = load(), d = document.createElement('dialog'), b = p.bests || {}, names = { slide: 'Belly Slide', dive: 'Dive', chase: 'Chase', honk: 'Honk!' };
-    d.className = 'pp-stats'; d.setAttribute('aria-label', 'penpen’s stats');
-    d.innerHTML = '<div class="st-top"><b>📊 penpen’s stats</b><button type="button" data-act="stats-x" aria-label="Close stats">✕</button></div>' +
+    d.className = 'pp-stats'; d.setAttribute('aria-label', nameOf(p) + '’s stats');
+    d.innerHTML = '<div class="st-top"><b>📊 ' + esc(nameOf(p)) + '’s stats</b><button type="button" data-act="stats-x" aria-label="Close stats">✕</button></div>' +
       '<div class="bats" id="pp-sbats">' + bats4(p) + '</div><p class="st-tip" id="pp-stip">Tap a battery to see what it does.</p>' +
       '<div class="st-grid"><span>Level<b>' + level(p) + '</b></span><span>Fitness<b>' + (p.fit || 0) + '</b></span><span>Coins<b>' + p.coins + '</b></span></div>' +
       (Object.keys(b).length ? '<p class="st-tip">Best scores: ' + Object.keys(b).map(function (k) { return (names[k] || k) + ' ' + b[k]; }).join(' · ') + '</p>' : '');
     w.appendChild(d); d.addEventListener('close', function () { d.remove(); });
+    if (d.showModal) d.showModal(); else d.setAttribute('open', '');
+  }
+  // tap the egg: it wobbles and cracks; the third tap hatches him, then you design him
+  function crack(p) {
+    var egg = document.getElementById('pp-egg'), n = (GD.cracks || 0) + 1;
+    if (!p.egg || !egg) return;
+    GD.cracks = n; sfx('hi');
+    if (n < 3) { egg.classList.add('c' + n); egg.classList.remove('wob'); void egg.offsetWidth; egg.classList.add('wob'); return say(n === 1 ? 'It moved! Tap again 🥚' : 'Crack! Almost… 🥚'); }
+    GD.cracks = 0; p.egg = false; p.look = look(p); p.xp += 1; save(p); sfx('la');
+    var r = egg.getBoundingClientRect(); hearts(r.left + r.width / 2, r.top, 4, pick(['🐣', '✨', '💛']));
+    paint('Hello! 🐣 Let’s make me look just right');
+    makeMe(true);
+  }
+  // design your penpen: name, body, eyes, beak, feet and an outfit you own. A native <dialog> with radio buttons; only known values are saved.
+  function makeMe(born) {
+    var p = load(), lk = look(p), d = document.createElement('dialog');
+    function swatches(k, label) {
+      return '<fieldset class="mk-row"><legend>' + label + '</legend>' + PAL[k].map(function (o) {
+        var chosen = lk[k] === o[0];
+        return k === 'eyes' ? '<label class="mk-txt"><input type="radio" name="eyes" value="' + o[0] + '"' + (chosen ? ' checked' : '') + '><span>' + o[1] + '</span></label>' :
+          '<label class="mk-sw" title="' + o[1] + '"><input type="radio" name="' + k + '" value="' + o[0] + '" aria-label="' + o[1] + '"' + (chosen ? ' checked' : '') + '><i style="background:' + o[0] + '"></i></label>';
+      }).join('') + '</fieldset>';
+    }
+    var outfits = Object.keys(WEAR).filter(function (k) { return p.own[k]; }).map(function (k) {
+      return '<label class="mk-txt"><input type="radio" name="wear" value="' + k + '"' + (p.wear === k ? ' checked' : '') + '><span>' + (WEAR[k].e || '🚫') + ' ' + WEAR[k].n + '</span></label>';
+    }).join('');
+    d.className = 'pp-stats pp-make'; d.setAttribute('aria-label', 'Design your penpen');
+    d.innerHTML = '<form method="dialog"><div class="st-top"><b>' + (born ? '🐣 Your penpen hatched!' : '🎨 Wardrobe') + '</b><button type="submit" value="x" aria-label="Close">✕</button></div>' +
+      '<div class="mk-prev" id="pp-mkprev"></div>' +
+      '<label class="mk-name">Name <input name="name" maxlength="12" autocomplete="off" value="' + esc(nameOf(p)) + '"></label>' +
+      swatches('body', 'Body') + swatches('eyes', 'Eyes') + swatches('beak', 'Beak') + swatches('feet', 'Feet') +
+      '<fieldset class="mk-row"><legend>Outfit</legend>' + outfits + '</fieldset><p class="st-tip">More outfits in the Shop.</p>' +
+      '<button type="submit" value="save" class="go mk-go">' + (born ? 'Done, let’s play!' : 'Save') + '</button></form>';
+    var f = d.querySelector('form');
+    function chosen() {
+      var o = {}; Object.keys(PAL).forEach(function (k) { var el = f.querySelector('input[name="' + k + '"]:checked'); o[k] = el && okVal(k, el.value) ? el.value : lk[k]; });
+      return o;
+    }
+    function preview() {
+      var wr = f.querySelector('input[name="wear"]:checked'), e = wr && WEAR[wr.value] ? WEAR[wr.value].e : '';
+      d.querySelector('#pp-mkprev').innerHTML = '<svg viewBox="-7 -14 134 134" width="120" height="120" aria-hidden="true">' + window.ppLook.svg(chosen()) + (e ? '<text x="60" y="8" font-size="30" text-anchor="middle">' + e + '</text>' : '') + '</svg>';
+    }
+    f.addEventListener('change', preview); preview();
+    d.addEventListener('close', function () {
+      if (d.returnValue === 'save') {
+        var q = load(), wr = f.querySelector('input[name="wear"]:checked'), nm = f.querySelector('input[name="name"]').value.replace(/\s+/g, ' ').trim().slice(0, 12);
+        q.look = chosen(); q.name = nm || 'penpen'; if (wr && q.own[wr.value]) q.wear = wr.value; save(q);
+        paint(born ? 'Hi! I’m ' + q.name + ' 💛' : 'Looking good! ✨');
+      }
+      d.remove();
+    });
+    w.appendChild(d);
     if (d.showModal) d.showModal(); else d.setAttribute('open', '');
   }
   function say(t) { var s = document.getElementById('pp-say'); GD.said = now(); GD.line = ''; if (s) s.textContent = t; }
@@ -394,7 +444,7 @@
       document.body.appendChild(hrt); setTimeout(function (el) { el.remove(); }.bind(null, hrt), 1200);
     }
   }
-  function eff(f) { return [f.food ? '🍽️+' + f.food : '', f.en ? '⚡+' + f.en : '', f.hp ? '❤️+' + f.hp : '', f.joy > 5 ? '💛+' + f.joy : ''].filter(Boolean).join(' '); }
+  function eff(f) { return [f.food ? '🍽️+' + f.food : '', f.en ? '⚡+' + f.en : '', f.joy > 5 ? '💛+' + f.joy : ''].filter(Boolean).join(' '); }
   function album() { try { return JSON.parse(localStorage.getItem('pp_album') || '[]'); } catch (e) { return []; } }
   function selfie() {
     var p = load(), wear = (WEAR[p.wear] || {}).e || '';
@@ -426,14 +476,14 @@
     };
   }
   function feed(k) {
-    var p = load(), f = FOODS[k]; if (!(p.bag[k] > 0)) return;
+    var p = load(), f = FOODS[k]; if (!f || !(p.bag[k] > 0) || p.egg) return;
     if (p.asleep) return say('Shh… he’s sleeping 💤');
-    if (k !== 'meds' && k !== 'bat' && p.food >= 100) return say('I’m stuffed! Maybe later 😋');
+    if (k !== 'bat' && p.food >= 100) return say('I’m stuffed! Maybe later 😋');
     if (k === 'bat' && p.energy >= 100) return say('Already fully charged! ⚡');
-    p.bag[k]--; p.food = clamp(p.food + f.food); p.joy = clamp(p.joy + f.joy); p.energy = clamp(p.energy + (f.en || 0)); p.hp = clamp(p.hp + (f.hp || 0)); p.xp += 2; save(p);
+    p.bag[k]--; p.food = clamp(p.food + f.food); p.joy = clamp(p.joy + f.joy); p.energy = clamp(p.energy + (f.en || 0)); p.xp += 2; save(p);
     var fb = w && w.querySelector('[data-feed="' + k + '"]'); if (fb) { fb.querySelector('small').textContent = '×' + p.bag[k]; fb.disabled = !p.bag[k]; }
-    refreshBats(p); if (!sick(p)) { var fx = w && w.querySelector('#pp-petpen .fx'); if (fx) fx.remove(); var sp = document.getElementById('pp-petpen'); if (sp) sp.classList.remove('sick'); }
-    say(k === 'meds' ? 'Bleh… but I feel better! 💊' : k === 'bat' ? 'Bzzzt! Recharged ⚡😎' : pick(['Nom nom nom! ' + f.e + ' 😋', 'Yum, ' + f.n.toLowerCase() + '! ' + f.e, 'Salamat! So full 😌 ' + f.e]));
+    refreshBats(p);
+    say(k === 'bat' ? 'Bzzzt! Recharged ⚡😎' : pick(['Nom nom nom! ' + f.e + ' 😋', 'Yum, ' + f.n.toLowerCase() + '! ' + f.e, 'Salamat! So full 😌 ' + f.e]));
     var pen = document.getElementById('pp-petpen');
     if (pen) {
       freeze(1600); pen.classList.remove('eat'); void pen.offsetWidth; pen.classList.add('eat');
@@ -485,7 +535,7 @@
     var gm = w.querySelector('.gmenu[open]'), b = e.target.closest('button');
     if (gm && (!e.target.closest('.gmenu') || b)) gm.open = false;   // a tap outside the menu, or on one of its buttons, closes it
     if (!b) return;
-    if (b.dataset.bat) { var sy = document.getElementById('pp-stip') || document.getElementById('pp-say'); if (sy) sy.textContent = { Full: '🍽️ Full: drops over time. Drag food to penpen — bigger meals fill more.', Happy: '💛 Happy: rub or tap his belly, play games or the quiz.', Energy: '⚡ Energy: games use a little. He naps to recharge, but you can always play.', Health: '❤️ Health: comes back on its own over time. Medicine helps fast.' }[b.dataset.bat] || ''; return; }
+    if (b.dataset.bat) { var sy = document.getElementById('pp-stip') || document.getElementById('pp-say'); if (sy) sy.textContent = { Full: '🍽️ Full: drops over time. Drag food to penpen — bigger meals fill more.', Happy: '💛 Happy: rub or tap his belly, play games or the quiz.', Energy: '⚡ Energy: games use a little. He naps to recharge, but you can always play.' }[b.dataset.bat] || ''; return; }
     var p = load();
     if (b.classList.contains('back')) return back();
     if (b.dataset.tab) { stopAll(); tab = b.dataset.tab; return paint(); }
@@ -508,6 +558,8 @@
       var pal = b.querySelector('.pen'); hop(pal); sfx('hi');
       return say(p.asleep ? 'Shh… everyone’s napping 💤' : window.ppLook.name(b.dataset.pal) + pick([' says hi! 👋', ' wants to play tag! 🏃', ' loves your penpen 💛', ' found a shiny shell! 🐚']));
     }
+    if (b.dataset.act === 'hatch') return crack(p);
+    if (b.dataset.act === 'make') return makeMe(false);
     if (b.dataset.act === 'selfie') return selfie();
     if (b.dataset.act === 'album') return showAlbum();
     if (b.dataset.act === 'sleep') { p.asleep = true; save(p); return paint('Night night 💤'); }
@@ -530,17 +582,17 @@
   /* ---------- Belly Slide: down a snowy hill ---------- */
   function drawPen(c, x, y, air, duck, t) {
     c.save(); c.translate(x, y); c.rotate(air ? -0.3 : 0.12 + Math.sin(t / 90) * 0.04); if (duck) c.scale(1.15, 0.7);
-    var b = bodyColor();
+    var P = load(), lk = look(P), b = lk.body;
     c.fillStyle = 'rgba(19,50,74,.15)'; if (!air) { c.beginPath(); c.ellipse(0, 14, 26, 4, 0, 0, 7); c.fill(); }
     c.fillStyle = b; c.beginPath(); c.ellipse(0, 0, 28, 15, 0, 0, 7); c.fill();
     c.fillStyle = '#FFF8EE'; c.beginPath(); c.ellipse(4, 5, 22, 9, 0, 0, 7); c.fill();
     c.fillStyle = b; c.beginPath(); c.ellipse(24, -8, 12, 11, 0, 0, 7); c.fill();
     c.fillStyle = '#FFF8EE'; c.beginPath(); c.ellipse(27, -6, 8, 7, 0, 0, 7); c.fill();
     c.fillStyle = '#13324A'; c.beginPath(); c.arc(29, -9, 2.2, 0, 7); c.fill();
-    c.fillStyle = '#F4A62A'; c.beginPath(); c.moveTo(34, -6); c.lineTo(42, -4); c.lineTo(34, -2); c.fill();
-    c.beginPath(); c.ellipse(-27, 4, 6, 3, 0.3, 0, 7); c.fill();
+    c.fillStyle = lk.beak; c.beginPath(); c.moveTo(34, -6); c.lineTo(42, -4); c.lineTo(34, -2); c.fill();
+    c.fillStyle = lk.feet; c.beginPath(); c.ellipse(-27, 4, 6, 3, 0.3, 0, 7); c.fill();
     c.fillStyle = b; c.beginPath(); c.ellipse(-4, -6, 12, 4, -0.2 + (air ? -0.6 : Math.sin(t / 60) * 0.3), 0, 7); c.fill();
-    var wear = (WEAR[load().wear] || {}).e; if (wear) { c.font = '16px serif'; c.fillText(wear, 16, -16); }
+    var wear = (WEAR[P.wear] || {}).e; if (wear) { c.font = '16px serif'; c.fillText(wear, 16, -16); }
     c.restore();
   }
   function hill(c, W, H, off, t) {
@@ -674,7 +726,7 @@
     '#pp-play .wrap{max-width:560px;margin:0 auto}#pp-play h3{font:900 13px ' + F + ';letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:16px 4px 8px}#pp-play h3 small{text-transform:none;letter-spacing:0;font-weight:700}' +
     '#pp-play .tabs{display:flex;gap:4px;background:var(--chip);border-radius:18px;padding:4px;margin-bottom:12px}#pp-play .tabs button{flex:1;border:0;background:none;border-radius:14px;padding:6px 2px;font:800 12px ' + F + ';color:var(--ink);cursor:pointer;display:flex;flex-direction:column;align-items:center}#pp-play .tabs span{font-size:20px}#pp-play .tabs .on{background:var(--card);box-shadow:0 2px 6px rgba(0,0,0,.08)}' +
     '#pp-play .stage{flex:1;background:linear-gradient(180deg,var(--accentSoft),var(--card));border-radius:24px;padding:12px 8px;text-align:center;position:relative;transition:background .4s}#pp-play .stage.night{background:linear-gradient(180deg,#24324F,#3C4C70)}' +
-    '#pp-play .pen{position:relative;display:inline-block;animation:pppb 1.6s ease-in-out infinite alternate;touch-action:none;cursor:pointer}#pp-play .pen.zz{animation-duration:3s}#pp-play .pen.sick{filter:saturate(.5) hue-rotate(40deg)}' +
+    '#pp-play .pen{position:relative;display:inline-block;animation:pppb 1.6s ease-in-out infinite alternate;touch-action:none;cursor:pointer}#pp-play .pen.zz{animation-duration:3s}' +
     '#pp-play .wear{position:absolute;left:50%;top:2px;transform:translateX(-50%);font-size:27px;pointer-events:none}#pp-play .fx{position:absolute;right:-6px;top:2px;font-size:20px;pointer-events:none}' +
     '@keyframes pppb{from{transform:translateY(0) rotate(-3deg)}to{transform:translateY(-6px) rotate(3deg)}}' +
     '#pp-play .say{display:inline-block;background:var(--card);color:var(--ink);border-radius:16px;padding:6px 12px;font-weight:800;margin-top:4px;font-size:14.5px}' +
@@ -735,7 +787,15 @@
     '#pp-play .ball{position:absolute;transform:translateX(-50%);transition:left .8s linear;z-index:45;font-size:24px;pointer-events:none}#pp-play .ball i{display:block;font-style:normal}#pp-play .ball i.up{animation:pparc .8s ease-in-out}@keyframes pparc{50%{transform:translateY(-56px) rotate(180deg)}}' +
     '.pp-stats{border:0;border-radius:24px;padding:16px;width:min(92vw,420px);background:var(--card,#fff);color:var(--ink,#13324A);font-family:' + F + ';box-shadow:0 12px 40px rgba(0,0,0,.25)}.pp-stats:not([open]){display:none}.pp-stats[open]:not(:modal){position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:99980;margin:0}.pp-stats::backdrop{background:rgba(10,20,30,.45)}' +
     '.pp-stats .st-top{display:flex;justify-content:space-between;align-items:center;font-size:18px;margin-bottom:12px}.pp-stats .st-top button{border:0;background:none;font-size:20px;color:inherit;cursor:pointer}' +
-    '#pp-play .pp-stats .bats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;width:auto}.pp-stats .st-tip{color:var(--muted,#7A8B99);font-size:13.5px;font-weight:700;text-align:center;margin:10px 0}' +
+    '#pp-play .pp-stats .bats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:auto}.pp-stats .st-tip{color:var(--muted,#7A8B99);font-size:13.5px;font-weight:700;text-align:center;margin:10px 0}' +
+    // the egg, and the design-your-penpen dialog
+    '#pp-play .egg{position:absolute;left:50%;bottom:10%;transform:translateX(-50%);z-index:30;border:0;background:none;padding:0;cursor:pointer;animation:ppegg 2.4s ease-in-out infinite}#pp-play .egg .ck{opacity:0;transition:opacity .2s}#pp-play .egg.c1 .ck1,#pp-play .egg.c2 .ck{opacity:1}' +
+    '#pp-play .egg.wob{animation:ppwob .5s ease-in-out}@keyframes ppegg{0%,85%,100%{rotate:0deg}90%{rotate:-6deg}95%{rotate:6deg}}@keyframes ppwob{25%{rotate:-12deg}75%{rotate:12deg}}' +
+    '.pp-make{max-height:92vh;overflow:auto}.pp-make .mk-prev{display:flex;justify-content:center;margin:-4px 0 6px}.pp-make .mk-name{display:flex;gap:10px;align-items:center;font-weight:800;margin-bottom:8px}.pp-make .mk-name input{flex:1;font:800 16px ' + F + ';padding:9px 12px;border:2px solid var(--line,#DCE6EE);border-radius:12px;background:var(--bg,#F5F8FA);color:inherit;min-width:0}' +
+    '.pp-make .mk-row{border:0;margin:0 0 8px;padding:0;display:flex;flex-wrap:wrap;gap:8px;align-items:center}.pp-make legend{font-weight:800;font-size:13.5px;color:var(--muted,#7A8B99);padding:0;margin-bottom:6px}' +
+    '.pp-make input[type=radio]{position:absolute;opacity:0;width:1px;height:1px}.pp-make .mk-sw{position:relative;cursor:pointer}.pp-make .mk-sw i{display:block;width:34px;height:34px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 2px var(--line,#DCE6EE)}.pp-make .mk-sw input:checked+i{box-shadow:0 0 0 3px var(--accent,#2E86DE)}' +
+    '.pp-make .mk-txt{position:relative;cursor:pointer}.pp-make .mk-txt span{display:block;padding:8px 12px;border-radius:999px;background:var(--bg,#F5F8FA);font-weight:800;font-size:14px;border:2px solid transparent}.pp-make .mk-txt input:checked+span{border-color:var(--accent,#2E86DE)}' +
+    '.pp-make input:focus-visible+i,.pp-make input:focus-visible+span{outline:3px solid var(--accent,#2E86DE);outline-offset:2px}.pp-make .mk-go{width:100%;margin-top:6px}' +
     '.pp-stats .st-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.pp-stats .st-grid span{background:var(--bg,#F5F8FA);border-radius:14px;padding:8px;text-align:center;font-size:12.5px;font-weight:800;color:var(--muted,#7A8B99)}.pp-stats .st-grid b{display:block;font-size:20px;color:var(--ink,#13324A)}' +
     '@media (prefers-reduced-motion: reduce){#pp-play .walker{transition:none}#pp-play .pen,#pp-play .walker .pen.eat,#pp-play .walker .pen.tk{animation:none}}' +
     '.pp-heart{position:fixed;z-index:99990;font-size:24px;pointer-events:none;animation:pphrt 1.2s ease-out forwards}@keyframes pphrt{to{transform:translateY(-70px) scale(1.4);opacity:0}}' +
