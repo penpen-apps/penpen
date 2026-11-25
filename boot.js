@@ -219,7 +219,7 @@
 
   window.ppSignOut = function () {
     ['pp_tok', 'pp_role', 'pp_sess', 'pp_trip_id', 'pp_trip_name'].forEach(function (k) { localStorage.removeItem(k); });
-    Object.keys(localStorage).forEach(function (k) { if (k.indexOf('pp_c_') === 0) localStorage.removeItem(k); });
+    Object.keys(localStorage).forEach(function (k) { if (k.indexOf('pp_c_') === 0 || k.indexOf('pp_diary_draft') === 0) localStorage.removeItem(k); });   // incl. unsaved diary words
     try { google.accounts.id.disableAutoSelect(); } catch (e) {}
     location.reload();
   };

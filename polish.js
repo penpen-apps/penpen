@@ -431,14 +431,18 @@
       var next = function () {
         if (i >= list.length) {
           DPH = []; dStrip(); if ($('#d-cap')) $('#d-cap').value = '';
-          if (hasVid) { ta.value = ''; sv.disabled = false; return orig && orig.call(sv); }
+          if (hasVid) { sv.disabled = false; return orig && orig.call(sv); }   // the words go with the video (they weren't sent with the photos)
           ta.value = ''; sv.disabled = false; sv.textContent = 'Save to the diary';
           var ok = $('#d-ok'); if (ok) { ok.style.display = 'block'; ok.textContent = (msg || 'Saved to the diary') + ' 📸 ' + n + ' photo' + (n > 1 ? 's' : '') + '. '; if (url) { var a = document.createElement('a'); a.className = 'linkbtn'; a.href = url; a.target = '_blank'; a.rel = 'noopener'; a.textContent = 'Open it ↗'; ok.appendChild(a); } }
           return;
         }
         sv.textContent = 'Saving photo ' + (i + 1) + ' of ' + n + '…';
         window.ppCall('penpenDiaryAdd', [{ text: i === 0 && !hasVid ? t : '', kind: kind, photo: list[i], video: null, caption: i === 0 ? cap.trim() : '' }])
-          .then(function (r) { if (r) { url = r.url || url; msg = msg || r.msg; } i++; next(); },
+          .then(function (r) {
+            if (r) { url = r.url || url; msg = msg || r.msg; }
+            if (i === 0 && t && !hasVid) { t = ''; ta.value = ''; if (window.ppDiaryDraft) ppDiaryDraft.clear(); }   // the words are saved now: a retry of the other photos mustn't add them twice
+            i++; next();
+          },
             function (e) { sv.disabled = false; DPH = list.slice(i); dStrip(); if (window.ppDiaryErr) ppDiaryErr(e); else alert((e && e.message) || 'Couldn’t save that photo — try again.'); });
       };
       next();
