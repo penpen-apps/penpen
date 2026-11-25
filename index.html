@@ -357,6 +357,21 @@ th .pp-qt{position:absolute;right:0;top:100%;width:210px;z-index:5;box-shadow:0 
 .pp-inv .pp-invrow{display:flex;gap:14px;align-items:flex-start}
 .pp-qr{width:132px;height:132px;flex:none;background:#FFFFFF;border-radius:12px;padding:4px}
 .pp-qr svg{width:100%;height:100%}
+.pp-add .pp-sub{margin-bottom:4px}
+.pp-add small.h{display:block;font-size:13px;color:var(--muted);margin-top:6px}
+.pp-roles{border:0;padding:0;margin:14px 0 0;min-width:0}
+.pp-roles legend{padding:0;font-size:12px;font-weight:600;color:var(--muted);letter-spacing:.06em;margin:0 0 6px}
+.pp-rolet{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border:2px solid var(--line);border-radius:16px;margin-bottom:8px;cursor:pointer;background:var(--card)}
+.pp-rolet input{width:22px;height:22px;margin:2px 0 0;accent-color:var(--accent);flex:none}
+.pp-rolet span{display:flex;flex-direction:column;min-width:0}
+.pp-rolet b{font-size:16px}
+.pp-rolet small{font-size:14px;color:var(--muted);line-height:1.35}
+.pp-rolet:has(input:checked){border-color:var(--accent);background:var(--accentSoft)}
+.pp-add .btn{width:100%;margin-top:10px}
+.pp-addmsg{font-size:15px;margin-top:10px;color:var(--danger)}
+.pp-addmsg:empty{display:none}
+.pp-added .fred{font-size:21px;line-height:1.25;margin:2px 0 6px}
+.pp-added .pp-sub{margin-bottom:6px}
 .pp-selfie{display:flex;align-items:center;justify-content:center;min-height:48px;margin:10px 0 4px;cursor:pointer}
 .pp-noticed{text-align:center;margin-bottom:8px}
 </style>
@@ -1358,8 +1373,11 @@ th .pp-qt{position:absolute;right:0;top:100%;width:210px;z-index:5;box-shadow:0 
     var ps = PROFS.people, h = '<div class="kick">YOUR TRAVEL BUDDIES</div>' + crewHuddle();
     h += '<div class="card pp-list">' + ps.map(function (p, i) { return '<button type="button" class="pp-li" data-who="' + i + '" aria-expanded="' + (CREW_SEL === i) + '">' + avatar(p.avatar, 48, 'face') + '<span><b>' + esc(p.name) + (p.isMe ? ' \u00b7 you' : '') + '</b><small>' + esc(subLine(p.role, p.job) || (p.saved ? 'Traveler' : 'Hasn\u2019t made a penguin yet')) + '</small></span></button>'; }).join('') + '</div>';
     if (CREW_SEL > -1 && ps[CREW_SEL]) h += profileCard(ps[CREW_SEL]);
-    h += inviteCard();
+    h += inviteCard() + addCard();
+    var f0 = $('pp-add'), keep = f0 && f0.elements && f0.elements.email ? { name: f0.elements.name.value, email: f0.elements.email.value, role: f0.elements.role.value, busy: f0.querySelector('[type=submit]').disabled } : null;
     box.innerHTML = h;
+    var f1 = keep && $('pp-add');   // a redraw mustn't wipe what the creator is typing
+    if (f1 && f1.elements.email) { f1.elements.name.value = keep.name; f1.elements.email.value = keep.email; f1.elements.role.value = keep.role; if (keep.busy) { var sb0 = f1.querySelector('[type=submit]'); sb0.disabled = true; sb0.textContent = 'Adding\u2026'; } }
     paintQR();
   }
   function profileCard(p) {
@@ -1668,8 +1686,61 @@ th .pp-qt{position:absolute;right:0;top:100%;width:210px;z-index:5;box-shadow:0 
       + '<div class="fred" style="font-size:19px;line-height:1.2">' + esc(t.name || 'Our trip') + '</div><div class="pp-sub">' + esc([t.dates, names].filter(function (x) { return x; }).join(' \u00b7 ')) + '</div>'
       + '<label class="sr" for="pp-link">penpen link</label><input class="in" id="pp-link" readonly value="' + esc(PROFS.url) + '" style="margin-top:8px;font-size:13px">'
       + '<button type="button" class="btn" data-copy="1" style="margin-top:8px;width:100%">Copy link</button></div></div>'
-      + '<p class="pp-note">Scan with a phone camera to open penpen. Someone new also needs to be added on the Trip Details tab (name and Gmail) and given access to the sheet, so penpen knows who they are.</p></div>';
+      + '<p class="pp-note">Scan with a phone camera to open penpen. Whoever opens this link and signs in with Google joins as a travel buddy, so only share it with your travel buddies.</p></div>';
   }
+  /* ---------- Add a friend (trip creator only): by Google email, no sheet editing ---------- */
+  var ADDED = null;   // the friend just added, so the "send them the link" card survives a redraw
+  function addCard() {
+    if (!window.ppTrips || window.ppTrips.role() !== 'creator') return '';
+    if (ADDED) {
+      var who = esc(ADDED.added.name);
+      return '<div class="card pp-add pp-added" id="pp-add"><div class="kick">ADD A TRAVEL BUDDY</div><div class="fred" role="status">' + who + ' is on the trip</div>'
+        + '<p class="pp-sub">Send them the app link. They sign in with <b>' + esc(ADDED.added.email) + '</b> and they\u2019re in.</p>'
+        + (ADDED.full ? '<p class="pp-note">Who\u2019s coming is full, so ' + who + ' can use penpen but won\u2019t be in the cost split. Free a spot on the Trip Details tab if they should be.</p>' : '')
+        + (ADDED.added.role === 'viewer' ? '<p class="pp-note">' + who + ' can look but not change anything, and isn\u2019t in the cost split.</p>' : '')
+        + '<button type="button" class="btn p" data-addshare="1">Send them the app link</button><button type="button" class="btn" data-addmore="1">Add someone else</button></div>';
+    }
+    return '<form class="card pp-add" id="pp-add" novalidate><div class="kick">ADD A TRAVEL BUDDY</div>'
+      + '<p class="pp-sub">Add them with their Google email. They sign in with that account and they\u2019re in, no invite code needed.</p>'
+      + '<label class="f" for="pp-add-name">NAME</label><input class="in" id="pp-add-name" name="name" required maxlength="40" autocomplete="off" placeholder="e.g. Kate">'
+      + '<label class="f" for="pp-add-email">GOOGLE EMAIL</label><input class="in" id="pp-add-email" name="email" type="email" required maxlength="254" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="kate@gmail.com" aria-describedby="pp-add-eh">'
+      + '<small class="h" id="pp-add-eh">The exact address they use to sign in to Google.</small>'
+      + '<fieldset class="pp-roles"><legend class="f">WHAT CAN THEY DO?</legend>'
+      + '<label class="pp-rolet"><input type="radio" name="role" value="crew" checked><span><b>Travel buddy</b><small>Adds costs, plans and diary entries, and shares the bills.</small></span></label>'
+      + '<label class="pp-rolet"><input type="radio" name="role" value="viewer"><span><b>Viewer</b><small>Sees the trip but can\u2019t change it. Not in the cost split. Good for family at home.</small></span></label></fieldset>'
+      + '<button type="submit" class="btn p">Add to trip</button><div class="pp-addmsg" id="pp-addmsg" role="alert"></div></form>';
+  }
+  var ADD_ERR = {
+    badname: 'Add their name.', bademail: 'That doesn\u2019t look like an email address. Check it and try again.',
+    already: 'That email is already on this trip.', notallowed: 'Only the trip creator can add people.',
+    samename: 'Someone with that name is already on Who\u2019s coming with a different email. Add an initial or a nickname to tell them apart.'
+  };
+  $('crew').addEventListener('submit', function (e) {
+    var f = e.target; if (f.id !== 'pp-add') return;
+    e.preventDefault();
+    var msg = $('pp-addmsg'), name = f.elements.name, email = f.elements.email, btn = f.querySelector('button[type=submit]');
+    msg.textContent = '';
+    if (!name.value.trim()) { msg.textContent = ADD_ERR.badname; name.focus(); return; }
+    if (!email.checkValidity() || !email.value.trim()) { msg.textContent = ADD_ERR.bademail; email.focus(); return; }
+    btn.disabled = true; btn.textContent = 'Adding\u2026';
+    window.ppTrips.addMember({ name: name.value.trim(), email: email.value.trim(), role: f.elements.role.value }).then(function (r) {
+      ADDED = r; crewStale = true; loadCrew();
+      setTimeout(function () { var c = $('pp-add'); if (c) { c.scrollIntoView({block: 'nearest', behavior: 'smooth'}); var sb = c.querySelector('[data-addshare]'); if (sb) sb.focus({preventScroll: true}); } }, 60);
+    }, function (er) {
+      var f2 = $('pp-add'); btn = f2 && f2.querySelector('[type=submit]'); msg = $('pp-addmsg');
+      if (btn) { btn.disabled = false; btn.textContent = 'Add to trip'; }
+      if (msg) msg.textContent = ADD_ERR[er.message] || (navigator.onLine ? 'Couldn\u2019t add them just now. Try again in a minute.' : 'You\u2019re offline. Adding a friend needs a connection.');
+    });
+  });
+  $('crew').addEventListener('click', function (e) {
+    var b = e.target.closest && e.target.closest('[data-addshare],[data-addmore]'); if (!b) return;
+    if (b.dataset.addmore) { ADDED = null; renderCrew(); var n = $('pp-add-name'); if (n) n.focus(); return; }
+    var url = window.ppTrips.appLink(), text = 'I added you to our trip on penpen. Open this and sign in with Google (' + ADDED.added.email + '):';
+    var copied = function () { b.textContent = 'Link copied. Paste it in a text'; setTimeout(function () { b.textContent = 'Send them the app link'; }, 3000); };
+    var copy = function () { if (navigator.clipboard) navigator.clipboard.writeText(text + ' ' + url).then(copied, function () { b.textContent = url; }); else b.textContent = url; };
+    if (navigator.share) navigator.share({ title: 'penpen', text: text, url: url }).catch(function (er) { if (!er || er.name !== 'AbortError') copy(); });
+    else copy();
+  });
   function paintQR() {
     var box = $('pp-qr'); if (!box || !PROFS || !PROFS.url) return;
     var draw = function () { if (!window.qrcode) { box.textContent = ''; box.style.display = 'none'; return; } var q = window.qrcode(0, 'M'); q.addData(PROFS.url); q.make(); box.innerHTML = q.createSvgTag({cellSize: 4, margin: 2, scalable: true}); };

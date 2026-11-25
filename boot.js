@@ -240,7 +240,16 @@
     open: function (id, name) { setTrip(id, name); location.reload(); },
     create: function (o) { return post('newTrip', o).then(function (r) { return r.trip; }); },
     setPlace: function (o) { return post('setPlace', o).then(function (r) { if (window.ppPlace) window.ppPlace.save(r.place); clearCache(); return r.place; }); },
-    remove: function (id) { return post('removeTrip', { id: id }).then(function (r) { return (r && r.trips) || []; }); }
+    remove: function (id) { return post('removeTrip', { id: id }).then(function (r) { return (r && r.trips) || []; }); },
+    role: function () { return ROLE; },
+    // creator only: add a friend by their Google email; the crew list and Today reload with them on it
+    addMember: function (o) {
+      return ready().then(function () { return post('addMember', o); }).then(function (r) {
+        Object.keys(localStorage).forEach(function (k) { if (/^pp_c_penpen(Profiles|Today):/.test(k)) localStorage.removeItem(k); });
+        return r;
+      });
+    },
+    appLink: function () { return BASE; }   // the plain app address: an added friend needs no invite code
   };
 
   window.ppSignOut = function () {

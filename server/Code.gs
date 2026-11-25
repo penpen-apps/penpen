@@ -120,16 +120,44 @@ function ppNewTrip_(user, a) {
   ppMineAdd_(user.email, id);
   return { id: id, name: name, start: start, end: end, where: where, role: 'creator' };
 }
-/* Put someone on the trip's "Who's coming" list (name + Google email) so penpen knows who "I" is. */
+/* Put someone on the trip's "Who's coming" list (name + Google email) so penpen knows who "I" is.
+   Returns false when the list is already full (MAXP people). */
 function ppAddPerson_(ss, name, email) {
-  var d = ss.getSheetByName(DET); if (!d || !email) return;
+  var d = ss.getSheetByName(DET); if (!d || !email) return false;
   var rows = d.getRange(D_FIRST, 2, MAXP, 4).getValues(), lo = String(email).toLowerCase(), free = -1;
   for (var i = 0; i < rows.length; i++) {
-    if (String(rows[i][3]).toLowerCase() === lo) return;
-    if (String(rows[i][0]).toLowerCase() === String(name).toLowerCase() && !rows[i][3]) { d.getRange(D_FIRST + i, 5).setValue(email); return; }
+    if (String(rows[i][3]).toLowerCase() === lo) return true;
+    if (String(rows[i][0]).toLowerCase() === String(name).toLowerCase() && !rows[i][3]) { d.getRange(D_FIRST + i, 5).setValue(email); return true; }
     if (free < 0 && !rows[i][0]) free = i;
   }
-  if (free >= 0) { d.getRange(D_FIRST + free, 2).setValue(name); d.getRange(D_FIRST + free, 5).setValue(email); }
+  if (free < 0) return false;
+  d.getRange(D_FIRST + free, 2).setValue(ppCellText_(name)); d.getRange(D_FIRST + free, 5).setValue(email);
+  return true;
+}
+/* Text typed by people goes into the sheet as plain text: a leading = + - @ would otherwise run as a formula. */
+function ppCellText_(s) { s = String(s == null ? '' : s); return /^[=+\-@]/.test(s) ? "'" + s : s; }
+/* The trip creator adds a friend by their Google email (no invite link needed).
+   Crew also go on "Who's coming", so penpen splits costs with them; viewers only get to look. */
+function ppAddMember_(me, a) {
+  var name = String(a.name || '').replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, 40);
+  var email = String(a.email || '').trim().toLowerCase(), role = String(a.role || '');
+  if (!name) throw new Error('badname');
+  if (email.length > 254 || !/^[a-z0-9_][^\s@<>()\[\]\\,;:"']*@[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(email)) throw new Error('bademail');
+  if (role !== 'crew' && role !== 'viewer') throw new Error('badrole');
+  var lock = LockService.getScriptLock(); lock.waitLock(20000);
+  try {
+    if (srvMemberOf_(email)) throw new Error('already');
+    var ss = srvSS_(), onList = false;
+    if (role === 'crew') {
+      // two people with the same name would confuse "Kate paid": ask for a different name instead
+      var d = ss.getSheetByName(DET), rows = d ? d.getRange(D_FIRST, 2, MAXP, 4).getValues() : [];
+      if (rows.some(function (r) { return String(r[0]).trim().toLowerCase() === name.toLowerCase() && r[3] && String(r[3]).toLowerCase() !== email; })) throw new Error('samename');
+      onList = ppAddPerson_(ss, name, email);
+    }
+    srvMembersSheet_().appendRow([email, ppCellText_(name), role, new Date(), me.email]);
+    ppMineAdd_(email, __PP_TRIP);   // shows up in their My trips (the home trip is found from its Members tab)
+    return { added: { name: name, email: email, role: role }, onList: onList, full: role === 'crew' && !onList };
+  } finally { lock.releaseLock(); }
 }
 // midnight in the trip sheet's own time zone, so the date doesn't slip a day when the script runs in another zone
 function ppDate_(s, tz) { return /^\d{4}-\d{2}-\d{2}$/.test(String(s || '')) ? Utilities.parseDate(s, tz, 'yyyy-MM-dd') : ''; }
@@ -166,7 +194,7 @@ function ppBlank_(ss, user, name, start, end, where, cc, tz) {
   set('TripName', name); set('FileTitle', name); set('TripStart', ppDate_(start, stz)); set('TripEnd', ppDate_(end, stz));
   ppAddPerson_(ss, user.name, user.email);
   var m = ss.getSheetByName('Members');
-  if (m) { m.clearContents(); m.appendRow(['Email', 'Name', 'Role', 'Joined', 'Invited by']); m.appendRow([user.email, user.name, 'creator', new Date(), '']); }
+  if (m) { m.clearContents(); m.appendRow(['Email', 'Name', 'Role', 'Joined', 'Invited by']); m.appendRow([user.email, ppCellText_(user.name), 'creator', new Date(), '']); }
   SpreadsheetApp.flush();
   try { applyDetails(ss); } catch (e) {}
 }
@@ -184,7 +212,7 @@ function doPost(e) {
     ppUseTrip_(action === 'join' ? ppCodeTrip_(args.code) : req.trip);
     var data = srvRoute_(user, action, args);
     if (action === 'join' && data && data.member) { ppMineAdd_(user.email, __PP_TRIP); data.trip = __PP_TRIP; try { ppAddPerson_(srvSS_(), user.name, user.email); } catch (e) {} }
-      if (action === 'whoami' && __PP_TRIP && data && data.member) { try { ppAddPerson_(srvSS_(), user.name, user.email); } catch (e) {} }
+    if (action === 'whoami' && __PP_TRIP && data && data.member && data.member.role !== 'viewer') { try { ppAddPerson_(srvSS_(), user.name, user.email); } catch (e) {} }
     return srvOut_({ ok: true, data: data });
   } catch (err) {
     return srvOut_({ ok: false, error: String((err && err.message) || err) });
@@ -276,7 +304,7 @@ function srvRoute_(user, action, a) {
   if (action === 'join') {
     if (me) return { member: me };
     if (!a.code || a.code !== srvInvite_()) throw new Error('badinvite');
-    srvMembersSheet_().appendRow([user.email, user.name, 'crew', new Date(), 'invite']);
+    srvMembersSheet_().appendRow([user.email, ppCellText_(user.name), 'crew', new Date(), 'invite']);
     return { member: srvMemberOf_(user.email) };
   }
 
@@ -311,6 +339,7 @@ function srvRoute_(user, action, a) {
 
   if (action === 'invite') { srvNeed_(me, 'admin'); return { code: srvInvite_(!!a.fresh) }; }
   if (action === 'members') { srvNeed_(me, 'admin'); return { members: srvMembers_() }; }
+  if (action === 'addMember') { srvNeed_(me, 'admin'); return ppAddMember_(me, a); }
 
   if (action === 'setRole') {
     srvNeed_(me, 'admin');
