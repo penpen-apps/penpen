@@ -3249,6 +3249,7 @@ function penpenToday() {
     if (row) { myBudget = Number(td.getRange(row, 6).getValue()) || 0; hidden = td.getRange(row, 7).getValue() === true; }
   }
   return {
+    setup: ppSetup_(ss, n),
     hello: hello, me: me || '', people: people, ls: ls, cur: cur, home: ctx.home, place: ppPlace_(ss), rate: Number(named(ss, 'LiveRate')) || 0,
     next: next, timelineDay: Utilities.formatDate(Utilities.parseDate(showDay || trip.today, tz, 'yyyy-MM-dd'), tz, 'EEE, MMM d'), timeline: timeline,
     look: ppLook_(ss), settle: settleText_(), balances: bal, pocket: pocket,
@@ -3257,6 +3258,17 @@ function penpenToday() {
     mine: meData ? {total: meData.total, personal: meData.personal, share: meData.share, covered: meData.covered,
       cats: Object.keys(meData.cats).map(c => ({cat: c, amt: meData.cats[c]})).sort((a, b) => b.amt - a.amt), hidden: hidden} : null
   };
+}
+
+/* "Get your trip ready" checklist on Today: only for new trips (made in the last 30 days, or nothing planned or spent yet),
+   never the home trip. The app ticks the steps off from these counts. */
+function ppSetup_(ss, expenses) {
+  if (!__PP_TRIP) return null;
+  const t = ppTripList_()[__PP_TRIP] || {}, recent = Date.now() - (Date.parse(t.made || '') || 0) < 30 * 864e5;
+  if (!recent && expenses) return null;
+  const stops = ppStops_(ss).length;
+  if (!recent && stops) return null;
+  return {stops: stops, expenses: expenses, emergency: ppContacts_(ss).filter(c => c.type === 'Emergency').length};
 }
 
 /* ---- one-tap fixes from the review list ---- */

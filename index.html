@@ -1007,7 +1007,7 @@ body.pp-viewer .pp-addbtn,body.pp-viewer .pp-edtxt{display:none}
     if (DAY && /^\d{4}-\d{2}-\d{2}$/.test(DAY)) return DAY;
     return (P && (P.open || P.start)) || t;
   }
-  $('plan-add').onclick = function () {
+  function openAddStop() {
     if (!canEdit(true)) return;
     var lo = (P && P.start) || '', hi = (P && P.end) || '';
     formDialog('Add a stop', 'It goes straight into the plan and on the map.',
@@ -1025,10 +1025,14 @@ body.pp-viewer .pp-addbtn,body.pp-viewer .pp-edtxt{display:none}
         }).withFailureHandler(function (er) { fail(er.message); })
           .penpenAddStop({date: day, time: v('time'), what: v('what'), place: v('place'), notes: v('notes')});
       });
-  };
+  }
+  $('plan-add').onclick = openAddStop;
   document.addEventListener('click', function (e) {
-    var b = e.target.closest && e.target.closest('[data-addct]'); if (!b || !canEdit(true)) return;
-    var type = b.dataset.addct, update = false, typeTouched = false;
+    var b = e.target.closest && e.target.closest('[data-addct]'); if (b) openAddContact(b.dataset.addct);
+  });
+  function openAddContact(type) {
+    if (!canEdit(true)) return;
+    var update = false, typeTouched = false;
     var cf = formDialog('Add a contact', 'A hotel, driver, tour or someone to call at home.',
       '<label class="f" for="ct-name">NAME</label><input class="in" id="ct-name" name="name" required maxlength="60" autocomplete="off" placeholder="e.g. Harolds Hotel" data-err="Add the contact\u2019s name.">'
       + '<label class="f" for="ct-type">TYPE</label><select class="in" id="ct-type" name="type">' + [['Emergency', 'Emergency contact at home'], ['Hotel', 'Hotel'], ['Tour', 'Tour'], ['Transport', 'Transport'], ['Other', 'Other']]
@@ -1047,13 +1051,22 @@ body.pp-viewer .pp-addbtn,body.pp-viewer .pp-edtxt{display:none}
             fail(r.exists + ' is already in your contacts. Update it with what you typed? Anything left blank stays as it is.');
             ok.textContent = 'Yes, update ' + r.exists; return;
           }
-          close(); keep('penpenSafety', r.safety); renderSafety(r.safety); notice(r.msg || 'Contact saved.');
+          close(); keep('penpenSafety', r.safety); renderSafety(r.safety); todayStale = true; if ($('p-today').classList.contains('on')) loadToday(); notice(r.msg || 'Contact saved.');
         }).withFailureHandler(function (er) { fail(er.message); })
           .penpenAddContact({name: v('name'), type: v('type'), phone: v('phone'), messenger: v('messenger'), email: v('email'), place: v('place'), notes: v('notes'), update: update});
       });
     cf.elements.type.onchange = function () { typeTouched = true; };
     cf.elements.name.oninput = function () { if (update) { update = false; var ok = cf.querySelector('[type=submit]'); ok.textContent = 'Add contact'; } };
-  });
+  }
+  // the "Get your trip ready" checklist on Today (story.js) opens these
+  window.ppStart = {
+    addStop: function () {   // wait for the plan (trip dates) so the day picker starts in the trip
+      go('p-plan'); var tries = 0;
+      (function ready() { if (P || ++tries > 50) openAddStop(); else setTimeout(ready, 100); })();
+    },
+    addContact: function (type) { openAddContact(type || 'Emergency'); },
+    say: function (t) { askPenpen(t || ''); }
+  };
   /* ---------- Plan extras: hotel at start/end + drive times (stage 1) ---------- */
   var EXTRAS = {};
   var BED_SVG = '<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18V8M3 14h18v4M21 14v-2a3 3 0 0 0-3-3h-7v5"></path><circle cx="7" cy="11" r="2"></circle></svg>';
