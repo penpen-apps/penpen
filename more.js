@@ -138,7 +138,7 @@
     ['u1122-play', '🎮', 'New: Play', 'Look after penpen, Belly Slide down a snowy hill, exercise and trivia — works offline', 'Play'],
     ['u1122-voice', '🛠️', 'Fixed: logging by voice', 'Telling penpen an expense works again', 'Money'],
     ['u1122-diary', '🔒', 'Diary: Just me is private', 'Your own Google Doc, with a link to open it', 'Diary'],
-    ['u1122-more', '🧭', 'More menu', 'Travel buddies, Safety, Bookings, Diary, Play and Settings each have their own page', 'More']
+    ['u1122-more', '🧭', 'More menu', 'Crew, Safety, Bookings, Diary, Play and Settings each have their own page', 'More']
   ];
   window.ppFeed = function () {
     var out = [], first = get('pp_feed_first') || {}, nowT = Date.now(), WEEK = 7 * 864e5, changed = false;

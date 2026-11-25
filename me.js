@@ -202,7 +202,7 @@
     var crew = whos.concat([document.querySelector('#pp-scene .pp-me')]).filter(Boolean).map(function (w) { var sv = w.querySelector('svg'); return sv ? sv.outerHTML : ''; }).join('');
     var stat = function (n, l) { return '<div><b>' + n + '</b><span>' + l + '</span></div>'; };
     return '<h3>' + yr + ' in travel</h3><div class="stats one">' + stat(thisYear.length, thisYear.length === 1 ? 'Trip' : 'Trips') + stat(Object.keys(places).length, Object.keys(places).length === 1 ? 'Place' : 'Places') + stat(nExp, 'Expenses') + '</div>' +
-      (buddies ? '<h3>Travel buddies</h3><div class="buds">' + buddies + '</div>' : '') +
+      (buddies ? '<h3>Crew</h3><div class="buds">' + buddies + '</div>' : '') +
       '<h3>My trips</h3><div class="album">' + trips.map(function (t) {
         return '<button type="button" class="pol' + (t.here ? ' here' : '') + '" data-trip="' + esc(t.id) + '" data-name="' + esc(t.name) + '"><div class="ph">' + (t.here && crew ? '<div class="cr">' + crew + '</div>' : '<span class="big">🧳</span>') + '</div>' +
           '<b>' + esc(t.name) + '</b><small>' + (t.s ? fmtD(t.s) + (t.e ? ' – ' + fmtD(t.e) : '') + ', ' + t.s.getFullYear() : (t.where || '')) + (t.here ? ' · now' : '') + '</small></button>';
