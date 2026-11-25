@@ -195,6 +195,7 @@ nav .pen{width:70px;height:70px;margin-top:-32px;border-radius:999px;background:
 .ctb a,.ctb button{min-height:44px;padding:0 14px;border-radius:999px;border:2px solid var(--line);background:var(--card);color:var(--ink);font-size:14px;font-weight:600;display:inline-flex;align-items:center;text-decoration:none}
 .ctb a.p{background:var(--accent);border-color:var(--accent);color:var(--accentInk)}
 .missing{font-size:13px;color:var(--warn)}
+.ct .nocc{font-size:13px;color:var(--warn);margin-top:4px}
 /* diary */
 .ta{width:100%;min-height:140px;border-radius:16px;border:1px solid var(--line);background:var(--card);padding:12px;font:inherit;font-size:16px;line-height:1.45;resize:vertical}
 .phbtns{display:flex;gap:8px;margin:10px 0}
@@ -426,7 +427,7 @@ body.pp-viewer .pp-addbtn,body.pp-viewer .pp-edtxt{display:none}
 
     <section class="pane" id="p-safety" aria-label="Safety">
       <div class="scroll">
-        <div class="fred" style="font-size:22px;margin-bottom:8px">Crew &amp; contacts</div>
+        <div class="fred" style="font-size:22px;margin-bottom:8px">Travel buddies &amp; contacts</div>
         <button class="sos" type="button" id="sos"><svg aria-hidden="true" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg>Call 112</button>
         <div class="sosask" id="sosask" role="alertdialog" aria-labelledby="sosq">
           <div id="sosq" style="font-size:17px;font-weight:600">Call 112 now?</div>
@@ -755,6 +756,7 @@ body.pp-viewer .pp-addbtn,body.pp-viewer .pp-edtxt{display:none}
   function loadForm() {
     google.script.run.withSuccessHandler(function (d) { F = d; formReady = true; resetForm(); }).withFailureHandler(function (e) { $('a-err').textContent = e.message; }).penpenFormData();
   }
+  var maybeAdded = '';
   $('addf').onsubmit = function (e) {
     e.preventDefault();
     var o = {what: $('a-what').value.trim(), amount: $('a-amt').value, cur: val('cur'), date: $('a-date').value, cat: val('cat'),
@@ -763,10 +765,14 @@ body.pp-viewer .pp-addbtn,body.pp-viewer .pp-edtxt{display:none}
     if (!o.what) { er.textContent = 'Add what it was for.'; return; }
     if (!(Number(o.amount) > 0)) { er.textContent = 'Enter an amount above 0.'; return; }
     if (!o.cat) { er.textContent = 'Pick a category.'; return; }
+    // a try that got no answer may still have been added: ask before adding the same thing again
+    var same = [o.what, o.amount, o.cur, o.date].join('|');
+    if (maybeAdded === same && !confirm('Your last try at adding "' + o.what + '" got no answer, so it may already be in Money. Add it again anyway?')) return;
     er.textContent = ''; var b = $('a-go'); b.disabled = true; b.textContent = 'Adding…';
     google.script.run.withSuccessHandler(function (r) {
+      maybeAdded = '';
       b.disabled = false; b.textContent = 'Add expense'; $('a-ok').style.display = 'block'; $('a-ok').textContent = '✅ Added: ' + r; moneyStale = true; todayStale = true; resetForm();
-    }).withFailureHandler(function (x) { er.textContent = x.message; b.disabled = false; b.textContent = 'Add expense'; }).addExpenseForm(o);
+    }).withFailureHandler(function (x) { if (x.weak) maybeAdded = same; er.textContent = x.message; b.disabled = false; b.textContent = 'Add expense'; }).addExpenseForm(o);
   };
 
   /* ---------- Today ---------- */
@@ -1095,6 +1101,18 @@ body.pp-viewer .pp-addbtn,body.pp-viewer .pp-edtxt{display:none}
 
   /* ---------- Diary ---------- */
   var DK = 'group', PHOTO = null, dlinks = null;
+  // an entry that isn't saved yet stays on this phone, so closing the app (or no signal) doesn't lose it
+  var DRAFT = 'pp_diary_draft:' + (localStorage.getItem('pp_trip_id') || '');
+  window.ppDiaryDraft = {
+    keep: function () { try { var t = $('d-text').value; if (t.trim()) localStorage.setItem(DRAFT, t); else localStorage.removeItem(DRAFT); } catch (e) {} },
+    clear: function () { try { localStorage.removeItem(DRAFT); } catch (e) {} }
+  };
+  $('d-text').addEventListener('input', ppDiaryDraft.keep);
+  (function () {
+    var t = null; try { t = localStorage.getItem(DRAFT); } catch (e) {}
+    if (!t || $('d-text').value.trim()) return;
+    $('d-text').value = t; $('d-ok').style.display = 'block'; $('d-ok').textContent = 'Your unsaved entry is back. Tap Save when you have signal.';
+  })();
   function dkind(k) { DK = k; $('d-group').setAttribute('aria-pressed', k === 'group'); $('d-me').setAttribute('aria-pressed', k === 'me'); }
   $('d-group').onclick = function () { dkind('group'); }; $('d-me').onclick = function () { dkind('me'); };
   function loadDiaryLinks() {
@@ -1132,7 +1150,7 @@ body.pp-viewer .pp-addbtn,body.pp-viewer .pp-edtxt{display:none}
     if (drec) { drec.stop(); return; }
     var base = $('d-text').value ? $('d-text').value.trim() + ' ' : '';
     drec = new SR(); drec.lang = 'en-US'; drec.interimResults = true; drec.continuous = true;
-    drec.onresult = function (e) { var s = ''; for (var i = 0; i < e.results.length; i++) s += e.results[i][0].transcript; $('d-text').value = base + s; };
+    drec.onresult = function (e) { var s = ''; for (var i = 0; i < e.results.length; i++) s += e.results[i][0].transcript; $('d-text').value = base + s; ppDiaryDraft.keep(); };
     drec.onend = function () { drec = null; $('d-mic').textContent = '🎤 Talk'; };
     drec.onerror = function () { drec = null; $('d-mic').textContent = '🎤 Talk'; };
     $('d-mic').textContent = '⏹ Stop'; try { drec.start(); } catch (x) { drec = null; $('d-mic').textContent = '🎤 Talk'; }
@@ -1153,7 +1171,7 @@ body.pp-viewer .pp-addbtn,body.pp-viewer .pp-edtxt{display:none}
     google.script.run.withSuccessHandler(function (r) {
       b.disabled = false; b.textContent = 'Save to the diary';
       $('d-ok').style.display = 'block'; $('d-ok').textContent = r.msg; var a = el('a', 'linkbtn', ' Open it ↗'); a.href = r.url; a.target = '_blank'; a.rel = 'noopener'; $('d-ok').appendChild(a);
-      $('d-text').value = ''; $('d-x').onclick(); clearVideo(); dlinks = null; loadDiaryLinks();
+      $('d-text').value = ''; ppDiaryDraft.clear(); $('d-x').onclick(); clearVideo(); dlinks = null; loadDiaryLinks();
     }).withFailureHandler(function (e) { b.disabled = false; b.textContent = 'Save to the diary'; ppDiaryErr(e); })
       .penpenDiaryAdd({text: t, kind: DK, photo: PHOTO, video: VIDEO, caption: $('d-cap').value.trim()});
   };
@@ -1243,10 +1261,13 @@ body.pp-viewer .pp-addbtn,body.pp-viewer .pp-edtxt{display:none}
   renderSos('');
   function tel(p) { return 'tel:' + String(p).replace(/[^\d+]/g, ''); }
   function msgUrl(m) { m = String(m || '').trim(); if (!m) return ''; if (/^https?:\/\//i.test(m)) return m; if (/^(m\.me|facebook\.com|fb\.com|www\.facebook\.com)\//i.test(m)) return 'https://' + m; return 'https://m.me/' + m.replace(/^@/, ''); }
-  function contactRow(c) {
+  function contactRow(c, home) {
     var r = el('div', 'ct');
     r.appendChild(el('div', 'n', c.name));
     var d = [c.person, c.phone, c.notes].filter(Boolean).join(' · '); if (d) r.appendChild(el('div', 'd', d));
+    // a number back home saved without its country code won't connect from abroad (penpen dials it exactly as saved)
+    if (home && c.phone && !/^\s*(\+|00)/.test(c.phone) && String(c.phone).replace(/\D/g, '').length >= 7)
+      r.appendChild(el('div', 'nocc', '\u26A0\uFE0F No country code, so this may not connect from abroad. Save it starting with + and the country code (+1 for the US).'));
     var b = el('div', 'ctb'), any = false;
     if (c.phone) { var a = el('a', 'p', 'Call'); a.href = tel(c.phone); b.appendChild(a); var t = el('a', '', 'Text'); t.href = 'sms:' + String(c.phone).replace(/[^\d+]/g, ''); b.appendChild(t); any = true; }
     if (c.msg) { var m = el('a', '', 'Messenger'); m.href = msgUrl(c.msg); m.target = '_blank'; m.rel = 'noopener'; b.appendChild(m); any = true; }
@@ -1279,7 +1300,7 @@ body.pp-viewer .pp-addbtn,body.pp-viewer .pp-edtxt{display:none}
     var em = $('emer'); em.innerHTML = ''; em.appendChild(el('div', 'kick', 'EMERGENCY CONTACTS AT HOME'));
     var es = s.contacts.filter(function (c) { return c.type === 'Emergency'; });
     if (!es.length) em.appendChild(el('div', 'muted', 'None yet.'));
-    es.forEach(function (c) { em.appendChild(contactRow(c)); });
+    es.forEach(function (c) { em.appendChild(contactRow(c, true)); });
     var tc = $('trip-ct'); tc.innerHTML = ''; tc.appendChild(el('div', 'kick', 'HOTELS, TOURS & TRANSPORT'));
     var ts = s.contacts.filter(function (c) { return c.type !== 'Emergency'; });
     if (!ts.length) tc.appendChild(el('div', 'muted', 'None yet.'));
@@ -1406,7 +1427,7 @@ body.pp-viewer .pp-addbtn,body.pp-viewer .pp-edtxt{display:none}
     var box = $('start'), sc = box.scrollTop, name = PROFS && PROFS.me ? PROFS.me : 'You', h;
     var dots = '<div class="pp-dots" aria-label="Step ' + ST.step + ' of 4">' + [1, 2, 3, 4].map(function (i) { return '<i' + (i === ST.step ? ' class="on"' : '') + '></i>'; }).join('') + '</div>';
     if (ST.step === 1) {
-      h = dots + '<div class="pp-hello">' + avatar(AV_DEF, 130, 'full', true) + '<div class="fred pp-h1">Hi! I\u2019m penpen.</div><p class="pp-sub">Let\u2019s set up your trip crew. Everyone gets their own penguin and profile.</p></div>'
+      h = dots + '<div class="pp-hello">' + avatar(AV_DEF, 130, 'full', true) + '<div class="fred pp-h1">Hi! I\u2019m penpen.</div><p class="pp-sub">Let\u2019s set up your travel buddies. Everyone gets their own penguin and profile.</p></div>'
         + '<div class="kick">WHAT KIND OF TRIP IS THIS?</div><div class="pp-trips">' + TRIPS.map(function (t) { var on = ST.trip === t[0]; return '<button type="button" class="pp-trip' + (on ? ' on' : '') + '" aria-pressed="' + on + '" data-trip="' + t[0] + '"><b class="fred">' + t[1] + '</b><span>' + t[2] + '</span></button>'; }).join('') + '</div>'
         + '<div class="kick">AND YOU ARE\u2026</div><div class="pp-chips">' + ROLES.map(function (r) { var on = ST.role === r; return '<button type="button" class="pp-chip' + (on ? ' on' : '') + '" aria-pressed="' + on + '" data-role="' + esc(r) + '">' + esc(r) + '</button>'; }).join('') + '</div>'
         + '<div class="err" id="st-err" role="alert"></div><button type="button" class="btn p pp-go" data-go="2">Next: make my penguin</button><button type="button" class="pp-skip" data-skip="1">Skip \u2014 keep classic penpen</button>';
@@ -1415,10 +1436,10 @@ body.pp-viewer .pp-addbtn,body.pp-viewer .pp-edtxt{display:none}
         + '<div class="kick">EYES</div>' + tilesHtml('eyes') + '<div class="kick">CHEEKS</div>' + tilesHtml('blush') + '<div class="kick">BODY COLOUR</div>' + tilesHtml('body')
         + '<div class="kick">HAIR</div>' + tilesHtml('hair') + '<div class="kick">HAIR COLOUR</div>' + swatchHtml('hairColor')
         + '<div class="kick">CLOTHES</div>' + tilesHtml('clothes') + '<div class="kick">CLOTHES COLOUR</div>' + swatchHtml('color')
-        + '<div class="kick">EXTRAS \u00b7 PICK ANY</div>' + tilesHtml('extras') + '<div class="kick">YOUR JOB IN THE CREW</div>' + tilesHtml('job')
+        + '<div class="kick">EXTRAS \u00b7 PICK ANY</div>' + tilesHtml('extras') + '<div class="kick">YOUR JOB ON THE TRIP</div>' + tilesHtml('job')
         + '<div class="err" id="st-err" role="alert"></div><button type="button" class="btn p pp-go" data-save="1">This is me</button><button type="button" class="pp-skip" data-go="1">Back</button>';
     } else if (ST.step === 3) {
-      h = dots + '<div class="fred pp-h1">Your crew is ready</div>' + crewHuddle() + '<p class="pp-sub" style="text-align:center;margin:10px 0">Everyone makes their own penguin the first time they open penpen. Tap a penguin in Crew to see their profile.</p><button type="button" class="btn p pp-go" data-go="4">Next: quick tour</button><button type="button" class="pp-skip" data-go="2">Change my penguin</button>';
+      h = dots + '<div class="fred pp-h1">Your travel buddies are ready</div>' + crewHuddle() + '<p class="pp-sub" style="text-align:center;margin:10px 0">Everyone makes their own penguin the first time they open penpen. Tap a penguin in Travel buddies (in More) to see their profile.</p><button type="button" class="btn p pp-go" data-go="4">Next: quick tour</button><button type="button" class="pp-skip" data-go="2">Change my penguin</button>';
     } else {
       h = dots + tourHtml() + '<button type="button" class="btn p pp-go" data-done="1">Start the trip</button>';
     }
@@ -1458,7 +1479,7 @@ body.pp-viewer .pp-addbtn,body.pp-viewer .pp-edtxt{display:none}
   }
   function renderCrew() {
     var box = $('crew'); if (!box || !PROFS) return;
-    var ps = PROFS.people, h = '<div class="kick">YOUR CREW</div>' + crewHuddle();
+    var ps = PROFS.people, h = '<div class="kick">YOUR TRAVEL BUDDIES</div>' + crewHuddle();
     h += '<div class="card pp-list">' + ps.map(function (p, i) { return '<button type="button" class="pp-li" data-who="' + i + '" aria-expanded="' + (CREW_SEL === i) + '">' + avatar(p.avatar, 48, 'face') + '<span><b>' + esc(p.name) + (p.isMe ? ' \u00b7 you' : '') + '</b><small>' + esc(subLine(p.role, p.job) || (p.saved ? 'Traveler' : 'Hasn\u2019t made a penguin yet')) + '</small></span></button>'; }).join('') + '</div>';
     if (CREW_SEL > -1 && ps[CREW_SEL]) h += profileCard(ps[CREW_SEL]);
     h += inviteCard() + addCard();
@@ -1575,9 +1596,9 @@ body.pp-viewer .pp-addbtn,body.pp-viewer .pp-edtxt{display:none}
       + '<button type="button" class="btn" data-tour="1" style="width:100%;margin-top:4px">Show the quick tour</button>';
   }
   function tourHtml() {
-    var rows = [['Today', 'Your day, your crew, and what\u2019s happening right now.'], ['Plan', 'Every stop, your hotels, and drive times between them.'],
+    var rows = [['Today', 'Your day, your travel buddies, and what\u2019s happening right now.'], ['Plan', 'Every stop, your hotels, and drive times between them.'],
       [guideMine() ? 'Your penguin (middle button)' : 'penpen (middle button)', 'Talk or type: add an expense, change the plan, ask anything.'],
-      ['Money', 'Who paid what, and what still needs paying.'], ['Crew', 'Everyone\u2019s profiles and numbers, plus a one-tap SOS call.'],
+      ['Money', 'Who paid what, and what still needs paying.'], ['More \u2192 Travel buddies', 'Everyone\u2019s profiles and numbers. SOS is in More \u2192 Safety.'],
       ['\uD83D\uDCD4 Diary (top)', 'Write about the day and add photos.'], ['\uD83D\uDD0A Speaker (top)', 'Turns the spoken replies on or off.']];
     return '<div class="fred pp-h1">Quick tour</div><div class="card pp-tour">' + rows.map(function (x) { return '<div class="pp-trow"><b>' + x[0] + '</b><span>' + x[1] + '</span></div>'; }).join('') + '</div><p class="pp-sub" style="margin-bottom:6px">Tip: tap your penguin on Today any time to change how you look. Scenes and dark mode are in More \u2192 Settings.</p>';
   }
@@ -1774,7 +1795,7 @@ body.pp-viewer .pp-addbtn,body.pp-viewer .pp-edtxt{display:none}
       + '<div class="fred" style="font-size:19px;line-height:1.2">' + esc(t.name || 'Our trip') + '</div><div class="pp-sub">' + esc([t.dates, names].filter(function (x) { return x; }).join(' \u00b7 ')) + '</div>'
       + '<label class="sr" for="pp-link">penpen link</label><input class="in" id="pp-link" readonly value="' + esc(PROFS.url) + '" style="margin-top:8px;font-size:13px">'
       + '<button type="button" class="btn" data-copy="1" style="margin-top:8px;width:100%">Copy link</button></div></div>'
-      + '<p class="pp-note">Scan with a phone camera to open penpen. Whoever opens this link and signs in with Google joins as crew, so only share it with your crew.</p></div>';
+      + '<p class="pp-note">Scan with a phone camera to open penpen. Whoever opens this link and signs in with Google joins as a travel buddy, so only share it with your travel buddies.</p></div>';
   }
   /* ---------- Add a friend (trip creator only): by Google email, no sheet editing ---------- */
   var ADDED = null;   // the friend just added, so the "send them the link" card survives a redraw
@@ -1782,19 +1803,19 @@ body.pp-viewer .pp-addbtn,body.pp-viewer .pp-edtxt{display:none}
     if (!window.ppTrips || window.ppTrips.role() !== 'creator') return '';
     if (ADDED) {
       var who = esc(ADDED.added.name);
-      return '<div class="card pp-add pp-added" id="pp-add"><div class="kick">ADD A FRIEND</div><div class="fred" role="status">' + who + ' is on the trip</div>'
+      return '<div class="card pp-add pp-added" id="pp-add"><div class="kick">ADD A TRAVEL BUDDY</div><div class="fred" role="status">' + who + ' is on the trip</div>'
         + '<p class="pp-sub">Send them the app link. They sign in with <b>' + esc(ADDED.added.email) + '</b> and they\u2019re in.</p>'
         + (ADDED.full ? '<p class="pp-note">Who\u2019s coming is full, so ' + who + ' can use penpen but won\u2019t be in the cost split. Free a spot on the Trip Details tab if they should be.</p>' : '')
         + (ADDED.added.role === 'viewer' ? '<p class="pp-note">' + who + ' can look but not change anything, and isn\u2019t in the cost split.</p>' : '')
         + '<button type="button" class="btn p" data-addshare="1">Send them the app link</button><button type="button" class="btn" data-addmore="1">Add someone else</button></div>';
     }
-    return '<form class="card pp-add" id="pp-add" novalidate><div class="kick">ADD A FRIEND</div>'
+    return '<form class="card pp-add" id="pp-add" novalidate><div class="kick">ADD A TRAVEL BUDDY</div>'
       + '<p class="pp-sub">Add them with their Google email. They sign in with that account and they\u2019re in, no invite code needed.</p>'
       + '<label class="f" for="pp-add-name">NAME</label><input class="in" id="pp-add-name" name="name" required maxlength="40" autocomplete="off" placeholder="e.g. Kate">'
       + '<label class="f" for="pp-add-email">GOOGLE EMAIL</label><input class="in" id="pp-add-email" name="email" type="email" required maxlength="254" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="kate@gmail.com" aria-describedby="pp-add-eh">'
       + '<small class="h" id="pp-add-eh">The exact address they use to sign in to Google.</small>'
       + '<fieldset class="pp-roles"><legend class="f">WHAT CAN THEY DO?</legend>'
-      + '<label class="pp-rolet"><input type="radio" name="role" value="crew" checked><span><b>Crew</b><small>Adds costs, plans and diary entries, and shares the bills.</small></span></label>'
+      + '<label class="pp-rolet"><input type="radio" name="role" value="crew" checked><span><b>Travel buddy</b><small>Adds costs, plans and diary entries, and shares the bills.</small></span></label>'
       + '<label class="pp-rolet"><input type="radio" name="role" value="viewer"><span><b>Viewer</b><small>Sees the trip but can\u2019t change it. Not in the cost split. Good for family at home.</small></span></label></fieldset>'
       + '<button type="submit" class="btn p">Add to trip</button><div class="pp-addmsg" id="pp-addmsg" role="alert"></div></form>';
   }

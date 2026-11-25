@@ -12,6 +12,11 @@ self.addEventListener('fetch', e => {
   const req = u.origin !== location.origin ? e.request
     : e.request.mode === 'navigate' ? new Request(u.href, { cache: 'no-cache', credentials: 'same-origin' })
     : new Request(e.request, { cache: 'no-cache' });
-  e.respondWith(fetch(req).then(r => { const copy = r.clone(); caches.open(V).then(c => c.put(e.request, copy)); return r; })
-    .catch(() => caches.match(e.request).then(m => m || caches.match('index.html'))));
+  const saved = () => caches.match(e.request).then(m => m || caches.match('index.html'));
+  const net = fetch(req).then(r => { const copy = r.clone(); caches.open(V).then(c => c.put(e.request, copy)); return r; });
+  // weak signal: if the network hasn't answered in 5 seconds, open from the saved copy instead of a blank screen
+  // (the network answer still updates the saved copy for next time)
+  const slow = new Promise(res => setTimeout(res, 5000)).then(() => caches.match(e.request)).then(m => m || net);
+  e.respondWith(Promise.race([net, slow]).catch(saved));
+  e.waitUntil(net.catch(() => {}));   // let a late answer finish updating the saved copy
 });
