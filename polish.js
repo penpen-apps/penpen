@@ -190,7 +190,7 @@
     ['Spent money? Just say it 💸', '“Lunch 450, I paid.” I write it down, split it and keep score. Ask me “Who owes who?” anytime.'],
     ['Your trip, day by day 🗺️', 'Today shows what’s next. Itinerary has every stop, time and direction. Tell me to change things.'],
     ['Lost for words? 🌐', 'Tap Translate, hold your button and talk. I’ll say it in Bisaya, Tagalog and more.'],
-    ['No signal? No problem 📴', 'Your plans and expenses stay on your phone, and you can play with me anytime in Play.'],
+    ['No signal? No problem 📴', 'Your plans and expenses stay on your phone, and you can play with me anytime in the Garden.'],
     ['That’s it! 🎉', 'Tap me in the middle whenever you need anything.']
   ];
   window.ppTour = function () {
