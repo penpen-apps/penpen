@@ -215,8 +215,13 @@
   // The drawing is scaled to fill the screen (whichever of width or height needs more), and walkers sit above the food bar by their bottom margin.
   function far(el) {
     var wd = document.getElementById('pp-world'), H = wd ? wd.clientHeight : 0, mb = el ? parseFloat(getComputedStyle(el).marginBottom) || 0 : 0;
-    return H ? Math.max(10, (BACK * Math.max(wd.clientWidth / 1080, H / 600) - mb) / H * 100) : 34;
+    return H ? Math.max(10, (BACK * Math.max(wd.clientWidth / 1080, H / 600) - mb) / H * 100) : 20;   // not laid out yet: stay well forward
   }
+  // keep a field walker on the grass: feet no higher than far() (the mountains start there) and no lower than 3%. Swimmers are the one exception, in the pond
+  function ground(el, y) { return el && el.parentNode && el.parentNode.id === 'pp-world' && !el.ppSwim ? Math.max(3, Math.min(far(el), y)) : y; }
+  // after the garden opens or the screen changes size, walk anyone who ended up too far back down onto the grass
+  function settle() { if (w) [].slice.call(w.querySelectorAll('#pp-world .walker')).forEach(function (el) { var p = pos(el); if (ground(el, p[1]) < p[1] - 0.01) go(el, p[0], p[1]); }); }
+  window.addEventListener('resize', settle);
   function wide(el) { return el && el.parentNode && el.parentNode.id === 'pp-world' ? WIDE : 1; }   // the field is WIDE screens across, so 1% of it is WIDE% of a screen
   function clampX(x) { return Math.max(4, Math.min(96, x)); }
   function still() { return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); }
@@ -224,6 +229,7 @@
   // walk el to x% across, y% up; returns the seconds it takes (pace: % per second)
   // the walking class is 'walking', not 'go': #pp-play .go is the green Start button style, and it painted a green box behind penpen
   function go(el, x, y, pace, deep) {
+    y = ground(el, y);
     var x0 = parseFloat(el.style.left) || 50, secs = Math.max(pace ? 0.5 : 1.2, Math.abs(x - x0) * wide(el) / (pace || 14));
     el.style.transitionDuration = secs + 's'; if (x !== x0) el.classList.toggle('l', x < x0); el.classList.add('walking');
     el.style.left = x + '%'; el.style.bottom = y + '%'; el.style.zIndex = String(40 - Math.round(y)); el.style.setProperty('--d', (1 - y / (deep || 160)).toFixed(3));
@@ -335,7 +341,7 @@
   function startGarden() {
     stopGarden();
     if (!load().asleep && !still()) { [].slice.call(w.querySelectorAll('#pp-garden .walker')).forEach(function (el, i) { var me = el.id === 'pp-walk'; later(el, me ? 'me' : 'p' + i, me ? 700 : 1300 + i * 600); }); playSoon(); }   // penpen sets off first, then his friends one by one
-    music(true); camera();
+    music(true); camera(); requestAnimationFrame(settle);
   }
   function stopGarden() { Object.keys(GD.t).forEach(function (k) { clearTimeout(GD.t[k]); }); GD.t = {}; endPlay(); music(false); cancelAnimationFrame(CAM.raf); }
   // the view follows penpen across the wide field. Swipe to look around; a few seconds after you let go, it glides back to him
