@@ -106,7 +106,8 @@
   }
 
   /* ---------- garden: drawn in code. To use a picture instead, swap gardenArt() for an <img> ---------- */
-  var PALS = ['sweet', 'surfer'];   // penguin friends who wander the garden (ids from guides.js)
+  var PALS = ['sweet', 'surfer', 'sunny', 'buddy', 'goofydad', 'grandma'];   // penguin friends who wander the garden (ids from guides.js)
+  var START = [[20, 22], [80, 16], [32, 30], [68, 28], [12, 8], [88, 6]];   // where each friend stands when the garden opens (% across, % up)
   var MUSIC_FILE = '';              // set to a music file (e.g. 'audio/garden.m4a') to play it instead of the code-made tune
   var SHUT = '<path class="shut" d="M45 49 Q51 54 57 49 M63 49 Q69 54 75 49" fill="none" stroke="#1F2A36" stroke-width="3" stroke-linecap="round"/>';
   var JOY = '<path class="joy" d="M45 51 Q51 44 57 51 M63 51 Q69 44 75 51" fill="none" stroke="#1F2A36" stroke-width="3.2" stroke-linecap="round"/>';
@@ -115,23 +116,30 @@
       [40, 340, '#B7A2F0'], [104, 372, '#F4A62A'], [182, 350, '#FFFFFF'], [268, 380, '#F28AA5'], [326, 344, '#FFFFFF'], [86, 412, '#F28AA5'], [236, 418, '#B7A2F0'], [300, 404, '#F4A62A']].map(function (f) {
       return '<g><path d="M' + f[0] + ' ' + (f[1] + 4) + ' v10" stroke="#4E9A48" stroke-width="2"/><circle cx="' + f[0] + '" cy="' + f[1] + '" r="5" fill="' + f[2] + '"/><circle cx="' + f[0] + '" cy="' + f[1] + '" r="2" fill="#F4C542"/></g>';
     }).join('');
-    return '<svg class="gart" viewBox="0 0 360 440" preserveAspectRatio="xMidYMax slice" aria-hidden="true">' +
-      '<rect width="360" height="440" fill="#CDEBFA"/><circle cx="306" cy="66" r="17" fill="#FFE58A"/>' +
-      '<ellipse cx="70" cy="74" rx="30" ry="9" fill="#fff" opacity=".85"/><ellipse cx="200" cy="56" rx="22" ry="7" fill="#fff" opacity=".7"/>' +
+    function cloud(x, y, k) { return '<ellipse cx="' + x + '" cy="' + y + '" rx="' + 30 * k + '" ry="' + 9 * k + '"/><ellipse cx="' + (x - 12 * k) + '" cy="' + (y - 6 * k) + '" rx="' + 14 * k + '" ry="' + 8 * k + '"/><ellipse cx="' + (x + 10 * k) + '" cy="' + (y - 7 * k) + '" rx="' + 12 * k + '" ry="' + 8 * k + '"/>'; }
+    // 360x600: tall enough for a full-screen phone garden; on wider screens the top of the sky is cut off, never the ground
+    return '<svg class="gart" viewBox="0 0 360 600" preserveAspectRatio="xMidYMax slice" aria-hidden="true">' +
+      '<defs><linearGradient id="pp-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8FCFF2"/><stop offset=".55" stop-color="#CDEBFA"/></linearGradient></defs>' +
+      '<rect width="360" height="600" fill="url(#pp-sky)"/><circle cx="300" cy="166" r="34" fill="#FFF3C4" opacity=".6"/><circle cx="300" cy="166" r="21" fill="#FFE58A"/>' +
+      '<g class="cloud c1" fill="#fff" opacity=".9">' + cloud(70, 150, 1) + cloud(240, 228, .8) + '</g><g class="cloud c2" fill="#fff" opacity=".7">' + cloud(170, 196, .7) + cloud(320, 120, .6) + '</g>' +
+      '<path d="M96 186 q5 -5 10 0 q5 -5 10 0 M128 172 q4 -4 8 0 q4 -4 8 0" fill="none" stroke="#5B7A99" stroke-width="2" stroke-linecap="round"/>' +
+      '<path d="M0 322 L34 282 L62 300 L108 250 L156 304 L204 268 L236 290 L292 246 L336 292 L360 276 V340 H0Z" fill="#E4F1FA"/><path d="M95 265 L108 250 L121 264 L112 260 Z M280 261 L292 246 L305 260 L296 256 Z" fill="#fff"/>' +
+      '<g transform="translate(0 160)">' +
       '<path d="M0 156 Q90 132 180 152 T360 144 V440 H0Z" fill="#A6DA92"/><path d="M0 184 Q120 164 220 182 T360 174 V440 H0Z" fill="#86C977"/><path d="M0 300 Q140 284 250 298 T360 292 V440 H0Z" fill="#7BBF6C"/>' +
       '<ellipse cx="282" cy="194" rx="54" ry="13" fill="#7FC8E8"/><ellipse cx="270" cy="191" rx="24" ry="4" fill="#BFE6F5" opacity=".75"/>' +
       '<path d="M22 176 A36 36 0 0 1 94 176 Z" fill="#F4FAFF" stroke="#C9DCEA" stroke-width="2"/><path d="M50 176 A8 11 0 0 1 66 176Z" fill="#5B7A99"/><path d="M30 164 H86 M40 152 H76" stroke="#C9DCEA" stroke-width="2"/>' +
-      fl + '</svg>';
+      fl + '</g></svg>';
   }
   var GD = { t: {}, hold: 0, s: [] }, Y = 37;   // Y: how far back (in % of the garden) the penguins can walk
   function still() { return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); }
   function later(el, key, ms) { clearTimeout(GD.t[key]); GD.t[key] = setTimeout(function () { stroll(el, key); }, ms); }
   // walk el to x% across, y% up; returns the seconds it takes (pace: % per second)
+  // the walking class is 'walking', not 'go': #pp-play .go is the green Start button style, and it painted a green box behind penpen
   function go(el, x, y, pace) {
     var x0 = parseFloat(el.style.left) || 50, secs = Math.max(pace ? 0.5 : 1.2, Math.abs(x - x0) / (pace || 14));
-    el.style.transitionDuration = secs + 's'; if (x !== x0) el.classList.toggle('l', x < x0); el.classList.add('go');
-    el.style.left = x + '%'; el.style.bottom = y + '%'; el.style.zIndex = String(40 - Math.round(y));
-    clearTimeout(el.ppStop); el.ppStop = setTimeout(function () { el.classList.remove('go'); }, secs * 1000);
+    el.style.transitionDuration = secs + 's'; if (x !== x0) el.classList.toggle('l', x < x0); el.classList.add('walking');
+    el.style.left = x + '%'; el.style.bottom = y + '%'; el.style.zIndex = String(40 - Math.round(y)); el.style.setProperty('--d', (1 - y / 160).toFixed(3));
+    clearTimeout(el.ppStop); el.ppStop = setTimeout(function () { el.classList.remove('walking'); }, secs * 1000);
     return secs;
   }
   // walk to a random spot, then rest a bit (unless he's busy playing)
@@ -143,10 +151,10 @@
   // stop penpen where he is (while you drag food or rub his belly)
   function freeze(ms) {
     var el = document.getElementById('pp-walk'), g = document.getElementById('pp-garden'); GD.hold = now() + ms; endPlay();
-    if (!el || !g || !el.classList.contains('go')) return;
+    if (!el || !g || !el.classList.contains('walking')) return;
     var r = el.getBoundingClientRect(), b = g.getBoundingClientRect();
     if (b.width) { el.style.transitionDuration = '0s'; el.style.left = ((r.left + r.width / 2 - b.left) / b.width * 100) + '%'; el.style.bottom = ((b.bottom - r.bottom) / b.height * 100) + '%'; }
-    el.classList.remove('go');
+    el.classList.remove('walking');
   }
 
   /* ---------- penpen plays with his friends: meet and high-five, tag, dance, catch ---------- */
@@ -188,7 +196,7 @@
     }
     if (game === 'dance') {
       var dy = 6 + Math.random() * 10, arrive = 0;
-      who.forEach(function (el, i) { arrive = Math.max(arrive, go(el, [50, 28, 72][i] || 50, dy)); });
+      who.forEach(function (el, i) { arrive = Math.max(arrive, go(el, [50, 37, 63, 24, 76, 11, 89][i] || 50, dy)); });
       step(arrive * 1000 + 100, function () {
         tell('Dance party! 🎶'); sfx('la');
         who.forEach(function (el) { el.classList.add('dance'); });
@@ -212,7 +220,7 @@
   }
   function startGarden() {
     stopGarden();
-    if (!load().asleep && !still()) { [].slice.call(w.querySelectorAll('#pp-garden .walker')).forEach(function (el, i) { later(el, el.id === 'pp-walk' ? 'me' : 'p' + i, 700 + i * 900); }); playSoon(); }
+    if (!load().asleep && !still()) { [].slice.call(w.querySelectorAll('#pp-garden .walker')).forEach(function (el, i) { var me = el.id === 'pp-walk'; later(el, me ? 'me' : 'p' + i, me ? 700 : 1300 + i * 600); }); playSoon(); }   // penpen sets off first, then his friends one by one
     music(true);
   }
   function stopGarden() { Object.keys(GD.t).forEach(function (k) { clearTimeout(GD.t[k]); }); GD.t = {}; endPlay(); music(false); }
@@ -293,7 +301,7 @@
       var face = (p.asleep ? SHUT : '') + JOY;
       h += '<div class="garden' + (p.asleep ? ' night' : '') + '" id="pp-garden">' + gardenArt() +
         '<div class="gtop"><span class="meters">' + meters(p) + '</span><button type="button" data-act="stats" class="gbtn" aria-haspopup="dialog">📊 Stats</button><button type="button" data-act="sound" class="gbtn" aria-pressed="' + soundOn() + '" aria-label="Music and sounds">' + (soundOn() ? '🔊' : '🔇') + '</button></div>' +
-        (window.ppLook ? PALS.map(function (id, i) { return '<button type="button" class="walker pal" data-pal="' + id + '" aria-label="' + window.ppLook.name(id) + ', penpen’s friend" style="left:' + (i ? 80 : 20) + '%;bottom:' + (i ? 16 : 22) + '%"><span class="pen' + (p.asleep ? ' zz' : '') + '"><svg viewBox="-7 -14 134 134" width="74" height="74" aria-hidden="true">' + window.ppLook.svg(id) + (p.asleep ? SHUT : '') + '</svg></span></button>'; }).join('') : '') +
+        (window.ppLook ? PALS.map(function (id, i) { return '<button type="button" class="walker pal" data-pal="' + id + '" aria-label="' + window.ppLook.name(id) + ', penpen’s friend" style="left:' + START[i][0] + '%;bottom:' + START[i][1] + '%;--d:' + (1 - START[i][1] / 160).toFixed(3) + '"><span class="pen' + (p.asleep ? ' zz' : '') + '"><svg viewBox="-7 -14 134 134" width="74" height="74" aria-hidden="true">' + window.ppLook.svg(id) + (p.asleep ? SHUT : '') + '</svg></span></button>'; }).join('') : '') +
         '<div class="walker" id="pp-walk" style="left:50%;bottom:8%"><div class="pen' + (sick(p) ? ' sick' : p.asleep ? ' zz' : '') + '" id="pp-petpen">' +
         '<svg viewBox="-7 -14 134 134" width="74" height="74" aria-hidden="true">' + inner() + face + '</svg>' + (wear.e ? '<span class="wear">' + wear.e + '</span>' : '') + (sick(p) ? '<span class="fx">🤒</span>' : p.asleep ? '<span class="fx">💤</span><span class="bed">🛏️</span>' : '') +
         '</div></div><div class="say" id="pp-say">' + (msg || mood(p)) + '</div>' +
@@ -317,6 +325,7 @@
         '<h3>Outfits</h3><div class="shop">' + Object.keys(WEAR).map(function (k) { var own = p.own[k], on = p.wear === k; return '<button data-buy="w:' + k + '" class="' + (on ? 'on' : '') + '"><span>' + (WEAR[k].e || '🚫') + '</span>' + WEAR[k].n + '<small>' + (on ? 'wearing' : own ? 'wear' : WEAR[k].price ? COIN + ' ' + WEAR[k].price : 'free') + '</small></button>'; }).join('') + '</div>' +
         '<p class="tip">Earn coins in Games and Quiz. A 🔋 Battery perks him up when he’s sleepy.</p>';
     }
+    w.classList.toggle('imm', tab === 'pet');   // the garden fills the screen; other tabs scroll as before
     w.innerHTML = h + '</div>';
     if (tab === 'pet') { petHooks(); startGarden(); }
     if (tab === 'slide') { drawIdle(); slideHooks(); }
@@ -650,12 +659,16 @@
     '#pp-play .qcard{background:var(--card);border-radius:22px;padding:18px;text-align:center}#pp-play .qq{font:900 19px/1.3 ' + F + ';margin:6px 0 14px}' +
     '#pp-play .qa{display:block;width:100%;margin:8px 0;border:1.5px solid var(--line);background:var(--bg);color:var(--ink);border-radius:14px;padding:13px;font:800 15px ' + F + ';cursor:pointer}#pp-play .qa.ok{background:#DFF3E6;border-color:#3FAF6B}#pp-play .qa.no{background:#FBE1DE;border-color:#D9534F}' +
     '#pp-play .garden{position:relative;aspect-ratio:9/11;min-height:340px;max-height:500px;border-radius:24px;overflow:hidden;background:#CDEBFA}#pp-play .gart{position:absolute;inset:0;width:100%;height:100%;transition:filter .4s}#pp-play .garden.night .gart{filter:brightness(.5) saturate(.6)}' +
+    '#pp-play.imm{display:flex;flex-direction:column;padding-bottom:calc(12px + env(safe-area-inset-bottom))}#pp-play.imm .top{width:100%}#pp-play.imm .wrap{flex:1;width:100%;display:flex;flex-direction:column;min-height:0}' +
+    '#pp-play.imm .garden{flex:1 1 auto;aspect-ratio:auto;min-height:340px;max-height:none}#pp-play.imm h3,#pp-play.imm .tip{display:none}#pp-play.imm .lv{margin:6px 0}#pp-play.imm .foods button{padding:6px 2px}#pp-play.imm .foods span{font-size:24px}#pp-play.imm .petacts{margin-top:8px}#pp-play.imm .petacts button{padding:8px 4px}' +
+    '@media(max-width:600px){#pp-play.imm .garden{margin:0 -16px;border-radius:0}}' +
+    '#pp-play .cloud{animation:ppcloud 60s linear infinite alternate}#pp-play .cloud.c2{animation-duration:90s}@keyframes ppcloud{to{transform:translateX(40px)}}@media(prefers-reduced-motion:reduce){#pp-play .cloud{animation:none}}' +
     '#pp-play .gtop{position:absolute;left:10px;right:10px;top:10px;display:flex;gap:6px;align-items:center;z-index:50}#pp-play .meters{flex:1;display:flex;gap:6px}' +
     '#pp-play .mtr{flex:1;max-width:120px;border:0;background:rgba(255,255,255,.88);border-radius:99px;padding:5px 8px;display:flex;align-items:center;gap:5px;cursor:pointer}#pp-play .mtr b{font-size:14px}#pp-play .mtr i{flex:1;height:8px;border-radius:9px;background:#DDE6EE;overflow:hidden}#pp-play .mtr u{display:block;height:100%;border-radius:9px;transition:width .4s}' +
     '#pp-play .gbtn{border:0;border-radius:99px;background:rgba(255,255,255,.9);color:#13324A;padding:6px 10px;font:800 13px ' + F + ';cursor:pointer}' +
     '#pp-play .garden .say{position:absolute;left:50%;top:52px;transform:translateX(-50%);z-index:50;max-width:84%;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.1)}#pp-play .garden .zbtn{top:auto;bottom:10px;z-index:50}' +
-    '#pp-play .walker{position:absolute;transform:translateX(-50%);transition-property:left,bottom;transition-timing-function:linear;z-index:30}#pp-play .walker.pal{border:0;background:none;padding:0;cursor:pointer}#pp-play .walker.l svg{transform:scaleX(-1)}' +
-    '#pp-play .walker.go .pen{animation:ppwd .32s ease-in-out infinite alternate}@keyframes ppwd{from{transform:rotate(-7deg)}to{transform:rotate(7deg) translateY(-3px)}}' +
+    '#pp-play .walker{position:absolute;transform:translateX(-50%) scale(var(--d,1));transform-origin:50% 100%;transition-property:left,bottom,transform;transition-timing-function:linear;z-index:30}#pp-play .walker.pal{border:0;background:none;padding:0;cursor:pointer}#pp-play .walker.l svg{transform:scaleX(-1)}' +
+    '#pp-play .walker.walking .pen{animation:ppwd .32s ease-in-out infinite alternate}@keyframes ppwd{from{transform:rotate(-7deg)}to{transform:rotate(7deg) translateY(-3px)}}' +
     '#pp-play .joy{display:none}#pp-play .walker .pen.eat{animation:ppchew .2s ease-in-out 6 alternate}#pp-play .pen.eat .joy{display:inline}#pp-play .pen.eat .pp-eyes,#pp-play .pen.eat .shut{display:none}@keyframes ppchew{to{transform:scale(1.07,.9)}}' +
     '#pp-play .garden .bed{font-size:52px}' +
     '#pp-play .walker.dance .pen{animation:ppdance .45s ease-in-out infinite alternate}@keyframes ppdance{from{transform:rotate(-12deg) translateY(0)}to{transform:rotate(12deg) translateY(-12px)}}' +
