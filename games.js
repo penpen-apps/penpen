@@ -64,7 +64,9 @@
     var cv = $('canvas', host), stage = $('.gstage', host), W = Math.min(stage.clientWidth || host.clientWidth || 340, stage.clientWidth ? 600 : 480), H = Math.round(stage.clientHeight || Math.min(Math.max(300, innerHeight - 330), W * 1.3));
     var dpr = Math.min(2, window.devicePixelRatio || 1); cv.width = W * dpr; cv.height = H * dpr; cv.style.width = W + 'px'; cv.style.height = H + 'px'; if (!stage.clientHeight) stage.style.height = H + 'px';
     var c = cv.getContext('2d'); c.scale(dpr, dpr);
-    var S = { id: id, host: host, c: c, W: W, H: H, keys: {}, raf: 0, on: false, score: 0, done: done, game: null, diff: DIFF[O.diff][1], scene: O.scene };
+    // S.top: how far down the picture the floating ‹ ? score bar reaches, so games keep their own top text and the player clear of it
+    var sr = stage.getBoundingClientRect(), top = sr.height ? Math.max(0, Math.round($('.gtop', host).getBoundingClientRect().bottom - sr.top)) : 0;
+    var S = { id: id, host: host, c: c, W: W, H: H, top: top, keys: {}, raf: 0, on: false, score: 0, done: done, game: null, diff: DIFF[O.diff][1], scene: O.scene };
     cur = S;
     var over = $('.gover', host), ctl = $('.gctl', host);
     $('.gback', host).onclick = function () { stop(); if (done) done(null); };
@@ -254,7 +256,7 @@
   /* ---------- Chase: a little maze, a hungry polar bear ---------- */
   var MAZE = ['###########', '#.........#', '#.##.#.##.#', '#*#..#..#*#', '#.#.###.#.#', '#.........#', '###.#.#.###', '#...#.#...#', '#.###.###.#', '#.........#', '#.##.#.##.#', '#*...#...*#', '###########'];
   MAKERS.chase = function (S) {
-    var c = S.c, W = S.W, H = S.H, R = MAZE.length, C = MAZE[0].length, cs = Math.floor(Math.min(W / C, H / R)), ox = (W - cs * C) / 2, oy = (H - cs * R) / 2;
+    var c = S.c, W = S.W, H = S.H, R = MAZE.length, C = MAZE[0].length, T = S.top ? S.top + 20 : 0, cs = Math.floor(Math.min(W / C, (H - T) / R)), ox = (W - cs * C) / 2, oy = T + (H - T - cs * R) / 2;   // the maze sits below the floating bar, room for the hearts line above it
     var grid = MAZE.map(function (r) { return r.split(''); }), lives = 3, lvl = 1;
     var P = { r: 9, c: 5, fr: 9, fc: 5, d: null, want: null, p: 1 }, B = { r: 5, c: 5, fr: 5, fc: 5, p: 1 }, frozen = 0;
     function left() { var n = 0; grid.forEach(function (r) { r.forEach(function (x) { if (x === '.' || x === '*') n++; }); }); return n; }
@@ -327,7 +329,7 @@
       step: function (dt) {
         var k = S.keys, sp = P.carry ? 120 : 150;
         var j = S.stick && Math.hypot(S.stick.x, S.stick.y) > 0.2 ? S.stick : null, mx = j ? j.x : (k.right ? 1 : 0) - (k.left ? 1 : 0), my = j ? j.y : (k.down ? 1 : 0) - (k.up ? 1 : 0);
-        P.x = clamp(P.x + mx * sp * dt, 16, W - 16); P.y = clamp(P.y + my * sp * dt, 16, H - 16);
+        P.x = clamp(P.x + mx * sp * dt, 16, W - 16); P.y = clamp(P.y + my * sp * dt, S.top + 16, H - 16);
         time -= dt; honkT -= dt; saidT -= dt;
         if (!P.carry) for (var i = items.length - 1; i >= 0; i--) if (Math.hypot(items[i].x - P.x, items[i].y - P.y) < 26) { P.carry = items[i].k; items.splice(i, 1); break; }
         if (P.carry && Math.hypot(nest.x - P.x, nest.y - P.y) < 48) { S.add(10); P.carry = null; said = 'Mine now! 😈'; saidT = 1; }
@@ -358,7 +360,7 @@
         drawPen(c, P.x, P.y, 52, honkT > 0 ? -0.15 : 0); if (P.carry) emoji(c, P.carry, P.x + 18, P.y - 18, 20);
         if (honkT > 0) { c.strokeStyle = 'rgba(19,50,74,.35)'; c.lineWidth = 3; c.beginPath(); c.arc(P.x, P.y, 70 * (1 - honkT / 0.35) + 10, 0, 7); c.stroke(); }
         if (saidT > 0) txt(c, said, P.x, P.y - 40, 16, '#13324A');
-        txt(c, '❤️'.repeat(Math.max(0, lives)) + '   ⏱ ' + Math.ceil(time) + '   Lv ' + lvl + ' · goal ' + goal(), 8, 14, 14, '#13324A', 'left');
+        txt(c, '❤️'.repeat(Math.max(0, lives)) + '   ⏱ ' + Math.ceil(time) + '   Lv ' + lvl + ' · goal ' + goal(), 8, S.top + 14, 14, '#13324A', 'left');
       }
     };
   };
