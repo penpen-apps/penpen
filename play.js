@@ -252,7 +252,7 @@
   var w = null, tab = 'pet', G = null, X = null, Q = null;
   function open() {
     if (document.getElementById('pp-play')) return;
-    w = document.createElement('div'); w.id = 'pp-play'; w.setAttribute('role', 'dialog'); w.setAttribute('aria-label', 'Play');
+    w = document.createElement('div'); w.id = 'pp-play'; w.setAttribute('role', 'dialog'); w.setAttribute('aria-label', 'Garden');
     document.body.appendChild(w); tab = 'pet';
     var p = load(), a = rewardExpenses(p), hi = p.hi; delete p.hi; save(p);
     paint(hi ? 'I’m back! 🐣 Missed you' : a ? '+' + a + ' 🐟 for the expenses you logged!' : '');
@@ -282,13 +282,13 @@
     return pick(['Happy penpen! 🐧', 'Rub my belly! 💕', 'Let’s slide! 🛷', 'I love this trip ✨']);
   }
   function tabs() {
-    return '<div class="tabs">' + [['pet', '🐧', 'penpen'], ['games', '🎮', 'Games'], ['quiz', '🎓', 'Quiz'], ['learn', '📚', 'Learn'], ['sing', '🎤', 'Sing'], ['shop', '🛍️', 'Shop']].map(function (t) {
+    return '<div class="tabs">' + [['pet', '🐧', 'My penpen'], ['games', '🎮', 'Games'], ['quiz', '🎓', 'Quiz'], ['learn', '📚', 'Learn'], ['sing', '🎤', 'Sing'], ['shop', '🛍️', 'Shop']].map(function (t) {
       return '<button data-tab="' + t[0] + '" class="' + (tab === t[0] ? 'on' : '') + '"><span>' + t[1] + '</span>' + t[2] + '</button>';
     }).join('') + '</div>';
   }
   function paint(msg) {
     var p = load(), wear = WEAR[p.wear] || WEAR.none;
-    var h = '<div class="top"><button class="back" aria-label="Back">‹</button><h2>' + (tab === 'pet' ? 'Play' : { games: 'Games', slide: 'Belly Slide', quiz: 'Professor Pen’s quiz', learn: 'Learn with penpen', sing: 'Sing with penpen', shop: 'Shop' }[tab]) + '</h2><span class="coins">' + COIN + ' <b id="pp-coins">' + p.coins + '</b></span></div><div class="wrap">' + tabs();
+    var h = '<div class="top"><button class="back" aria-label="Back">‹</button><h2>' + (tab === 'pet' ? 'Garden' : { games: 'Games', slide: 'Belly Slide', quiz: 'Professor Pen’s quiz', learn: 'Learn with penpen', sing: 'Sing with penpen', shop: 'Shop' }[tab]) + '</h2><span class="coins">' + COIN + ' <b id="pp-coins">' + p.coins + '</b></span></div><div class="wrap">' + tabs();
     if (tab === 'pet') {
       var face = (p.asleep ? SHUT : '') + JOY;
       h += '<div class="garden' + (p.asleep ? ' night' : '') + '" id="pp-garden">' + gardenArt() +
