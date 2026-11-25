@@ -176,10 +176,10 @@
   function later(el, key, ms) { clearTimeout(GD.t[key]); GD.t[key] = setTimeout(function () { stroll(el, key); }, ms); }
   // walk el to x% across, y% up; returns the seconds it takes (pace: % per second)
   // the walking class is 'walking', not 'go': #pp-play .go is the green Start button style, and it painted a green box behind penpen
-  function go(el, x, y, pace) {
+  function go(el, x, y, pace, deep) {
     var x0 = parseFloat(el.style.left) || 50, secs = Math.max(pace ? 0.5 : 1.2, Math.abs(x - x0) / (pace || 14));
     el.style.transitionDuration = secs + 's'; if (x !== x0) el.classList.toggle('l', x < x0); el.classList.add('walking');
-    el.style.left = x + '%'; el.style.bottom = y + '%'; el.style.zIndex = String(40 - Math.round(y)); el.style.setProperty('--d', (1 - y / 160).toFixed(3));
+    el.style.left = x + '%'; el.style.bottom = y + '%'; el.style.zIndex = String(40 - Math.round(y)); el.style.setProperty('--d', (1 - y / (deep || 160)).toFixed(3));
     clearTimeout(el.ppStop); el.ppStop = setTimeout(function () { el.classList.remove('walking'); }, secs * 1000);
     return secs;
   }
@@ -306,49 +306,75 @@
       '<path d="M116 178 V146" stroke="#8B5530" stroke-width="3" stroke-linecap="round"/><rect x="98" y="132" width="36" height="16" rx="3" fill="#C98A52" stroke="#8B5530" stroke-width="1.5"/>' +
       '<text x="116" y="143.5" text-anchor="middle" font-family="' + F + '" font-size="8.5" font-weight="900" fill="#fff">Games</text></g></svg>';
   }
-  // the room: ice-brick walls, a warm wood floor, string lights, a little window and a crackling fire
+  // the room, seen from inside the dome: rings of ice blocks curve up and over, a round wood floor with a woven rug,
+  // a crackling fire pit a little left of the middle, a round window, string lights and a crooked fish picture
   function iglooArt() {
-    var bulbs = [30, 66, 102, 138, 222, 258, 294, 330].map(function (x, i) { return '<circle class="bulb" cx="' + x + '" cy="' + (98 + (i % 2) * 7) + '" r="4" fill="' + ['#F7B955', '#F28AA5', '#8FD3F0', '#B7E08F'][i % 4] + '"/>'; }).join('');
-    var planks = [392, 428, 470, 518, 572].map(function (y) { return '<path d="M0 ' + y + ' H360" stroke="#9A6438" stroke-width="2" opacity=".55"/>'; }).join('');
+    var rings = '', joints = '', k, j, prev = null;
+    // each ring of blocks is the back half of a circle around the dome, seen in perspective: lower rings are wide, higher ones small
+    for (k = 0; k <= 15; k++) {
+      var f = k * Math.PI / 30, cy = 380 - 450 * Math.sin(f), rx = 170 * Math.cos(f), ry = 100 * Math.cos(f), cur = { cy: cy, rx: rx, ry: ry };
+      rings += '<path d="M' + (178 - rx).toFixed(1) + ' ' + cy.toFixed(1) + ' A' + rx.toFixed(1) + ' ' + ry.toFixed(1) + ' 0 0 1 ' + (178 + rx).toFixed(1) + ' ' + cy.toFixed(1) + '"/>';
+      if (prev) for (j = 1; j < 12; j++) {   // the joints between blocks, staggered row to row
+        var a2 = (j + (k % 2) / 2) * Math.PI / 12;
+        joints += 'M' + (178 + prev.rx * Math.cos(a2)).toFixed(1) + ' ' + (prev.cy - prev.ry * Math.sin(a2)).toFixed(1) + ' L' + (178 + rx * Math.cos(a2)).toFixed(1) + ' ' + (cy - ry * Math.sin(a2)).toFixed(1) + ' ';
+      }
+      prev = cur;
+    }
+    var bulbs = '';
+    for (j = 0; j <= 12; j++) {   // string lights, two drooping loops across the wall
+      var t = (j % 6.5) / 6.5, x0 = j < 7 ? 24 : 178, x1 = j < 7 ? 178 : 336, y0 = j < 7 ? 168 : 132, y1 = j < 7 ? 132 : 172, cx = (x0 + x1) / 2, cyy = (y0 + y1) / 2 + 46;
+      if (j === 6) continue;
+      var bx = (1 - t) * (1 - t) * x0 + 2 * t * (1 - t) * cx + t * t * x1, by = (1 - t) * (1 - t) * y0 + 2 * t * (1 - t) * cyy + t * t * y1;
+      bulbs += '<circle class="bulb" cx="' + bx.toFixed(1) + '" cy="' + (by + 4).toFixed(1) + '" r="4" fill="' + ['#F7B955', '#F28AA5', '#8FD3F0', '#B7E08F'][j % 4] + '"/>';
+    }
+    var floor = [70, 140, 210, 280].map(function (r) { return '<ellipse cx="178" cy="476" rx="' + r + '" ry="' + r * 0.38 + '"/>'; }).join('');
+    var stones = [-34, -24, -12, 0, 12, 24, 34].map(function (dx, i) { return '<ellipse cx="' + (160 + dx) + '" cy="' + (330 + Math.abs(dx) / 34 * -6 + (i % 2)) + '" rx="7" ry="5"/>'; }).join('');
     return '<svg class="gart" viewBox="0 0 360 600" preserveAspectRatio="xMidYMax slice" aria-hidden="true"><defs>' +
-      '<pattern id="pp-ice" width="48" height="26" patternUnits="userSpaceOnUse"><rect width="48" height="26" fill="#D8ECF6"/><path d="M0 1H48 M0 14H48 M24 1V14 M0 14V26 M48 14V26" stroke="#AFCFE2" stroke-width="1.6" fill="none"/></pattern>' +
-      '<radialGradient id="pp-warm" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#FFB45A" stop-opacity=".55"/><stop offset="1" stop-color="#FFB45A" stop-opacity="0"/></radialGradient></defs>' +
-      '<rect width="360" height="360" fill="url(#pp-ice)"/><path d="M0 0 H360 V150 Q180 -30 0 150 Z" fill="#A9CCE0" opacity=".45"/>' +
-      '<path d="M10 92 Q66 116 120 96 M240 96 Q294 116 350 92" fill="none" stroke="#5B7A99" stroke-width="1.5"/>' + bulbs +
-      '<g transform="translate(40 0)"><circle cx="60" cy="200" r="26" fill="#C9DCEA"/><circle cx="60" cy="200" r="21" fill="#28406B"/><circle cx="52" cy="192" r="2" fill="#fff"/><circle cx="68" cy="206" r="1.5" fill="#fff"/><circle cx="66" cy="190" r="5" fill="#FFF3C4"/><path d="M39 200 H81 M60 179 V221" stroke="#C9DCEA" stroke-width="3"/></g>' +
-      '<rect x="240" y="178" width="44" height="36" rx="3" fill="#FFF8EE" stroke="#A8683A" stroke-width="4"/><path d="M252 196 Q262 186 272 196 Q262 206 252 196 Z M272 196 L279 190 V202 Z" fill="#3B8FD9"/><circle cx="257" cy="195" r="1.3" fill="#fff"/>' +
-      '<rect y="356" width="360" height="244" fill="#C8875A"/>' + planks + '<rect y="352" width="360" height="8" fill="#9A6438"/>' +
-      '<ellipse cx="180" cy="420" rx="170" ry="90" fill="url(#pp-warm)"/>' +
-      // the fireplace: a stone surround, logs and three flames that flicker
-      '<rect x="138" y="272" width="84" height="9" rx="3" fill="#8B5530"/><path d="M146 281 H214 V358 H146 Z" fill="#9C8F86"/><path d="M146 296 H214 M146 316 H214 M146 336 H214 M168 281 V296 M192 296 V316 M168 316 V336 M192 336 V358" stroke="#7F736B" stroke-width="1.5"/>' +
-      '<path d="M158 358 V320 A22 22 0 0 1 202 320 V358 Z" fill="#3A2A22"/><circle cx="180" cy="300" r="34" fill="url(#pp-warm)"/>' +
-      '<g class="flm"><path d="M166 352 Q160 334 172 322 Q170 336 178 340 Q180 328 188 320 Q186 334 194 330 Q200 342 192 352 Z" fill="#F28A2E"/></g>' +
-      '<g class="flm f2"><path d="M172 352 Q170 340 178 332 Q180 342 186 338 Q190 346 186 352 Z" fill="#FFD25A"/></g>' +
-      '<rect x="160" y="350" width="40" height="6" rx="3" fill="#6E4224"/><rect x="166" y="345" width="30" height="6" rx="3" fill="#8B5530" transform="rotate(-8 181 348)"/></svg>';
+      '<radialGradient id="pp-warm" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#FFB45A" stop-opacity=".6"/><stop offset="1" stop-color="#FFB45A" stop-opacity="0"/></radialGradient>' +
+      '<radialGradient id="pp-round" cx="178" cy="300" r="330" gradientUnits="userSpaceOnUse"><stop offset=".45" stop-color="#5E87A8" stop-opacity="0"/><stop offset="1" stop-color="#5E87A8" stop-opacity=".6"/></radialGradient></defs>' +
+      '<rect width="360" height="600" fill="#D3E8F3"/><g fill="none" stroke="#AFCFE2" stroke-width="1.8">' + rings + '<path d="' + joints + '" stroke-width="1.4"/></g>' +
+      // the window (round, on the curve) and a fish picture hung a bit crooked
+      '<g transform="translate(266 214) rotate(8)"><ellipse rx="25" ry="29" fill="#C9DCEA"/><ellipse rx="19" ry="23" fill="#28406B"/><circle cx="-6" cy="-8" r="2" fill="#fff"/><circle cx="7" cy="9" r="1.5" fill="#fff"/><circle cx="6" cy="-10" r="5" fill="#FFF3C4"/><path d="M-19 0 H19 M0 -23 V23" stroke="#C9DCEA" stroke-width="3"/></g>' +
+      '<g transform="translate(78 214) rotate(-9)"><rect x="-22" y="-17" width="44" height="34" rx="3" fill="#FFF8EE" stroke="#A8683A" stroke-width="4"/><path d="M-10 0 Q0 -10 10 0 Q0 10 -10 0 Z M10 0 L17 -6 V6 Z" fill="#3B8FD9"/><circle cx="-5" cy="-1" r="1.3" fill="#fff"/></g>' +
+      '<path d="M24 168 Q101 196 178 132 Q257 196 336 172" fill="none" stroke="#5B7A99" stroke-width="1.5"/>' + bulbs +
+      // the round floor: warm wood rings and a woven rug, with the curved wall meeting it at the back
+      '<path d="M8 380 A170 100 0 0 1 348 380 V600 H8 Z M-40 380 H8 V600 H-40 Z M348 380 H400 V600 H348 Z" fill="#D29A66"/><path d="M8 380 A170 100 0 0 1 348 380" fill="none" stroke="#9A6438" stroke-width="5"/>' +
+      '<g fill="none" stroke="#A8703F" stroke-width="2" opacity=".5">' + floor + '</g>' +
+      '<ellipse cx="178" cy="476" rx="116" ry="44" fill="#E46F5A"/><ellipse cx="178" cy="476" rx="96" ry="36" fill="#F4C542"/><ellipse cx="178" cy="476" rx="74" ry="28" fill="#3FAF6B"/><ellipse cx="178" cy="476" rx="52" ry="20" fill="#F4C542"/><ellipse cx="178" cy="476" rx="30" ry="11" fill="#E46F5A"/>' +
+      '<rect width="360" height="600" fill="url(#pp-round)"/><ellipse cx="164" cy="360" rx="190" ry="140" fill="url(#pp-warm)"/>' +
+      // the fire pit: a ring of stones, logs and flames that flicker
+      '<circle cx="160" cy="302" r="52" fill="url(#pp-warm)"/><g fill="#9C8F86" stroke="#7F736B" stroke-width="1.2">' + stones + '</g>' +
+      '<rect x="142" y="322" width="36" height="6" rx="3" fill="#6E4224" transform="rotate(-10 160 325)"/><rect x="142" y="322" width="36" height="6" rx="3" fill="#8B5530" transform="rotate(12 160 325)"/>' +
+      '<g class="flm"><path d="M146 326 Q140 308 152 296 Q150 310 158 314 Q160 302 168 294 Q166 308 174 304 Q180 316 172 326 Z" fill="#F28A2E"/></g>' +
+      '<g class="flm f2"><path d="M152 326 Q150 314 158 306 Q160 316 166 312 Q170 320 166 326 Z" fill="#FFD25A"/></g>' +
+      '<g fill="#8B5530" stroke="#6E4224" stroke-width="1"><rect x="196" y="318" width="26" height="7" rx="3.5"/><rect x="200" y="311" width="22" height="7" rx="3.5"/></g></svg>';
   }
-  // the eight things in the room, each drawn in code: [id, name, what it is, % across, % up, width in px, drawing]
+  // the eight things around the round room, near and far: [id, name, what it is, % across, % up, width in px when near, drawing]
   var ROOM = [
-    ['shop', 'Shop', 'a wardrobe', 11, 41, 80, '<svg viewBox="0 -14 64 110"><path d="M4 12 Q32 0 60 12Z" fill="#8B5530"/><rect x="6" y="10" width="52" height="80" rx="5" fill="#A8683A" stroke="#7A4A26" stroke-width="2"/><rect x="10" y="16" width="21" height="66" rx="3" fill="#BD7C4A"/><rect x="33" y="16" width="21" height="66" rx="3" fill="#BD7C4A"/><path d="M32 60 q5 10 -2 24" stroke="#E46F5A" stroke-width="4" fill="none" stroke-linecap="round"/><circle cx="28" cy="48" r="2" fill="#F4C542"/><circle cx="36" cy="48" r="2" fill="#F4C542"/><rect x="10" y="89" width="6" height="6" fill="#7A4A26"/><rect x="48" y="89" width="6" height="6" fill="#7A4A26"/><rect x="24" y="-12" width="16" height="13" rx="1" fill="#1F2A36"/><rect x="24" y="-4" width="16" height="2.5" fill="#D9534F"/><rect x="19" y="0" width="26" height="3" rx="1.5" fill="#1F2A36"/></svg>'],
-    ['learn', 'Learn', 'a bookshelf', 29.5, 41, 76, '<svg viewBox="0 0 64 96"><rect x="4" y="4" width="56" height="88" rx="4" fill="#9A6438" stroke="#7A4A26" stroke-width="2"/><rect x="9" y="9" width="46" height="78" fill="#6E4224"/><path d="M9 35 H55 M9 62 H55" stroke="#9A6438" stroke-width="4"/>' +
+    ['shop', 'Shop', 'a wardrobe', 27, 47, 120, '<svg viewBox="0 -14 64 110"><path d="M4 12 Q32 0 60 12Z" fill="#8B5530"/><rect x="6" y="10" width="52" height="80" rx="5" fill="#A8683A" stroke="#7A4A26" stroke-width="2"/><rect x="10" y="16" width="21" height="66" rx="3" fill="#BD7C4A"/><rect x="33" y="16" width="21" height="66" rx="3" fill="#BD7C4A"/><path d="M32 60 q5 10 -2 24" stroke="#E46F5A" stroke-width="4" fill="none" stroke-linecap="round"/><circle cx="28" cy="48" r="2" fill="#F4C542"/><circle cx="36" cy="48" r="2" fill="#F4C542"/><rect x="10" y="89" width="6" height="6" fill="#7A4A26"/><rect x="48" y="89" width="6" height="6" fill="#7A4A26"/><rect x="24" y="-12" width="16" height="13" rx="1" fill="#1F2A36"/><rect x="24" y="-4" width="16" height="2.5" fill="#D9534F"/><rect x="19" y="0" width="26" height="3" rx="1.5" fill="#1F2A36"/></svg>'],
+    ['learn', 'Learn', 'a bookshelf', 10, 39, 104, '<svg viewBox="0 0 64 96"><rect x="4" y="4" width="56" height="88" rx="4" fill="#9A6438" stroke="#7A4A26" stroke-width="2"/><rect x="9" y="9" width="46" height="78" fill="#6E4224"/><path d="M9 35 H55 M9 62 H55" stroke="#9A6438" stroke-width="4"/>' +
       [[11, 7, 22, '#D9534F'], [19, 6, 18, '#3B8FD9'], [26, 8, 24, '#F4A62A'], [35, 6, 20, '#3FAF6B'], [42, 7, 23, '#7C6BB8'], [11, 8, 22, '#3FAF6B', 1], [20, 6, 17, '#F28AA5', 1], [27, 7, 24, '#3B8FD9', 1], [44, 9, 21, '#D9534F', 1], [12, 6, 20, '#F4A62A', 2], [19, 8, 23, '#7C6BB8', 2], [36, 6, 18, '#3FAF6B', 2], [43, 7, 24, '#3B8FD9', 2]].map(function (b) { var floor = [33, 60, 87][b[4] || 0]; return '<rect x="' + b[0] + '" y="' + (floor - b[2]) + '" width="' + b[1] + '" height="' + b[2] + '" rx="1" fill="' + b[3] + '"/>'; }).join('') +
       '<circle cx="38" cy="50" r="7" fill="#5DA9E9"/><path d="M33 47 Q38 52 43 46" stroke="#3FAF6B" stroke-width="3" fill="none"/><path d="M38 57 V60" stroke="#C9962B" stroke-width="2"/></svg>'],
-    ['quiz', 'Quiz', 'a chalkboard', 70.5, 41, 80, '<svg viewBox="0 0 70 96"><path d="M14 52 L7 94 M56 52 L63 94 M35 52 L35 92" stroke="#8B5530" stroke-width="4" stroke-linecap="round"/><rect x="5" y="6" width="60" height="48" rx="3" fill="#2F5444" stroke="#A8683A" stroke-width="4"/><rect x="9" y="56" width="52" height="4" rx="2" fill="#A8683A"/><rect x="40" y="53" width="8" height="3" rx="1" fill="#fff"/>' +
+    ['quiz', 'Quiz', 'a chalkboard', 88, 37, 110, '<svg viewBox="0 0 70 96"><path d="M14 52 L7 94 M56 52 L63 94 M35 52 L35 92" stroke="#8B5530" stroke-width="4" stroke-linecap="round"/><rect x="5" y="6" width="60" height="48" rx="3" fill="#2F5444" stroke="#A8683A" stroke-width="4"/><rect x="9" y="56" width="52" height="4" rx="2" fill="#A8683A"/><rect x="40" y="53" width="8" height="3" rx="1" fill="#fff"/>' +
       '<text x="12" y="27" font-family="' + F + '" font-size="12" font-weight="900" fill="#F4FAFF">A B C</text><text x="50" y="44" font-family="' + F + '" font-size="18" font-weight="900" fill="#FFE58A">?</text><path d="M13 38 H40 M13 45 H32" stroke="#F4FAFF" stroke-width="1.6" opacity=".7"/></svg>'],
-    ['sing', 'Sing', 'a record player and a mic', 89, 41, 84, '<svg viewBox="0 0 80 96"><rect x="2" y="54" width="50" height="6" rx="2" fill="#8B5530"/><path d="M8 60 V94 M46 60 V94" stroke="#7A4A26" stroke-width="4"/><rect x="5" y="38" width="44" height="16" rx="3" fill="#1F8FA6"/><ellipse cx="25" cy="38" rx="17" ry="5.5" fill="#1F2A36"/><ellipse cx="25" cy="38" rx="5" ry="1.8" fill="#F4C542"/><path d="M45 30 L34 37" stroke="#C9DCEA" stroke-width="2.5" stroke-linecap="round"/><circle cx="45" cy="30" r="2.5" fill="#C9DCEA"/>' +
+    ['sing', 'Sing', 'a record player and a mic', 70, 46, 120, '<svg viewBox="0 0 80 96"><rect x="2" y="54" width="50" height="6" rx="2" fill="#8B5530"/><path d="M8 60 V94 M46 60 V94" stroke="#7A4A26" stroke-width="4"/><rect x="5" y="38" width="44" height="16" rx="3" fill="#1F8FA6"/><ellipse cx="25" cy="38" rx="17" ry="5.5" fill="#1F2A36"/><ellipse cx="25" cy="38" rx="5" ry="1.8" fill="#F4C542"/><path d="M45 30 L34 37" stroke="#C9DCEA" stroke-width="2.5" stroke-linecap="round"/><circle cx="45" cy="30" r="2.5" fill="#C9DCEA"/>' +
       '<path d="M12 22 V12 L20 10 V20 M28 16 V6 L34 5 V14" stroke="#13324A" stroke-width="1.8" fill="none"/><circle cx="10" cy="22" r="2.6" fill="#13324A"/><circle cx="18" cy="20" r="2.6" fill="#13324A"/><circle cx="26" cy="16" r="2.4" fill="#13324A"/><circle cx="32" cy="14" r="2.4" fill="#13324A"/>' +
       '<path d="M68 36 V90" stroke="#5B6470" stroke-width="3"/><ellipse cx="68" cy="92" rx="10" ry="3" fill="#5B6470"/><rect x="62" y="16" width="12" height="20" rx="6" fill="#9AA7B4" stroke="#5B6470" stroke-width="1.5"/><path d="M62 24 H74 M62 29 H74" stroke="#5B6470" stroke-width="1"/></svg>'],
-    ['dive', 'Dive', 'swim goggles and a snorkel', 15, 27, 76, '<svg viewBox="0 0 64 80"><rect x="6" y="52" width="52" height="26" rx="5" fill="#E8F4FA" stroke="#AFCFE2" stroke-width="2"/><path d="M8 65 H56" stroke="#AFCFE2" stroke-width="1.5"/>' +
+    ['dive', 'Dive', 'swim goggles and a snorkel', 13, 17, 92, '<svg viewBox="0 0 64 80"><rect x="6" y="52" width="52" height="26" rx="5" fill="#E8F4FA" stroke="#AFCFE2" stroke-width="2"/><path d="M8 65 H56" stroke="#AFCFE2" stroke-width="1.5"/>' +
       '<path d="M52 4 V40 Q52 50 42 50" stroke="#F4D03F" stroke-width="6" fill="none" stroke-linecap="round"/><rect x="47" y="2" width="10" height="6" rx="2" fill="#F28A2E"/>' +
       '<path d="M6 40 Q32 30 58 40" stroke="#1F2A36" stroke-width="3" fill="none"/><circle cx="21" cy="40" r="9" fill="#8FD3F0" stroke="#F28A2E" stroke-width="3"/><circle cx="41" cy="40" r="9" fill="#8FD3F0" stroke="#F28A2E" stroke-width="3"/><path d="M30 40 H32" stroke="#F28A2E" stroke-width="3"/><path d="M16 36 L19 33 M36 36 L39 33" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>'],
-    ['chase', 'Chase', 'a polar bear rug', 50, 26, 150, '<svg viewBox="0 0 120 64"><g fill="#F7F9FB" stroke="#D5DEE6" stroke-width="1.5"><ellipse cx="34" cy="14" rx="9" ry="7" transform="rotate(-30 34 14)"/><ellipse cx="34" cy="50" rx="9" ry="7" transform="rotate(30 34 50)"/><ellipse cx="94" cy="12" rx="9" ry="7" transform="rotate(30 94 12)"/><ellipse cx="94" cy="52" rx="9" ry="7" transform="rotate(-30 94 52)"/><circle cx="110" cy="32" r="4"/><ellipse cx="64" cy="32" rx="38" ry="19"/><circle cx="10" cy="22" r="5"/><circle cx="10" cy="42" r="5"/><circle cx="18" cy="32" r="14"/></g>' +
+    ['chase', 'Chase', 'a polar bear rug', 72, 8, 190, '<svg viewBox="0 0 120 64"><g fill="#F7F9FB" stroke="#D5DEE6" stroke-width="1.5"><ellipse cx="34" cy="14" rx="9" ry="7" transform="rotate(-30 34 14)"/><ellipse cx="34" cy="50" rx="9" ry="7" transform="rotate(30 34 50)"/><ellipse cx="94" cy="12" rx="9" ry="7" transform="rotate(30 94 12)"/><ellipse cx="94" cy="52" rx="9" ry="7" transform="rotate(-30 94 52)"/><circle cx="110" cy="32" r="4"/><ellipse cx="64" cy="32" rx="38" ry="19"/><circle cx="10" cy="22" r="5"/><circle cx="10" cy="42" r="5"/><circle cx="18" cy="32" r="14"/></g>' +
       '<ellipse cx="9" cy="32" rx="6" ry="5" fill="#EEF2F6"/><circle cx="5" cy="32" r="2.4" fill="#1F2A36"/><circle cx="17" cy="26" r="1.8" fill="#1F2A36"/><circle cx="17" cy="38" r="1.8" fill="#1F2A36"/><path d="M60 22 Q64 32 60 42 M72 24 Q75 32 72 40" stroke="#E2E9EF" stroke-width="2" fill="none"/></svg>'],
-    ['slide', 'Belly Slide', 'a sled', 85, 27, 100, '<svg viewBox="0 0 90 54"><path d="M20 34 L24 22 M40 34 L42 22 M60 34 L62 22" stroke="#8B5530" stroke-width="3"/><rect x="14" y="14" width="64" height="9" rx="3" fill="#C98A52" stroke="#8B5530" stroke-width="1.5"/><path d="M30 14 V23 M46 14 V23 M62 14 V23" stroke="#8B5530" stroke-width="1"/>' +
+    ['slide', 'Belly Slide', 'a sled', 84, 23, 120, '<svg viewBox="0 0 90 54"><path d="M20 34 L24 22 M40 34 L42 22 M60 34 L62 22" stroke="#8B5530" stroke-width="3"/><rect x="14" y="14" width="64" height="9" rx="3" fill="#C98A52" stroke="#8B5530" stroke-width="1.5"/><path d="M30 14 V23 M46 14 V23 M62 14 V23" stroke="#8B5530" stroke-width="1"/>' +
       '<path d="M6 38 H72 Q86 38 84 26 Q82 18 75 21" stroke="#D9534F" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M76 18 Q60 6 40 12" stroke="#F4D03F" stroke-width="1.8" fill="none"/></svg>'],
-    ['honk', 'Honk!', 'a trumpet', 28, 14, 90, '<svg viewBox="0 0 80 66"><path d="M22 40 L16 64 M58 40 L64 64 M40 42 V64" stroke="#8B5530" stroke-width="4" stroke-linecap="round"/><ellipse cx="40" cy="40" rx="26" ry="6" fill="#A8683A"/>' +
+    ['honk', 'Honk!', 'a trumpet', 21, 29, 106, '<svg viewBox="0 0 80 66"><path d="M22 40 L16 64 M58 40 L64 64 M40 42 V64" stroke="#8B5530" stroke-width="4" stroke-linecap="round"/><ellipse cx="40" cy="40" rx="26" ry="6" fill="#A8683A"/>' +
       '<g stroke="#C9962B" stroke-width="1.5"><rect x="8" y="22" width="44" height="6" rx="3" fill="#F4C542"/><path d="M50 25 L72 13 V37 Z" fill="#F4C542" stroke-linejoin="round"/><ellipse cx="72" cy="25" rx="3" ry="12" fill="#FFE58A"/><rect x="22" y="14" width="4" height="10" rx="1" fill="#F4C542"/><rect x="29" y="14" width="4" height="10" rx="1" fill="#F4C542"/><rect x="36" y="14" width="4" height="10" rx="1" fill="#F4C542"/><path d="M14 28 Q12 36 22 36 H44 Q50 36 48 28" fill="none"/><rect x="3" y="23" width="6" height="4" rx="1" fill="#C9962B"/></g></svg>']
   ];
   var BIG = { dive: 1, chase: 1, honk: 1, slide: 1 };   // the four that open in the games player; the rest are their own tabs
-  function spot(it) { return [it[3], Math.min(it[4], 38)]; }   // where penpen stands to use it (the back row's things are against the wall)
+  // the floor is round: penpen walks inside an oval (wide at the front, narrow at the back), and things far back look smaller
+  var DEEP = 110;   // depth: at y% up, things are drawn at (1 - y / DEEP) of their near size
+  function inRoom(x, y) { var dx = (x - 50) / 46, dy = y / 47, m = Math.hypot(dx, dy); if (m > 1) { x = 50 + dx / m * 46; y = dy / m * 47; } return [x, Math.max(4, y)]; }
+  function spot(it) { return inRoom(it[3], it[4] - 6); }   // where penpen stands to use it: just in front of it
   function iglooRoom(p) {
     var wear = WEAR[p.wear] || WEAR.none;
     return '<div class="garden igl" id="pp-igloo">' + iglooArt() +
@@ -356,9 +382,9 @@
       '<button type="button" data-act="sound" class="gbtn" aria-pressed="' + soundOn() + '" aria-label="Music and sounds">' + (soundOn() ? '🔊' : '🔇') + '</button></div>' +
       '<div class="say" id="pp-say">Walk to something to play 🎮</div>' +
       ROOM.map(function (it) {
-        return '<button type="button" class="iitem" data-item="' + it[0] + '" aria-label="' + it[1] + ': ' + it[2] + '" style="left:' + it[3] + '%;bottom:' + it[4] + '%;width:' + it[5] + 'px;z-index:' + (it[0] === 'chase' ? 1 : Math.max(1, 40 - it[4])) + ';--d:' + (1 - it[4] / 200).toFixed(3) + '">' + it[6] + '<span class="itag">' + it[1] + '</span></button>';
+        return '<button type="button" class="iitem" data-item="' + it[0] + '" aria-label="' + it[1] + ': ' + it[2] + '" style="left:' + it[3] + '%;bottom:' + it[4] + '%;width:' + it[5] + 'px;z-index:' + (it[0] === 'chase' ? 1 : Math.max(1, 50 - Math.round(it[4]))) + ';--d:' + (1 - it[4] / DEEP).toFixed(3) + '">' + it[6] + '<span class="itag">' + it[1] + '</span></button>';
       }).join('') +
-      '<div class="walker' + (sad(p) ? ' sad' : '') + '" id="pp-iwalk" style="left:50%;bottom:10%;z-index:30"><div class="pen" aria-label="' + esc(nameOf(p)) + '">' + views(inner(p) + faceBits(51, 69, 49, 6) + JOY, window.ppLook ? window.ppLook.side(look(p)) : '') + (wear.e ? '<span class="wear">' + wear.e + '</span>' : '') + '</div></div>' +
+      '<div class="walker' + (sad(p) ? ' sad' : '') + '" id="pp-iwalk" style="left:50%;bottom:10%;z-index:40;--d:' + (1 - 10 / DEEP).toFixed(3) + '"><div class="pen" aria-label="' + esc(nameOf(p)) + '">' + views(inner(p) + faceBits(51, 69, 49, 6) + JOY, window.ppLook ? window.ppLook.side(look(p)) : '') + (wear.e ? '<span class="wear">' + wear.e + '</span>' : '') + '</div></div>' +
       '<button type="button" class="iplay" id="pp-iplay" hidden></button>' +
       '<div class="ijoy" id="pp-ijoy" role="img" aria-label="Joystick: drag to walk (arrow keys work too)"><i></i></div></div>';
   }
@@ -387,8 +413,8 @@
       var dt = Math.min(0.05, (t - I.last) / 1000), k = I.keys, v = I.v && Math.hypot(I.v.x, I.v.y) > 0.2 ? I.v : null; I.last = t;
       var vx = v ? v.x : (k.r ? 1 : 0) - (k.l ? 1 : 0), vy = v ? v.y : (k.d ? 1 : 0) - (k.u ? 1 : 0);
       if (vx || vy) {
-        I.x = Math.max(6, Math.min(94, I.x + vx * 30 * dt)); I.y = Math.max(6, Math.min(38, I.y - vy * 20 * dt));
-        me.style.transitionDuration = '0s'; me.style.left = I.x + '%'; me.style.bottom = I.y + '%'; me.style.zIndex = String(40 - Math.round(I.y)); me.style.setProperty('--d', (1 - I.y / 160).toFixed(3));
+        var at = inRoom(I.x + vx * 30 * dt, I.y - vy * 22 * dt); I.x = at[0]; I.y = at[1];
+        me.style.transitionDuration = '0s'; me.style.left = I.x + '%'; me.style.bottom = I.y + '%'; me.style.zIndex = String(50 - Math.round(I.y)); me.style.setProperty('--d', (1 - I.y / DEEP).toFixed(3));
         if (Math.abs(vx) > 0.1) me.classList.toggle('l', vx < 0);
         me.classList.add('walking'); clearTimeout(me.ppStop); me.ppStop = setTimeout(function () { me.classList.remove('walking'); }, 150);
         nearBy();
@@ -411,7 +437,7 @@
   // tap a thing: penpen walks over to it
   function walkTo(id) {
     var it = ROOM.filter(function (x) { return x[0] === id; })[0], me = document.getElementById('pp-iwalk'); if (!it || !me || !I) return;
-    var s = spot(it), secs = go(me, s[0], s[1], 30); I.x = s[0]; I.y = s[1];
+    var s = spot(it), secs = go(me, s[0], s[1], 30, DEEP); I.x = s[0]; I.y = s[1]; me.style.zIndex = String(50 - Math.round(s[1]));
     clearTimeout(I.arrive); I.arrive = setTimeout(nearBy, secs * 1000);
   }
   // Play: the four big games open in the games player; Quiz, Learn, Sing and Shop open their own screens. Back comes home to the igloo
@@ -956,7 +982,7 @@
     '#pp-play .gdoor{pointer-events:none}#pp-play .gdoor .door{pointer-events:auto;cursor:pointer;outline:none}#pp-play .gdoor .door:focus-visible .hit{stroke:#fff;stroke-width:3}#pp-play .gdoor .glow{animation:ppglow 2.2s ease-in-out infinite alternate}@keyframes ppglow{from{opacity:.55}to{opacity:1}}' +
     '#pp-play.imm .garden.igl{--fb:0px;background:#C8875A}#pp-play .igl .gtop .ititle{flex:1;min-width:0;background:rgba(255,255,255,.9);color:#13324A;border-radius:99px;padding:6px 12px;font:900 14px ' + F + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
     '#pp-play .iitem{position:absolute;transform:translateX(-50%) scale(var(--d,1));transform-origin:50% 100%;border:0;background:none;padding:0 0 18px;cursor:pointer;-webkit-tap-highlight-color:transparent}#pp-play .iitem svg{display:block;width:100%;height:auto;overflow:visible;transition:filter .2s}' +
-    '#pp-play .iitem .itag{position:absolute;left:50%;bottom:0;transform:translateX(-50%);white-space:nowrap;background:rgba(255,255,255,.85);color:#13324A;border-radius:99px;padding:1px 8px;font:900 11.5px/16px ' + F + '}' +
+    '#pp-play .iitem .itag{position:absolute;left:50%;bottom:0;transform:translateX(-50%) scale(calc(1 / var(--d,1)));transform-origin:50% 100%;white-space:nowrap;background:rgba(255,255,255,.85);color:#13324A;border-radius:99px;padding:1px 8px;font:900 11.5px/16px ' + F + '}' +
     '#pp-play .iitem.near svg{filter:drop-shadow(0 0 6px #FFE58A) drop-shadow(0 0 2px #fff);animation:ppnear .9s ease-in-out infinite alternate}#pp-play .iitem.near .itag{background:#F7B955}#pp-play .iitem:focus-visible{outline:3px solid #fff;outline-offset:2px;border-radius:12px}@keyframes ppnear{to{transform:translateY(-4px)}}' +
     '#pp-play .igl .flm{transform-box:fill-box;transform-origin:50% 100%;animation:ppflm .45s ease-in-out infinite alternate}#pp-play .igl .flm.f2{animation-duration:.33s}@keyframes ppflm{to{transform:scale(.88,1.12)}}#pp-play .igl .bulb{animation:ppglow 1.6s ease-in-out infinite alternate}#pp-play .igl .bulb:nth-of-type(2n){animation-delay:.8s}' +
     '#pp-play .iplay{position:absolute;left:14px;bottom:calc(24px + env(safe-area-inset-bottom));z-index:60;border:0;border-radius:99px;background:#3FAF6B;color:#fff;font:900 17px ' + F + ';padding:14px 20px;box-shadow:0 4px 0 #2B8550,0 8px 18px rgba(0,0,0,.2);cursor:pointer;animation:pppop .25s ease-out}#pp-play .iplay[hidden]{display:none}@keyframes pppop{from{transform:scale(.6);opacity:0}}' +
