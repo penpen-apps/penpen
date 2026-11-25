@@ -47,7 +47,7 @@
   var pass = false;
   var TABS = { Today: 'p-today', Plan: 'p-plan', Itinerary: 'p-plan', Money: 'p-money', Expenses: 'p-money', Crew: 'p-safety', More: 'p-safety' };
   window.ppGoTab = function (label) {
-    if (label === 'Play' && window.ppOpenPlay) { window.ppOpenPlay(); return true; }
+    if ((label === 'Garden' || label === 'Play') && window.ppOpenPlay) { window.ppOpenPlay(); return true; }
     if (label === 'Diary') { var dd = document.getElementById('to-diary'); if (dd) dd.click(); return true; }
     if (label === 'Settings' && window.ppOpenSettings) { window.ppOpenSettings(); return true; }
     var id = TABS[label]; if (!id) return false; if (id === 'p-safety') view('crew'); window.ppNavGo(id); return true; };
@@ -91,7 +91,7 @@
         ['safety', '🛟', 'Safety', 'SOS · Nearby help · Emergency contacts', '<em class="off">SOS calls work offline</em>'],
         ['book', '🏨', 'Bookings', 'Hotels · Tours · Transport', OFF],
         ['diary', '📔', 'Diary', 'Memories · Photos · Notes', ''],
-        ['play', '🎮', 'Play', 'Feed penpen · Games · Quiz', OFF],
+        ['play', '🎮', 'Garden', 'Feed penpen · Games · Quiz', OFF],
         ['set', '⚙️', 'Settings', 'Guide · Voice · Scene · Trip sheet', ''],
         ['priv', '🔒', 'Privacy and account', 'Location · Microphone · Clear this phone', '']
       ].map(function (x) { return '<button type="button" role="menuitem" data-m="' + x[0] + '"><i>' + x[1] + '</i><span><b>' + x[2] + '</b><small>' + x[3] + '</small>' + x[4] + '</span><u>›</u></button>'; }).join('') + '</div>';
@@ -126,7 +126,7 @@
     ['🗺️', 'Itinerary', 'Every day of the trip with times, places and directions. Tell penpen to change it.', ['“Move canyoneering to 9 am”', '“Add dinner on Dec 5 at 7 pm”']],
     ['👥', 'Travel buddies, Safety & Bookings', 'In More: who’s on the trip and the invite QR, SOS and nearby help, and your hotels, tours and transport.', []],
     ['📔', 'Diary', 'Write, talk or add photos. Group diary is shared with everyone; Just me is only for you.', ['“Dear diary, today we…”']],
-    ['🎮', 'Play', 'Look after penpen and play Belly Slide — even with no signal. Every expense you log earns a 🐟.', []],
+    ['🎮', 'Garden', 'Look after penpen and play Belly Slide — even with no signal. Every expense you log earns a 🐟.', []],
     ['⚙️', 'Settings', 'Pick your guide, voice, scene and light/dark, and open the trip’s Google Sheet.', []]
   ];
   window.ppHelpHtml = function () {
@@ -138,7 +138,7 @@
     ['u1122-play', '🎮', 'New: Play', 'Look after penpen, Belly Slide down a snowy hill, exercise and trivia — works offline', 'Play'],
     ['u1122-voice', '🛠️', 'Fixed: logging by voice', 'Telling penpen an expense works again', 'Money'],
     ['u1122-diary', '🔒', 'Diary: Just me is private', 'Your own Google Doc, with a link to open it', 'Diary'],
-    ['u1122-more', '🧭', 'More menu', 'Travel buddies, Safety, Bookings, Diary, Play and Settings each have their own page', 'More']
+    ['u1122-more', '🧭', 'More menu', 'Travel buddies, Safety, Bookings, Diary, Garden and Settings each have their own page', 'More']
   ];
   window.ppFeed = function () {
     var out = [], first = get('pp_feed_first') || {}, nowT = Date.now(), WEEK = 7 * 864e5, changed = false;
