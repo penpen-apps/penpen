@@ -161,12 +161,29 @@
   function sad(p) { return !p.asleep && !p.egg && (p.food < 25 || p.joy < 25); }
   // a happy moment: open beak and flappy flippers for a bit
   function cheer(el, ms) { if (!el) return; el.classList.add('yay'); clearTimeout(el.ppYay); el.ppYay = setTimeout(function () { el.classList.remove('yay'); }, ms || 1400); }
-  // the garden field: 1080 x 600, three phone screens wide. Left: the pond. Middle: the igloo and the fountain. Right: bushes and a flower meadow.
+  // the race pond on the right of the field (art units). Penguins wade in and swim here now and then; the pond race will start here later.
+  var POND = { x: 830, y: 362, rx: 104, ry: 15 };
+  var POND_ART = '<ellipse cx="830" cy="364" rx="110" ry="18" fill="#6FA765"/><ellipse cx="830" cy="362" rx="104" ry="15" fill="#7FC8E8"/>' +
+    '<ellipse cx="830" cy="358" rx="88" ry="8" fill="#9AD6EE" opacity=".55"/><ellipse cx="872" cy="359" rx="18" ry="2.4" fill="#FFF3C4" opacity=".7"/>' +
+    '<path class="shim" d="M806 366 h18 M856 368 h14 M900 362 h12 M836 356 h10" stroke="#E8F7FD" stroke-width="1.6" stroke-linecap="round"/>' +
+    '<ellipse cx="910" cy="366" rx="8" ry="2.6" fill="#4E9A48"/><ellipse cx="896" cy="370" rx="5" ry="1.8" fill="#4E9A48"/><circle cx="912" cy="364" r="2" fill="#F28AA5"/>' +
+    '<path d="M732 360 q-3 -14 -1 -22 M738 362 q1 -12 4 -18 M926 358 q2 -13 0 -20 M932 360 q-1 -10 3 -16" stroke="#4E9A48" stroke-width="2" fill="none" stroke-linecap="round"/>' +
+    '<ellipse cx="731" cy="338" rx="2" ry="5" fill="#8B5530"/><ellipse cx="926" cy="338" rx="2" ry="5" fill="#8B5530"/>' +
+    // the little wooden dock, reaching back into the water from the front shore
+    '<path d="M752 384 V392 M774 384 V392 M774 356 V362 M792 356 V362" stroke="#7A4A26" stroke-width="3" stroke-linecap="round"/>' +
+    '<path d="M746 384 L778 384 L796 355 L772 355 Z" fill="#C98A52" stroke="#8B5530" stroke-width="1.5" stroke-linejoin="round"/>' +
+    '<path d="M752 375 H783 M758 366 H788 M764 360 H791" stroke="#8B5530" stroke-width="1.2"/>';
+  // the sled hill in the mountains behind the pond: a snowy hill with a winding Belly Slide track and a little red sled
+  var SLED_HILL = '<path d="M682 336 Q742 252 800 246 Q862 252 920 336 Z" fill="#F4FAFF"/><path d="M800 246 Q862 252 920 336 H880 Q852 290 800 246 Z" fill="#DCEBF5"/>' +
+    '<path d="M800 250 Q770 272 802 290 Q834 306 794 332" fill="none" stroke="#BFD7E8" stroke-width="6" stroke-linecap="round"/>' +
+    '<path d="M800 250 Q770 272 802 290 Q834 306 794 332" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-dasharray="2 6"/>' +
+    '<rect x="808" y="287" width="17" height="5" rx="2" fill="#E0533D"/><path d="M806 294 h20 q4 0 5 -4" fill="none" stroke="#8B5530" stroke-width="1.4" stroke-linecap="round"/>';
+  // the garden field: 1080 x 600, three phone screens wide. Left: the igloo. Middle (where the view opens): the fountain. Right: the race pond with a wooden dock, and the sled hill in the mountains behind it.
   // Penguins walk only on the grass in front of the igloo and the fountain (see far()); on a phone the far left and right edges are cropped a little.
   function gardenArt() {
     var fl = '', n = 0, seed = 7;
     function rnd() { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; }
-    function blocked(x, y) { return (y < 376 && ((x > 380 && x < 560) || (x > 578 && x < 682) || (x > 156 && x < 304) || (x > 744 && x < 810) || (x > 862 && x < 902))); }
+    function blocked(x, y) { return (y < 376 && ((x > 200 && x < 380) || (x > 488 && x < 592) || (x > 668 && x < 712) || (x > 942 && x < 990))) || (y < 392 && x > 706 && x < 950); }
     while (n < 90) {
       var x = 110 + rnd() * 860, y = n < 24 ? 318 + rnd() * 50 : 382 + rnd() * 210, c = ['#F28AA5', '#FFFFFF', '#F4A62A', '#B7A2F0', '#FF7A7A'][Math.floor(rnd() * 5)], k = 0.7 + (y - 300) / 300;
       if (blocked(x, y)) continue;
@@ -185,11 +202,11 @@
       '<path d="M226 186 q5 -5 10 0 q5 -5 10 0 M258 172 q4 -4 8 0 q4 -4 8 0 M690 150 q5 -5 10 0 q5 -5 10 0" fill="none" stroke="#5B7A99" stroke-width="2" stroke-linecap="round"/>' +
       // the mountains: one range, drawn three times (the middle one mirrored) so the peaks don't repeat side by side
       '<g id="pp-mt"><path d="M0 322 L34 282 L62 300 L108 250 L156 304 L204 268 L236 290 L292 246 L336 292 L360 276 V350 H0Z" fill="#E4F1FA"/><path d="M95 265 L108 250 L121 264 L112 260 Z M280 261 L292 246 L305 260 L296 256 Z" fill="#fff"/></g>' +
-      '<use href="#pp-mt" transform="translate(720 0) scale(-1 1)"/><use href="#pp-mt" transform="translate(720 0)"/>' +
+      '<use href="#pp-mt" transform="translate(720 0) scale(-1 1)"/><use href="#pp-mt" transform="translate(720 0)"/>' + SLED_HILL +
       '<path d="M0 316 Q90 292 180 312 T360 304 T540 312 T720 302 T900 312 T1080 304 V600 H0Z" fill="#A6DA92"/><path d="M0 344 Q120 326 220 342 T420 336 T620 344 T820 334 T1080 340 V600 H0Z" fill="#86C977"/>' +
       '<path d="M0 460 Q140 444 250 458 T470 452 T690 460 T910 450 T1080 456 V600 H0Z" fill="#7BBF6C"/>' +
-      '<ellipse cx="230" cy="350" rx="66" ry="13" fill="#7FC8E8"/><ellipse cx="214" cy="347" rx="28" ry="4" fill="#BFE6F5" opacity=".75"/><ellipse cx="262" cy="353" rx="8" ry="2.6" fill="#4E9A48"/><ellipse cx="190" cy="354" rx="6" ry="2" fill="#4E9A48"/>' +
-      bush(748, 372) + bush(864, 370) + IGLOO + FOUNTAIN + fl + '</svg>';
+      POND_ART +
+      bush(672, 372) + bush(946, 374) + '<g transform="translate(-180 0)">' + IGLOO + '</g><g transform="translate(-90 0)">' + FOUNTAIN + '</g>' + fl + '</svg>';
   }
   var GD = { t: {}, hold: 0, s: [] }, CAM = { raf: 0, user: 0 }, BACK = 228;   // BACK: art units from the bottom of the garden drawing to the back of the grass
   // how far up (in % of the garden) a penguin's feet can go and still be on the grass, in front of the igloo and the fountain.
@@ -215,8 +232,31 @@
   function stroll(el, key) {
     if (!el.isConnected) return;
     if ((key === 'me' && GD.hold > now()) || el.ppBusy) return later(el, key, 1200);
+    if (key !== 'me' && Math.random() < 0.18 && swim(el, key)) return;
     var me = document.getElementById('pp-walk'), from = pos(key === 'me' || !me ? el : me)[0];
     later(el, key, go(el, clampX(from + (Math.random() * 2 - 1) * 30), 3 + Math.random() * (far(el) - 3)) * 1000 + 1500 + Math.random() * 3500);
+  }
+  // an art point (1080 x 600 units) as [% across, % up] of the field, the same way far() scales the drawing
+  function artAt(el, ax, ay) {
+    var wd = document.getElementById('pp-world'), W = wd ? wd.clientWidth : 0, H = wd ? wd.clientHeight : 0;
+    if (!W || !H) return null;
+    var k = Math.max(W / 1080, H / 600), mb = parseFloat(getComputedStyle(el).marginBottom) || 0;
+    return [(ax * k - (1080 * k - W) / 2) / W * 100, ((600 - ay) * k - mb) / H * 100];
+  }
+  // a friend wades into the race pond, bobs and paddles about for a while, then climbs out and wanders off
+  function swim(el, key) {
+    function spot() { return artAt(el, POND.x + 30 + (Math.random() * 2 - 1) * 46, POND.y + 1 + Math.random() * 5); }   // the open water, clear of the dock
+    var a = spot(); if (!a) return false;
+    el.ppSwim = true;
+    function next(ms, f) { clearTimeout(GD.t[key]); GD.t[key] = setTimeout(function () { if (el.isConnected) f(); }, ms); }
+    next(go(el, a[0], a[1]) * 1000, function () {
+      el.classList.add('swim'); pop(el, pick(['💦', '🌊', '💙']));
+      next(2500 + Math.random() * 2000, function () {
+        var b = spot() || a;
+        next(go(el, b[0], b[1], 4) * 1000 + 2500 + Math.random() * 3000, function () { el.classList.remove('swim'); el.ppSwim = false; later(el, key, 200); });
+      });
+    });
+    return true;
   }
   // stop penpen where he is (while you drag food or rub his belly)
   function freeze(ms) {
@@ -241,7 +281,7 @@
   function tell(t) { var s = document.getElementById('pp-say'); if (s && now() - (GD.said || 0) > 6000) { s.textContent = t; GD.line = t; } }
   function playSoon() { clearTimeout(GD.t.play); GD.t.play = setTimeout(playTime, 7000 + Math.random() * 7000); }
   function playTime() {
-    var me = document.getElementById('pp-walk'), pals = w ? [].slice.call(w.querySelectorAll('#pp-garden .walker.pal')) : [];
+    var me = document.getElementById('pp-walk'), pals = w ? [].slice.call(w.querySelectorAll('#pp-garden .walker.pal')).filter(function (el) { return !el.ppSwim; }) : [];   // swimmers stay in the pond
     if (!me || !me.isConnected) return;
     if (load().asleep || still() || document.hidden || GD.hold > now() || !pals.length) return playSoon();
     var f = pick(pals), nm = window.ppLook ? window.ppLook.name(f.dataset.pal) : 'his friend', mine = nameOf(load()), who = [me].concat(pals), game = pick(['meet', 'tag', 'dance', 'ball']);
@@ -344,7 +384,7 @@
   /* ---------- the cozy igloo: a games room inside the garden's igloo. Walk penpen to a thing and Play pops up ---------- */
   // the door layer over the garden art: the igloo's doorway glows, and a little Games sign points the way in
   function doorArt() {
-    return '<svg class="gart gdoor" viewBox="0 0 1080 600" preserveAspectRatio="xMidYMax slice"><g class="door" data-act="igloo" role="button" tabindex="0" aria-label="Igloo: go inside to play">' +
+    return '<svg class="gart gdoor" viewBox="0 0 1080 600" preserveAspectRatio="xMidYMax slice"><g class="door" data-act="igloo" role="button" tabindex="0" aria-label="Igloo: go inside to play" transform="translate(-180 0)">' +
       '<rect class="hit" x="386" y="290" width="172" height="90" rx="14" fill="transparent"/><path class="glow" d="M426 372 C426 350 450 350 450 372 Z" fill="#F7B955"/>' +
       '<path d="M534 380 V348" stroke="#8B5530" stroke-width="3" stroke-linecap="round"/><rect x="514" y="334" width="40" height="17" rx="3" fill="#C98A52" stroke="#8B5530" stroke-width="1.5"/>' +
       '<text x="534" y="346" text-anchor="middle" font-family="' + F + '" font-size="9" font-weight="900" fill="#fff">Games</text></g></svg>';
@@ -1008,6 +1048,9 @@
     '@media(prefers-reduced-motion:reduce){#pp-play .lid,#pp-play .fl-l,#pp-play .fl-r,#pp-play .sv *,#pp-play .mouth{animation:none!important}}' +
     '#pp-play .joy{display:none}#pp-play .walker .pen.eat{animation:ppchew .2s ease-in-out 6 alternate}#pp-play .pen.eat .joy{display:inline}#pp-play .pen.eat .pp-eyes,#pp-play .pen.eat .shut{display:none}@keyframes ppchew{to{transform:scale(1.07,.9)}}' +
     '#pp-play .garden .bed{font-size:52px}' +
+    // swimming in the race pond: the bottom of the penguin is under the water line (its feet spot), it bobs, and ripples spread around it
+    '#pp-play .walker.swim .pen{clip-path:inset(0 0 40% 0);animation:ppswim 1.1s ease-in-out infinite alternate;transform-origin:50% 60%}@keyframes ppswim{from{transform:translateY(40%) rotate(-6deg)}to{transform:translateY(35%) rotate(6deg)}}' +
+    '#pp-play .walker.swim::after{content:"";position:absolute;left:-18%;right:-18%;bottom:-7px;height:14px;border-radius:50%;border:2px solid rgba(255,255,255,.85);pointer-events:none;animation:ppripple 1.6s ease-out infinite}@keyframes ppripple{from{transform:scale(.7);opacity:.9}to{transform:scale(1.25);opacity:0}}' +
     '#pp-play .walker.dance .pen{animation:ppdance .45s ease-in-out infinite alternate}@keyframes ppdance{from{transform:rotate(-12deg) translateY(0)}to{transform:rotate(12deg) translateY(-12px)}}' +
     '#pp-play .ball{position:absolute;transform:translateX(-50%);transition:left .8s linear;z-index:45;font-size:24px;pointer-events:none}#pp-play .ball i{display:block;font-style:normal}#pp-play .ball i.up{animation:pparc .8s ease-in-out}@keyframes pparc{50%{transform:translateY(-56px) rotate(180deg)}}' +
     '.pp-stats{border:0;border-radius:24px;padding:16px;width:min(92vw,420px);background:var(--card,#fff);color:var(--ink,#13324A);font-family:' + F + ';box-shadow:0 12px 40px rgba(0,0,0,.25)}.pp-stats:not([open]){display:none}.pp-stats[open]:not(:modal){position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:99980;margin:0}.pp-stats::backdrop{background:rgba(10,20,30,.45)}' +
