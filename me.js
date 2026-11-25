@@ -199,7 +199,7 @@
       return { id: t.id || '', name: t.name, s: s, e: e, here: here, where: t.where || '' };
     });
     var open = trips.filter(function (t) { return t.here && t.s; })[0]; if (open) yr = open.s.getFullYear();
-    var thisYear = trips.filter(function (t) { return !t.s || t.s.getFullYear() === yr; });
+    var thisYear = trips.filter(function (t) { return t.s ? t.s.getFullYear() === yr : t.here; });   // a trip with no dates yet only counts if it's the open one
     var days = thisYear.reduce(function (n, t) { return n + (t.s && t.e ? Math.round((t.e - t.s) / 864e5) + 1 : 0); }, 0);
     var places = {}; f.places.forEach(function (p) { places[p] = 1; }); trips.forEach(function (t) { if (!t.here && t.where) t.where.split(/[-–,·]/).forEach(function (p) { if (p.trim()) places[p.trim()] = 1; }); });
     var mine = T.budget && T.budget.mine ? Math.round(T.budget.mine.spent || 0) : 0;
