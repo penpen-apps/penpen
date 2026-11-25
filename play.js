@@ -127,11 +127,12 @@
   function still() { return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); }
   function later(el, key, ms) { clearTimeout(GD.t[key]); GD.t[key] = setTimeout(function () { stroll(el, key); }, ms); }
   // walk el to x% across, y% up; returns the seconds it takes (pace: % per second)
+  // the walking class is 'walking', not 'go': #pp-play .go is the green Start button style, and it painted a green box behind penpen
   function go(el, x, y, pace) {
     var x0 = parseFloat(el.style.left) || 50, secs = Math.max(pace ? 0.5 : 1.2, Math.abs(x - x0) / (pace || 14));
-    el.style.transitionDuration = secs + 's'; if (x !== x0) el.classList.toggle('l', x < x0); el.classList.add('go');
+    el.style.transitionDuration = secs + 's'; if (x !== x0) el.classList.toggle('l', x < x0); el.classList.add('walking');
     el.style.left = x + '%'; el.style.bottom = y + '%'; el.style.zIndex = String(40 - Math.round(y));
-    clearTimeout(el.ppStop); el.ppStop = setTimeout(function () { el.classList.remove('go'); }, secs * 1000);
+    clearTimeout(el.ppStop); el.ppStop = setTimeout(function () { el.classList.remove('walking'); }, secs * 1000);
     return secs;
   }
   // walk to a random spot, then rest a bit (unless he's busy playing)
@@ -143,10 +144,10 @@
   // stop penpen where he is (while you drag food or rub his belly)
   function freeze(ms) {
     var el = document.getElementById('pp-walk'), g = document.getElementById('pp-garden'); GD.hold = now() + ms; endPlay();
-    if (!el || !g || !el.classList.contains('go')) return;
+    if (!el || !g || !el.classList.contains('walking')) return;
     var r = el.getBoundingClientRect(), b = g.getBoundingClientRect();
     if (b.width) { el.style.transitionDuration = '0s'; el.style.left = ((r.left + r.width / 2 - b.left) / b.width * 100) + '%'; el.style.bottom = ((b.bottom - r.bottom) / b.height * 100) + '%'; }
-    el.classList.remove('go');
+    el.classList.remove('walking');
   }
 
   /* ---------- penpen plays with his friends: meet and high-five, tag, dance, catch ---------- */
@@ -655,7 +656,7 @@
     '#pp-play .gbtn{border:0;border-radius:99px;background:rgba(255,255,255,.9);color:#13324A;padding:6px 10px;font:800 13px ' + F + ';cursor:pointer}' +
     '#pp-play .garden .say{position:absolute;left:50%;top:52px;transform:translateX(-50%);z-index:50;max-width:84%;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.1)}#pp-play .garden .zbtn{top:auto;bottom:10px;z-index:50}' +
     '#pp-play .walker{position:absolute;transform:translateX(-50%);transition-property:left,bottom;transition-timing-function:linear;z-index:30}#pp-play .walker.pal{border:0;background:none;padding:0;cursor:pointer}#pp-play .walker.l svg{transform:scaleX(-1)}' +
-    '#pp-play .walker.go .pen{animation:ppwd .32s ease-in-out infinite alternate}@keyframes ppwd{from{transform:rotate(-7deg)}to{transform:rotate(7deg) translateY(-3px)}}' +
+    '#pp-play .walker.walking .pen{animation:ppwd .32s ease-in-out infinite alternate}@keyframes ppwd{from{transform:rotate(-7deg)}to{transform:rotate(7deg) translateY(-3px)}}' +
     '#pp-play .joy{display:none}#pp-play .walker .pen.eat{animation:ppchew .2s ease-in-out 6 alternate}#pp-play .pen.eat .joy{display:inline}#pp-play .pen.eat .pp-eyes,#pp-play .pen.eat .shut{display:none}@keyframes ppchew{to{transform:scale(1.07,.9)}}' +
     '#pp-play .garden .bed{font-size:52px}' +
     '#pp-play .walker.dance .pen{animation:ppdance .45s ease-in-out infinite alternate}@keyframes ppdance{from{transform:rotate(-12deg) translateY(0)}to{transform:rotate(12deg) translateY(-12px)}}' +
