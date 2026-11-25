@@ -144,7 +144,9 @@
     put(t, 'pp-story-hero', 'div', hero, t.firstChild);
     document.querySelector('#pp-story-hero .trip').onclick = openTrips;
     // who's coming
-    var o = others(I), crew = !o.length ? '🧳 Solo trip · just you & penpen' : o.length === 1 ? '👫 You & ' + esc(o[0]) + ' · travel buddies' : '🐧 Your crew · ' + (o.length + 1) + ' travel buddies';
+    // nobody else yet: use the trip type picked in setup, so a Friends trip isn't called solo
+    var kind = (cached('penpenProfiles') || {}).tripType, WAIT = { couple: '💑 Couple trip · invite your partner', family: '👨‍👩‍👧 Family trip · invite your family', friends: '🐧 Friends trip · invite your friends' };
+    var o = others(I), crew = !o.length ? (WAIT[kind] || '🧳 Solo trip · just you & penpen') : o.length === 1 ? '👫 You & ' + esc(o[0]) + ' · travel buddies' : '🐧 Your crew · ' + (o.length + 1) + ' travel buddies';
     put(t, 'pp-story-crew', 'div', crew, sc);
     // penpen's line now pops up over his head when you tap him (me.js)
     var old = document.getElementById('pp-story-say'); if (old) old.remove();
