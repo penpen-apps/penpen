@@ -357,7 +357,17 @@ th .pp-qt{position:absolute;right:0;top:100%;width:210px;z-index:5;box-shadow:0 
 .pp-qr{width:132px;height:132px;flex:none;background:#FFFFFF;border-radius:12px;padding:4px}
 .pp-qr svg{width:100%;height:100%}
 .pp-add .pp-sub{margin-bottom:4px}
-.pp-add small.h{display:block;font-size:13px;color:var(--muted);margin-top:6px}
+.pp-addrow{display:flex;align-items:center;gap:14px;margin-top:10px}
+.pp-addbtn{flex:none;min-height:44px;padding:0 16px;font-size:15px;color:var(--accentText);border-color:var(--accent)}
+body.pp-viewer .pp-addbtn{display:none}
+.pp-dlg{border:0;border-radius:22px;padding:18px 18px 16px;background:var(--card);color:var(--ink);width:min(440px,calc(100vw - 24px));max-height:calc(100dvh - 24px);overflow:auto;box-shadow:0 18px 50px rgba(19,50,74,.28)}
+.pp-dlg::backdrop{background:rgba(19,50,74,.45)}
+.pp-dlg h2{font-size:22px;margin:0 0 2px}
+.pp-dlg .pp-sub{margin:0 0 4px}
+.pp-dlg label.f span{font-weight:400;letter-spacing:0;text-transform:none}
+.pp-dlg select.in{appearance:auto}
+.pp-dlg .row2{margin-top:16px}
+.pp-add small.h,.pp-dlg small.h{display:block;font-size:13px;color:var(--muted);margin-top:6px}
 .pp-roles{border:0;padding:0;margin:14px 0 0;min-width:0}
 .pp-roles legend{padding:0;font-size:12px;font-weight:600;color:var(--muted);letter-spacing:.06em;margin:0 0 6px}
 .pp-rolet{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border:2px solid var(--line);border-radius:16px;margin-bottom:8px;cursor:pointer;background:var(--card)}
@@ -410,7 +420,7 @@ th .pp-qt{position:absolute;right:0;top:100%;width:210px;z-index:5;box-shadow:0 
         <div class="acts"><a class="act p" id="route" target="_blank" rel="noopener">Open whole route in Google Maps</a></div>
         <div class="card" id="stops"><div class="muted">Loading the plan…</div></div>
         <div class="card tip">To change the plan, tell penpen — e.g. “Add dinner on Dec 5 at 7 pm”, “Move canyoneering to 9 am”, or “Remove the free day”. Changes ask Yes / No first.
-          <div><button class="linkbtn" type="button" id="plan-ask">Ask penpen</button></div></div>
+          <div class="pp-addrow"><button class="btn pp-addbtn" type="button" id="plan-add">＋ Add a stop</button><button class="linkbtn" type="button" id="plan-ask">Ask penpen</button></div></div>
       </div>
     </section>
 
@@ -432,7 +442,8 @@ th .pp-qt{position:absolute;right:0;top:100%;width:210px;z-index:5;box-shadow:0 
         <div class="card" id="live"><div class="muted">Loading…</div></div>
         <div class="card" id="emer"></div>
         <div class="card" id="trip-ct"></div>
-        <div class="card tip">Add or fix a number by telling penpen — e.g. “Harolds Hotel’s number is 032 123 4567” — or type it in the Contacts tab of the sheet.</div>
+        <div class="card tip">Add or fix a number by telling penpen — e.g. “Harolds Hotel’s number is 032 123 4567” — or add it here.
+          <div class="pp-addrow"><button class="btn pp-addbtn" type="button" data-addct="Emergency">＋ Add a contact</button></div></div>
       </div>
     </section>
 
@@ -954,6 +965,83 @@ th .pp-qt{position:absolute;right:0;top:100%;width:210px;z-index:5;box-shadow:0 
     }, 60);
   }
   $('plan-ask').onclick = function () { askPenpen('Add to the plan: '); };
+
+  /* ---------- Add a stop / Add a contact: a short form instead of chat (crew and creator; viewers can't change the trip) ---------- */
+  function canEdit() { var r = window.ppTrips && window.ppTrips.role(); document.body.classList.toggle('pp-viewer', r === 'viewer'); return r !== 'viewer'; }
+  canEdit();
+  function notice(t) { var d = el('div', 'pp-ptoast', t); d.setAttribute('role', 'status'); document.body.appendChild(d); setTimeout(function () { d.remove(); }, 4200); }
+  // one native <dialog>: Esc and the Cancel button close it, focus returns to the button that opened it
+  function formDialog(title, sub, fields, okLabel, send) {
+    var d = document.createElement('dialog'); d.className = 'pp-dlg'; d.setAttribute('aria-labelledby', 'pp-dlg-t');
+    d.innerHTML = '<form novalidate><h2 class="fred" id="pp-dlg-t">' + esc(title) + '</h2><p class="pp-sub">' + esc(sub) + '</p>' + fields
+      + '<div class="pp-addmsg" role="alert"></div><div class="row2"><button type="button" class="btn" data-x="1">Cancel</button><button type="submit" class="btn p">' + esc(okLabel) + '</button></div></form>';
+    document.body.appendChild(d);
+    var f = d.querySelector('form'), msg = d.querySelector('.pp-addmsg'), ok = f.querySelector('[type=submit]');
+    d.addEventListener('close', function () { d.remove(); });
+    f.querySelector('[data-x]').onclick = function () { d.close(); };
+    f.onsubmit = function (e) {
+      e.preventDefault(); if (ok.disabled) return; msg.textContent = '';
+      var bad = [].slice.call(f.elements).filter(function (x) { return x.willValidate && !x.checkValidity(); })[0];
+      if (bad) { msg.textContent = bad.dataset.err || 'Check this field.'; bad.focus(); return; }
+      var label = ok.textContent; ok.disabled = true; ok.textContent = 'Adding\u2026';
+      send(f, function (er) { ok.disabled = false; ok.textContent = label; if (er) msg.textContent = er; }, function () { d.close(); }, ok);
+    };
+    d.showModal();
+    var first = f.querySelector('input,select'); if (first) first.focus();
+    return f;
+  }
+  function tripDay() {   // the day you're looking at, else the first day of the trip, else today
+    var t = window.ppPlace ? window.ppPlace.now().day : '';
+    if (DAY && /^\d{4}-\d{2}-\d{2}$/.test(DAY)) return DAY;
+    return (P && (P.open || P.start)) || t;
+  }
+  $('plan-add').onclick = function () {
+    if (!canEdit()) return;
+    var lo = (P && P.start) || '', hi = (P && P.end) || '';
+    formDialog('Add a stop', 'It goes straight into the plan and on the map.',
+      '<label class="f" for="st-day">DAY</label><input class="in" type="date" id="st-day" name="date" required value="' + esc(tripDay()) + '"' + (lo ? ' min="' + esc(lo) + '"' : '') + (hi ? ' max="' + esc(hi) + '"' : '') + ' data-err="Pick a day' + (lo && hi ? ' during the trip' : '') + '.">'
+      + '<label class="f" for="st-time">TIME <span>(optional)</span></label><input class="in" type="time" id="st-time" name="time">'
+      + '<label class="f" for="st-what">WHAT</label><input class="in" id="st-what" name="what" required maxlength="80" autocomplete="off" placeholder="e.g. Dinner, Snorkelling tour" data-err="Say what the stop is, e.g. Dinner.">'
+      + '<label class="f" for="st-place">PLACE <span>(optional)</span></label><input class="in" id="st-place" name="place" maxlength="120" autocomplete="off" placeholder="e.g. Larsian, Cebu City" aria-describedby="st-ph"><small class="h" id="st-ph">Add the town so penpen can find it on the map.</small>'
+      + '<label class="f" for="st-notes">NOTES <span>(optional)</span></label><input class="in" id="st-notes" name="notes" maxlength="300" autocomplete="off">',
+      'Add stop', function (f, fail, close) {
+        var v = function (k) { return f.elements[k].value.trim(); }, day = v('date');
+        google.script.run.withSuccessHandler(function (r) {
+          close(); P = r.plan; planStale = false; todayStale = true;
+          needLeaflet(function () { renderDays(); showDay(P.days.some(function (d) { return d.day === day; }) ? day : P.open); });
+          notice(r.msg || 'Added to the plan.');
+        }).withFailureHandler(function (er) { fail(er.message); })
+          .penpenAddStop({date: day, time: v('time'), what: v('what'), place: v('place'), notes: v('notes')});
+      });
+  };
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest && e.target.closest('[data-addct]'); if (!b || !canEdit()) return;
+    var type = b.dataset.addct, update = false, typeTouched = false;
+    var cf = formDialog('Add a contact', 'A hotel, driver, tour or someone to call at home.',
+      '<label class="f" for="ct-name">NAME</label><input class="in" id="ct-name" name="name" required maxlength="60" autocomplete="off" placeholder="e.g. Harolds Hotel" data-err="Add the contact\u2019s name.">'
+      + '<label class="f" for="ct-type">TYPE</label><select class="in" id="ct-type" name="type">' + [['Emergency', 'Emergency contact at home'], ['Hotel', 'Hotel'], ['Tour', 'Tour'], ['Transport', 'Transport'], ['Other', 'Other']]
+        .map(function (t) { return '<option value="' + t[0] + '"' + (t[0] === type ? ' selected' : '') + '>' + t[1] + '</option>'; }).join('') + '</select>'
+      + '<label class="f" for="ct-phone">PHONE</label><input class="in" type="tel" id="ct-phone" name="phone" maxlength="30" autocomplete="off" pattern="[0-9+\\(\\)\\-.\\s]{3,30}" placeholder="e.g. +63 917 123 4567" data-err="A phone number can only have digits, spaces, + ( ) - and dots.">'
+      + '<label class="f" for="ct-msg">MESSENGER LINK <span>(optional)</span></label><input class="in" type="url" id="ct-msg" name="messenger" maxlength="200" autocomplete="off" pattern="https://.+" placeholder="https://m.me/…" data-err="The Messenger link should start with https://">'
+      + '<label class="f" for="ct-email">EMAIL <span>(optional)</span></label><input class="in" type="email" id="ct-email" name="email" maxlength="120" autocomplete="off" autocapitalize="off" spellcheck="false" data-err="That doesn\u2019t look like an email address.">'
+      + '<label class="f" for="ct-place">PLACE <span>(optional)</span></label><input class="in" id="ct-place" name="place" maxlength="120" autocomplete="off">'
+      + '<label class="f" for="ct-notes">NOTES <span>(optional)</span></label><input class="in" id="ct-notes" name="notes" maxlength="300" autocomplete="off">',
+      'Add contact', function (f, fail, close, ok) {
+        var v = function (k) { return f.elements[k].value.trim(); };
+        if (!v('phone') && !v('messenger') && !v('email')) { fail('Add a phone number, Messenger link or email.'); f.elements.phone.focus(); return; }
+        google.script.run.withSuccessHandler(function (r) {
+          if (r.exists) {   // same name already saved: ask before changing it
+            update = true; if (!typeTouched && r.type) f.elements.type.value = r.type;   // keep its type unless you picked a new one
+            fail(r.exists + ' is already in your contacts. Update it with what you typed? Anything left blank stays as it is.');
+            ok.textContent = 'Yes, update ' + r.exists; return;
+          }
+          close(); renderSafety(r.safety); notice(r.msg || 'Contact saved.');
+        }).withFailureHandler(function (er) { fail(er.message); })
+          .penpenAddContact({name: v('name'), type: v('type'), phone: v('phone'), messenger: v('messenger'), email: v('email'), place: v('place'), notes: v('notes'), update: update});
+      });
+    cf.elements.type.onchange = function () { typeTouched = true; };
+    cf.elements.name.oninput = function () { if (update) { update = false; var ok = cf.querySelector('[type=submit]'); ok.textContent = 'Add contact'; } };
+  });
   /* ---------- Plan extras: hotel at start/end + drive times (stage 1) ---------- */
   var EXTRAS = {};
   var BED_SVG = '<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18V8M3 14h18v4M21 14v-2a3 3 0 0 0-3-3h-7v5"></path><circle cx="7" cy="11" r="2"></circle></svg>';
@@ -1177,6 +1265,8 @@ th .pp-qt{position:absolute;right:0;top:100%;width:210px;z-index:5;box-shadow:0 
     var ts = s.contacts.filter(function (c) { return c.type !== 'Emergency'; });
     if (!ts.length) tc.appendChild(el('div', 'muted', 'None yet.'));
     ts.forEach(function (c) { tc.appendChild(contactRow(c)); });
+    var ab = el('button', 'btn pp-addbtn', '\uFF0B Add a contact'); ab.type = 'button'; ab.dataset.addct = 'Hotel';
+    var ar = el('div', 'pp-addrow'); ar.appendChild(ab); tc.appendChild(ar);
   }
   function loadSafety() {
     google.script.run.withSuccessHandler(renderSafety).withFailureHandler(function (e) { $('live').textContent = '⚠️ ' + e.message; }).penpenSafety();
