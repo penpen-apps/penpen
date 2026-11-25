@@ -397,10 +397,10 @@ th .pp-qt{position:absolute;right:0;top:100%;width:210px;z-index:5;box-shadow:0 
     <section class="pane" id="p-safety" aria-label="Safety">
       <div class="scroll">
         <div class="fred" style="font-size:22px;margin-bottom:8px">Crew &amp; contacts</div>
-        <button class="sos" type="button" id="sos"><svg aria-hidden="true" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg>Call 911</button>
+        <button class="sos" type="button" id="sos"><svg aria-hidden="true" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg>Call 112</button>
         <div class="sosask" id="sosask" role="alertdialog" aria-labelledby="sosq">
-          <div id="sosq" style="font-size:17px;font-weight:600">Call 911 now? (Philippine emergency number)</div>
-          <div class="row2"><a href="tel:911" id="sos-yes">Yes, call 911</a><button class="btn" type="button" id="sos-no">No</button></div>
+          <div id="sosq" style="font-size:17px;font-weight:600">Call 112 now?</div>
+          <div class="row2"><a href="tel:112" id="sos-yes">Yes, call 112</a><button class="btn" type="button" id="sos-no">No</button></div>
         </div>
         <div id="crew"></div>
         <div class="kick" id="here">NEARBY HELP</div>
@@ -1069,7 +1069,93 @@ th .pp-qt{position:absolute;right:0;top:100%;width:210px;z-index:5;box-shadow:0 
   var S = null, safetyStale = false;
   $('to-add').onclick = function () { go('p-add'); };
   $('sos').onclick = function () { $('sosask').classList.add('on'); $('sos-yes').focus(); };
-  $('sos-no').onclick = function () { $('sosask').classList.remove('on'); $('sos').focus(); };
+  // SOS: emergency numbers for the country this trip is in (not always 911).
+  // [name, police, ambulance, fire, tourist police (optional), words that point to the country]
+  var SOS_NUM = {
+    PH: ['the Philippines', '911', '911', '911', '', 'philippines|cebu|dipolog|manila|bohol|davao|palawan|siargao|dumaguete|iloilo|boracay|moalboal|oslob|el nido|coron|baguio'],
+    US: ['the US', '911', '911', '911', '', 'united states|usa|hawaii|honolulu|new york|las vegas|los angeles|san francisco|orlando|miami|chicago|seattle|alaska'],
+    CA: ['Canada', '911', '911', '911', '', 'canada|vancouver|toronto|montreal|banff|calgary|quebec'],
+    MX: ['Mexico', '911', '911', '911', '', 'mexico|cancun|tulum|cabo|puerto vallarta|playa del carmen|oaxaca|guadalajara'],
+    JP: ['Japan', '110', '119', '119', '', 'japan|tokyo|osaka|kyoto|okinawa|hokkaido|sapporo|nara|hiroshima|fukuoka|nagoya|yokohama|hakone'],
+    KR: ['South Korea', '112', '119', '119', '', 'korea|seoul|busan|jeju|incheon'],
+    TW: ['Taiwan', '110', '119', '119', '', 'taiwan|taipei|kaohsiung|taichung|tainan'],
+    HK: ['Hong Kong', '999', '999', '999', '', 'hong kong'],
+    MO: ['Macau', '999', '999', '999', '', 'macau|macao'],
+    CN: ['China', '110', '120', '119', '', 'china|beijing|shanghai|guangzhou|shenzhen|chengdu|xi\'an'],
+    SG: ['Singapore', '999', '995', '995', '', 'singapore'],
+    MY: ['Malaysia', '999', '999', '999', '', 'malaysia|kuala lumpur|penang|langkawi|sabah|borneo|kota kinabalu|malacca|melaka'],
+    TH: ['Thailand', '191', '1669', '199', '1155', 'thailand|bangkok|phuket|chiang mai|krabi|pattaya|koh samui|ko samui|phi phi|chiang rai'],
+    VN: ['Vietnam', '113', '115', '114', '', 'vietnam|viet nam|hanoi|ho chi minh|saigon|da nang|hoi an|ha long|nha trang|phu quoc'],
+    ID: ['Indonesia', '110', '118', '113', '', 'indonesia|bali|jakarta|lombok|ubud|yogyakarta|komodo|gili'],
+    KH: ['Cambodia', '117', '119', '118', '', 'cambodia|siem reap|phnom penh|angkor'],
+    IN: ['India', '112', '112', '112', '', 'india|delhi|mumbai|goa|jaipur|agra|bangalore|bengaluru|kerala'],
+    AU: ['Australia', '000', '000', '000', '', 'australia|sydney|melbourne|brisbane|perth|cairns|gold coast|adelaide'],
+    NZ: ['New Zealand', '111', '111', '111', '', 'new zealand|auckland|queenstown|wellington|christchurch'],
+    GB: ['the UK', '999', '999', '999', '', 'united kingdom|england|scotland|wales|london|edinburgh|manchester|liverpool'],
+    IE: ['Ireland', '112', '112', '112', '', 'ireland|dublin|galway|cork'],
+    FR: ['France', '112', '112', '112', '', 'france|paris|lyon|marseille|bordeaux'],
+    DE: ['Germany', '110', '112', '112', '', 'germany|berlin|munich|frankfurt|hamburg|cologne'],
+    ES: ['Spain', '112', '112', '112', '', 'spain|madrid|barcelona|seville|ibiza|mallorca|valencia'],
+    IT: ['Italy', '112', '112', '112', '', 'italy|rome|milan|venice|florence|naples|amalfi|sicily'],
+    PT: ['Portugal', '112', '112', '112', '', 'portugal|lisbon|porto|algarve|madeira'],
+    NL: ['the Netherlands', '112', '112', '112', '', 'netherlands|holland|amsterdam|rotterdam'],
+    GR: ['Greece', '112', '112', '112', '', 'greece|athens|santorini|mykonos|crete'],
+    CH: ['Switzerland', '117', '144', '118', '', 'switzerland|zurich|geneva|lucerne|interlaken|zermatt'],
+    AT: ['Austria', '133', '144', '122', '', 'austria|vienna|salzburg|innsbruck'],
+    TR: ['Turkey', '112', '112', '112', '', 'turkey|türkiye|turkiye|istanbul|cappadocia|antalya'],
+    AE: ['the UAE', '999', '998', '997', '', 'united arab emirates|uae|dubai|abu dhabi']
+  };
+  // the phone's time zone follows you abroad, so it says where you are right now
+  var SOS_TZ = { 'Asia/Manila': 'PH', 'Asia/Tokyo': 'JP', 'Asia/Seoul': 'KR', 'Asia/Taipei': 'TW', 'Asia/Hong_Kong': 'HK', 'Asia/Macau': 'MO', 'Asia/Shanghai': 'CN',
+    'Asia/Singapore': 'SG', 'Asia/Kuala_Lumpur': 'MY', 'Asia/Kuching': 'MY', 'Asia/Bangkok': 'TH', 'Asia/Ho_Chi_Minh': 'VN', 'Asia/Saigon': 'VN', 'Asia/Jakarta': 'ID', 'Asia/Makassar': 'ID',
+    'Asia/Phnom_Penh': 'KH', 'Asia/Kolkata': 'IN', 'Asia/Calcutta': 'IN', 'Australia/Sydney': 'AU', 'Australia/Melbourne': 'AU', 'Australia/Brisbane': 'AU', 'Australia/Perth': 'AU', 'Australia/Adelaide': 'AU',
+    'Pacific/Auckland': 'NZ', 'Europe/London': 'GB', 'Europe/Dublin': 'IE', 'Europe/Paris': 'FR', 'Europe/Berlin': 'DE', 'Europe/Madrid': 'ES', 'Europe/Rome': 'IT', 'Europe/Lisbon': 'PT',
+    'Europe/Amsterdam': 'NL', 'Europe/Athens': 'GR', 'Europe/Zurich': 'CH', 'Europe/Vienna': 'AT', 'Europe/Istanbul': 'TR', 'Asia/Dubai': 'AE',
+    'America/New_York': 'US', 'America/Chicago': 'US', 'America/Denver': 'US', 'America/Phoenix': 'US', 'America/Los_Angeles': 'US', 'America/Anchorage': 'US', 'Pacific/Honolulu': 'US', 'America/Detroit': 'US',
+    'America/Toronto': 'CA', 'America/Vancouver': 'CA', 'America/Edmonton': 'CA', 'America/Winnipeg': 'CA', 'America/Halifax': 'CA', 'America/Montreal': 'CA',
+    'America/Mexico_City': 'MX', 'America/Cancun': 'MX', 'America/Tijuana': 'MX', 'America/Monterrey': 'MX', 'America/Merida': 'MX' };
+  function sosTrip(here) {   // countries the trip's name, destination and plan point to, in order
+    var txt = (localStorage.getItem('pp_trip_name') || '') + ' ' + (here || ''), cur = localStorage.getItem('pp_trip_id') || '', out = [];
+    try { JSON.parse(localStorage.getItem('pp_trips_list') || '[]').forEach(function (t) { if ((t.id || '') === cur) txt = t.where + ' ' + t.name + ' ' + txt; }); } catch (e) {}
+    try { var P = JSON.parse(localStorage.getItem('pp_c_penpenPlan:[]') || 'null'); ((P && P.days) || []).forEach(function (d) { (d.stops || []).forEach(function (st) { txt += ' ' + (st.place || ''); }); }); } catch (e) {}
+    var low = ' ' + txt.toLowerCase() + ' ';
+    Object.keys(SOS_NUM).map(function (k) { var m = low.search(new RegExp('[^a-z](' + SOS_NUM[k][5] + ')[^a-z]')); return [m, k]; })
+      .filter(function (x) { return x[0] >= 0; }).sort(function (a, b) { return a[0] - b[0]; }).forEach(function (x) { out.push(x[1]); });
+    return out;
+  }
+  function sosNums(k) {   // one button per number: police 110, ambulance & fire 119 …
+    var c = SOS_NUM[k], by = {}, order = [];
+    [['Police', c[1]], ['Ambulance', c[2]], ['Fire', c[3]], ['Tourist police', c[4]]].forEach(function (x) {
+      if (!x[1]) return; if (!by[x[1]]) { by[x[1]] = []; order.push(x[1]); } by[x[1]].push(x[0]);
+    });
+    return order.map(function (n) { var w = by[n]; return { n: n, l: w.length >= 3 ? 'Emergency' : w[0] + w.slice(1).map(function (x) { return ' & ' + x.toLowerCase(); }).join('') }; });
+  }
+  var sosKey = '';
+  function renderSos(here) {
+    var tz = ''; try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (e) {}
+    var now = SOS_TZ[tz] || '', trip = sosTrip(here), k = trip.indexOf(now) >= 0 ? now : (trip[0] || now);
+    if (k + '/' + now === sosKey) return; sosKey = k + '/' + now;
+    var nums = k ? sosNums(k) : [{ n: '112', l: 'Emergency' }], one = nums.length === 1, ask = $('sosask');
+    $('sos').lastChild.textContent = one ? 'Call ' + nums[0].n : 'Emergency call';
+    ask.innerHTML = '';
+    var q = el('div', '', k ? (one ? 'Call ' + nums[0].n + ' now? (emergency number in ' + SOS_NUM[k][0] + ')' : 'Which emergency? (numbers for ' + SOS_NUM[k][0] + ')')
+      : 'Call 112 now? We don\u2019t know this trip\u2019s country. 112 works on mobile phones in many countries, but check the local number.');
+    q.id = 'sosq'; q.style.cssText = 'font-size:17px;font-weight:600'; ask.appendChild(q);
+    var row = null;
+    nums.forEach(function (x, i) {
+      var a = el('a', '', one ? 'Yes, call ' + x.n : x.l + ' \u00b7 ' + x.n); a.href = 'tel:' + x.n; if (!i) a.id = 'sos-yes';
+      row = el('div', 'row2'); row.appendChild(a); ask.appendChild(row);
+    });
+    if (!one) { row = el('div', 'row2'); ask.appendChild(row); }
+    var no = el('button', 'btn', 'No'); no.type = 'button'; no.id = 'sos-no'; no.onclick = function () { ask.classList.remove('on'); $('sos').focus(); }; row.appendChild(no);
+    var nn = function (c) { return sosNums(c).map(function (x) { return x.n; }).join(); };
+    if (now && now !== k && nn(now) !== nn(k)) {   // e.g. a Japan trip while you're still at home in the US
+      var p = el('div', 'tip', 'Not in ' + SOS_NUM[k][0] + ' yet? In ' + SOS_NUM[now][0] + ' call ');
+      sosNums(now).forEach(function (x, i) { var a = el('a', '', x.n); a.href = 'tel:' + x.n; a.style.cssText = 'display:inline;background:none;color:inherit;text-decoration:underline;min-height:0;font-size:inherit'; if (i) p.appendChild(document.createTextNode(' / ')); p.appendChild(a); });
+      ask.appendChild(p);
+    }
+  }
+  renderSos('');
   function tel(p) { return 'tel:' + String(p).replace(/[^\d+]/g, ''); }
   function msgUrl(m) { m = String(m || '').trim(); if (!m) return ''; if (/^https?:\/\//i.test(m)) return m; if (/^(m\.me|facebook\.com|fb\.com|www\.facebook\.com)\//i.test(m)) return 'https://' + m; return 'https://m.me/' + m.replace(/^@/, ''); }
   function contactRow(c) {
@@ -1086,7 +1172,7 @@ th .pp-qt{position:absolute;right:0;top:100%;width:210px;z-index:5;box-shadow:0 
     return r;
   }
   function renderSafety(s) {
-    S = s; safetyStale = false;
+    S = s; safetyStale = false; renderSos(s.here);
     $('here').textContent = 'NEARBY HELP' + (s.here ? ' · ' + s.here.toUpperCase() : '') + ' (opens Google Maps)';
     var lv = $('live'); lv.innerHTML = ''; lv.appendChild(el('div', 'kick', 'LIVE LOCATION'));
     s.live.forEach(function (p) {
@@ -1397,7 +1483,7 @@ th .pp-qt{position:absolute;right:0;top:100%;width:210px;z-index:5;box-shadow:0 
   function tourHtml() {
     var rows = [['Today', 'Your day, your crew, and what\u2019s happening right now.'], ['Plan', 'Every stop, your hotels, and drive times between them.'],
       [guideMine() ? 'Your penguin (middle button)' : 'penpen (middle button)', 'Talk or type: add an expense, change the plan, ask anything.'],
-      ['Money', 'Who paid what, and what still needs paying.'], ['Crew', 'Everyone\u2019s profiles and numbers, plus SOS 911.'],
+      ['Money', 'Who paid what, and what still needs paying.'], ['Crew', 'Everyone\u2019s profiles and numbers, plus a one-tap SOS call.'],
       ['\uD83D\uDCD4 Diary (top)', 'Write about the day and add photos.'], ['\uD83D\uDD0A Speaker (top)', 'Turns the spoken replies on or off.']];
     return '<div class="fred pp-h1">Quick tour</div><div class="card pp-tour">' + rows.map(function (x) { return '<div class="pp-trow"><b>' + x[0] + '</b><span>' + x[1] + '</span></div>'; }).join('') + '</div><p class="pp-sub" style="margin-bottom:6px">Tip: tap your penguin on Today any time to change how you look. Themes and dark mode are in Crew \u2192 your profile.</p>';
   }
