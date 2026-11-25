@@ -210,7 +210,7 @@
     var crew = whos.concat([document.querySelector('#pp-scene .pp-me')]).filter(Boolean).map(function (w) { var sv = w.querySelector('svg'); return sv ? sv.outerHTML : ''; }).join('');
     var stat = function (n, l) { return n == null ? '' : '<div><b>' + n + '</b><span>' + l + '</span></div>'; };
     return '<h3>' + yr + ' in travel</h3><div class="stats one">' + stat(thisYear.length, thisYear.length === 1 ? 'Trip' : 'Trips') + stat(Object.keys(places).length, Object.keys(places).length === 1 ? 'Place' : 'Places') + stat(nExp, 'Expenses') + '</div>' +
-      (buddies ? '<h3>Crew</h3><div class="buds">' + buddies + '</div>' : '') +
+      (buddies ? '<h3>Travel buddies</h3><div class="buds">' + buddies + '</div>' : '') +
       '<h3>My trips</h3><div class="album">' + trips.map(function (t) {
         return '<button type="button" class="pol' + (t.here ? ' here' : '') + '" data-trip="' + esc(t.id) + '" data-name="' + esc(t.name) + '"><div class="ph">' + (t.here && crew ? '<div class="cr">' + crew + '</div>' : '<span class="big">🧳</span>') + '</div>' +
           '<b>' + esc(t.name) + '</b><small>' + (t.s ? fmtD(t.s) + (t.e ? ' – ' + fmtD(t.e) : '') + ', ' + t.s.getFullYear() : (t.where || '')) + when(t) + '</small></button>';
@@ -343,8 +343,8 @@
       if (w && !tidy.whole && days.offsetParent) { tidy.whole = 1; w.click(); } }   // open the Plan on the whole trip
     buddies(); dress();
     var fr = document.querySelector('#p-safety .fred');
-    if (fr && /Crew & contacts/.test(fr.textContent)) fr.childNodes.forEach(function (n) { if (n.nodeType === 3 && /Crew & contacts/.test(n.textContent)) n.textContent = n.textContent.replace('Crew & contacts', 'Crew & safety'); });
-    if (fr && fr.firstElementChild && /Crew & contacts/.test(fr.firstElementChild.textContent) && !fr.firstElementChild.children.length) fr.firstElementChild.textContent = 'Crew & safety';
+    if (fr && /Travel buddies & contacts/.test(fr.textContent)) fr.childNodes.forEach(function (n) { if (n.nodeType === 3 && /Travel buddies & contacts/.test(n.textContent)) n.textContent = n.textContent.replace('Travel buddies & contacts', 'Travel buddies & safety'); });
+    if (fr && fr.firstElementChild && /Travel buddies & contacts/.test(fr.firstElementChild.textContent) && !fr.firstElementChild.children.length) fr.firstElementChild.textContent = 'Travel buddies & safety';
   }
 
   /* ---------- penguins with a mind of their own ---------- */
