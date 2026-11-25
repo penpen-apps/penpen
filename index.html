@@ -1012,6 +1012,15 @@ th .pp-qt{position:absolute;right:0;top:100%;width:210px;z-index:5;box-shadow:0 
     drec.onerror = function () { drec = null; $('d-mic').textContent = '🎤 Talk'; };
     $('d-mic').textContent = '⏹ Stop'; try { drec.start(); } catch (x) { drec = null; $('d-mic').textContent = '🎤 Talk'; }
   };
+  // a failed save shows a friendly note under the button (not a browser pop-up); the words stay in the box
+  window.ppDiaryErr = function (e) {
+    var m = (e && e.message) || '', ok = $('d-ok');
+    var say = /offline|view this trip|private diary/i.test(m) ? m
+      : /DriveApp|DocumentApp|getFileById|permission|authori[sz]|pahintulot/i.test(m) ? 'The diary needs a one-time Google Drive OK from the trip creator before it can save.'
+      : 'Couldn\u2019t save to the diary just now.';
+    ok.style.display = 'block'; ok.textContent = '\u26A0\uFE0F ' + say + ' Your entry is still here, so nothing is lost.';
+    if (m && m !== say) { var d = el('small', 'muted', ' (' + m + ')'); d.style.display = 'block'; ok.appendChild(d); }   // the raw reason, small, so whoever fixes it can see it
+  };
   $('d-save').onclick = function () {
     var t = $('d-text').value.trim();
     if (!t && !PHOTO && !VIDEO) { $('d-text').focus(); return; }
@@ -1020,7 +1029,7 @@ th .pp-qt{position:absolute;right:0;top:100%;width:210px;z-index:5;box-shadow:0 
       b.disabled = false; b.textContent = 'Save to the diary';
       $('d-ok').style.display = 'block'; $('d-ok').textContent = r.msg; var a = el('a', 'linkbtn', ' Open it ↗'); a.href = r.url; a.target = '_blank'; a.rel = 'noopener'; $('d-ok').appendChild(a);
       $('d-text').value = ''; $('d-x').onclick(); clearVideo(); dlinks = null; loadDiaryLinks();
-    }).withFailureHandler(function (e) { b.disabled = false; b.textContent = 'Save to the diary'; alert(e.message); })
+    }).withFailureHandler(function (e) { b.disabled = false; b.textContent = 'Save to the diary'; ppDiaryErr(e); })
       .penpenDiaryAdd({text: t, kind: DK, photo: PHOTO, video: VIDEO, caption: $('d-cap').value.trim()});
   };
 
