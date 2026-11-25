@@ -226,7 +226,7 @@
       h += '<div class="garden' + (p.asleep ? ' night' : '') + '" id="pp-garden">' + gardenArt() +
         '<div class="gtop"><span class="meters">' + meters(p) + '</span><button type="button" data-act="stats" class="gbtn" aria-haspopup="dialog">📊 Stats</button><button type="button" data-act="sound" class="gbtn" aria-pressed="' + soundOn() + '" aria-label="Music and sounds">' + (soundOn() ? '🔊' : '🔇') + '</button></div>' +
         (window.ppLook ? PALS.map(function (id, i) { return '<button type="button" class="walker pal" data-pal="' + id + '" aria-label="' + window.ppLook.name(id) + ', penpen’s friend" style="left:' + (i ? 80 : 20) + '%;bottom:' + (i ? 16 : 22) + '%"><span class="pen' + (p.asleep ? ' zz' : '') + '"><svg viewBox="-7 -14 134 134" width="74" height="74" aria-hidden="true">' + window.ppLook.svg(id) + (p.asleep ? SHUT : '') + '</svg></span></button>'; }).join('') : '') +
-        '<div class="walker me" id="pp-walk" style="left:50%;bottom:8%"><div class="pen' + (sick(p) ? ' sick' : p.asleep ? ' zz' : '') + '" id="pp-petpen">' +
+        '<div class="walker" id="pp-walk" style="left:50%;bottom:8%"><div class="pen' + (sick(p) ? ' sick' : p.asleep ? ' zz' : '') + '" id="pp-petpen">' +
         '<svg viewBox="-7 -14 134 134" width="116" height="116" aria-hidden="true">' + inner() + face + '</svg>' + (wear.e ? '<span class="wear">' + wear.e + '</span>' : '') + (sick(p) ? '<span class="fx">🤒</span>' : p.asleep ? '<span class="fx">💤</span><span class="bed">🛏️</span>' : '') +
         '</div></div><div class="say" id="pp-say">' + (msg || mood(p)) + '</div>' +
         (p.asleep ? '<button data-act="wake" class="zbtn">☀️ Wake</button>' : '<button data-act="sleep" class="zbtn">💤 Sleep</button>') +
