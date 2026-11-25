@@ -90,6 +90,7 @@
       if (!l) return;
       cap.onclick = null; cap.textContent = '';
       if (forMe) { localStorage.setItem('pp_tr_me', l); if (l === S.lang) S.lang = l === 'English' ? (suggested()[0] || localStorage.getItem('pp_tr_lang') || 'Spanish') : 'English'; switchLang(S.lang, true); }
+      else if (l === myLang()) { pickLang(); status('Pick the language of the person you\'re talking to.'); }   // switching to your own language would do nothing
       else switchLang(l);
     };
   }

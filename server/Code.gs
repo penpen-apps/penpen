@@ -36,13 +36,14 @@ function srvOut_(o) { return ContentService.createTextOutput(JSON.stringify(o)).
    list below can be opened, and the person must be on that trip's Members tab. */
 var PP_HOME = 'XXX_SHEET_ID';
 var __PP_TRIP = '';
+var __PP_SS = null;   // the open trip's spreadsheet, opened once per request
 function ppK_(k) { return __PP_TRIP ? k + '@' + __PP_TRIP : k; }
 function ppProps_() { return PropertiesService.getScriptProperties(); }
 function ppTripList_() { try { return JSON.parse(ppProps_().getProperty('pp_trips') || '{}'); } catch (e) { return {}; } }
 function ppUseTrip_(id) {
   id = String(id || '');
   if (!id || id === PP_HOME || !ppTripList_()[id]) id = '';
-  __PP_TRIP = id; SHEET_ID = id || PP_HOME; SSID = id || PP_HOME;
+  __PP_TRIP = id; SHEET_ID = id || PP_HOME; SSID = id || PP_HOME; __PP_SS = null;
 }
 function ppMine_(email) { try { return JSON.parse(ppProps_().getProperty('pp_mine_' + email) || '[]'); } catch (e) { return []; } }
 function ppMineAdd_(email, id) {
@@ -108,7 +109,7 @@ function ppTripsAction_(user, action, a) {
 function ppNewTrip_(user, a) {
   var name = String(a.name || '').trim().slice(0, 60) || 'New trip';
   var start = String(a.start || '').slice(0, 10), end = String(a.end || '').slice(0, 10), where = String(a.where || '').trim().slice(0, 80);
-  var cc = String(a.country || '').toUpperCase(); if (cc && !PP_PLACES[cc]) throw new Error('badcountry');
+  var cc = String(a.country || '').toUpperCase(); if (cc && cc !== 'XX' && !PP_PLACES[cc]) throw new Error('badcountry');
   var copy = DriveApp.getFileById(PP_HOME).makeCopy('penpen · ' + name, ppTripsFolder_());
   var id = copy.getId();
   var all = ppTripList_();
@@ -362,7 +363,11 @@ function onOpen() {
 }
 
 var SHEET_ID = 'XXX_SHEET_ID';
-function ss_() { return SpreadsheetApp.getActive() || SpreadsheetApp.openById(SHEET_ID); }
+// On a trip other than the home one, always use that trip's sheet (never the sheet this script may be bound to).
+function ss_() {
+  if (__PP_TRIP) return __PP_SS || (__PP_SS = SpreadsheetApp.openById(SHEET_ID));
+  return SpreadsheetApp.getActive() || SpreadsheetApp.openById(SHEET_ID);
+}
 function sh_(n) { return ss_().getSheetByName(n); }
 function esc_(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 function goTo(name) { var s = sh_(name); if (s) SpreadsheetApp.getActive().setActiveSheet(s); }
@@ -603,8 +608,8 @@ function showQuickAdd() {
     '</style>' +
     '<div class="sub">' + esc_(data.trip) + '</div>' +
     '<div class="card hero" style="padding:10px 14px"><div class="lbl">RIGHT NOW</div><div class="v" id="now" style="font-size:16px">' + esc_(data.now) + '</div></div>' +
-    '<div class="box"><textarea id="t" placeholder="Type or say it, e.g. Grab 320 pesos, Brad paid"></textarea><button class="mic" id="mic" title="Speak">🎤</button></div>' +
-    '<div class="hint" id="hint">Always say <b>pesos</b> or <b>dollars</b>. Press <b>Enter</b> to add · Shift+Enter for a new line.</div>' +
+    '<div class="box"><textarea id="t" placeholder="Type or say it, e.g. Grab 320 ' + esc_(curWord(getCtx(ss_()).local)) + ', Brad paid"></textarea><button class="mic" id="mic" title="Speak">🎤</button></div>' +
+    '<div class="hint" id="hint">Always say <b>' + esc_(curWord(getCtx(ss_()).local)) + '</b> or <b>' + esc_(curWord(getCtx(ss_()).home)) + '</b>. Press <b>Enter</b> to add · Shift+Enter for a new line.</div>' +
     '<label class="f">Try one</label><div class="ex" id="ex"></div>' +
     '<div class="btns"><button class="l" id="undo" type="button">↩ Undo last</button><button type="button" onclick="google.script.host.close()">Done</button><button class="p" id="go" type="button">Add</button></div>' +
     '<div class="log" id="log"></div>' +
@@ -2386,27 +2391,35 @@ const PP_PLACES = {
    from the trip currency (PHP → Philippines), which is how trips made before countries existed still work. */
 function ppPlace_(ss) {
   let cc = ''; try { cc = JSON.parse(ppProps_().getProperty(ppK_('pp_place')) || '{}').cc || ''; } catch (e) {}
-  const cur = String(named(ss, 'LocalCur') || 'PHP').trim(), set = !!PP_PLACES[cc];
-  if (!set) { const m = Object.keys(PP_PLACES).filter(k => PP_PLACES[k][1] === cur); cc = cur === 'USD' ? 'US' : m.length === 1 ? m[0] : ''; }
+  const cur = String(named(ss, 'LocalCur') || 'PHP').trim(), set = !!PP_PLACES[cc] || cc === 'XX';   // XX = somewhere penpen has no country for
+  if (cc === 'XX') cc = ''; else if (!set) cc = ppCcForCur_(cur);
   return {cc: cc, name: cc ? PP_PLACES[cc][0] : '', cur: cur, sym: sym(cur).trim() || cur, tz: ppTz_(ss), set: set};
+}
+function ppCcForCur_(cur) {   // PHP → PH; USD → US; a currency many countries share (EUR) → ''
+  const m = Object.keys(PP_PLACES).filter(k => PP_PLACES[k][1] === cur);
+  return cur === 'USD' ? 'US' : m.length === 1 ? m[0] : '';
 }
 function ppPlaceName_(ss) { const n = ppPlace_(ss).name; return n ? ', ' + n : ''; }   // ", Japan" for map searches
 /* Write the country onto a trip sheet: time zone, trip currency (and its sign), each location's currency + zone.
    Never called on the original (home) trip. */
 function ppApplyPlace_(ss, cc, tz) {
-  cc = String(cc || '').toUpperCase();
-  const P = PP_PLACES[cc]; if (!P) throw new Error('badcountry');
-  tz = P[2].indexOf(tz) >= 0 ? tz : P[2][0];
+  cc = String(cc || '').toUpperCase(); tz = String(tz || '');
+  const P = PP_PLACES[cc]; if (!P && cc !== 'XX') throw new Error('badcountry');
+  // somewhere else: any real time zone name; money is counted in the home currency
+  if (P) tz = P[2].indexOf(tz) >= 0 ? tz : P[2][0];
+  else if (!/^(Africa|America|Antarctica|Asia|Atlantic|Australia|Europe|Indian|Pacific)\/[A-Za-z0-9_+\-\/]{2,40}$/.test(tz)) throw new Error('badtimezone');
+  const cur = P ? P[1] : String(named(ss, 'HomeCur') || 'USD').trim();
+  const oldCur = String(named(ss, 'LocalCur') || '').trim(), oldTz = ss.getSpreadsheetTimeZone();
   ss.setSpreadsheetTimeZone(tz);
   const dv = SpreadsheetApp.newDataValidation().requireValueInList(Object.keys(CUR), true).setAllowInvalid(false).build();
   ['HomeCur', 'LocalCur'].forEach(n => { const r = ss.getRangeByName(n); if (r) r.setDataValidation(dv); });   // copies carry an older currency list
   const lc = ss.getRangeByName('LocalCur'), ls = ss.getRangeByName('LocalSym');
-  if (lc) lc.setValue(P[1]);
-  if (ls) ls.setValue(sym(P[1]).trim() || P[1]);
+  if (lc) lc.setValue(cur);
+  if (ls) ls.setValue(sym(cur).trim() || cur);
   const loc = ss.getRangeByName('Locations');
-  if (loc) {
-    const v = loc.getValues(), cols = loc.offset(0, 4, v.length, 2);
-    cols.setValues(v.map(r => String(r[1]).trim() ? [P[1], tz] : [r[4], r[5]]));   // every listed place gets the trip's currency + zone
+  if (loc) {   // places that still follow the trip (blank, or the old trip currency/zone) move with it; a place set to its own country keeps it
+    const v = loc.getValues(), cols = loc.offset(0, 4, v.length, 2), same = (x, old) => !String(x).trim() || String(x).trim() === old;
+    cols.setValues(v.map(r => String(r[1]).trim() ? [same(r[4], oldCur) ? cur : r[4], same(r[5], oldTz) ? tz : r[5]] : [r[4], r[5]]));
   }
   ppProps_().setProperty(ppK_('pp_place'), JSON.stringify({cc: cc}));
   return tz;
@@ -2476,7 +2489,7 @@ function ppBookings_(ss, days) {
 /* ============================ weather (Open-Meteo, no key) ============================ */
 function ppWeather_(ss, loc) {
   if (!loc) return null;
-  const cc = ppPlace_(ss).cc, cache = CacheService.getScriptCache(), key = 'pp_wx_' + cc + '_' + loc.place;
+  const cc = (loc.cur && ppCcForCur_(loc.cur)) || ppPlace_(ss).cc, cache = CacheService.getScriptCache(), key = 'pp_wx_' + cc + '_' + loc.place;
   const hit = cache.get(key); if (hit) return JSON.parse(hit);
   try {
     const props = PropertiesService.getScriptProperties();
@@ -3000,13 +3013,14 @@ function penpenHelpTab_() {
     .setBackground('#0B7F8C').setFontColor('#FFFFFF').setFontSize(14).setHorizontalAlignment('center').setFontLine('none');
   q.setRowHeight(5, 52);
   q.getRange('B6:C6').merge().setValue('Tip: open it on your phone, then Share → Add to Home Screen. Tap 🔊 to turn penpen’s voice on or off.').setFontSize(9).setFontColor('#4F6475');
+  const hctx = getCtx(ss), cw = curWord(hctx.local), cs = sym(hctx.local).trim() || hctx.local;   // the trip's currency in the examples
   const groups = [
     ['ADD MONEY STUFF', [
-      ['Lunch at Jollibee 800 pesos, Brad paid', 'shared 50/50'],
+      ['Lunch at Jollibee 800 ' + cw + ', Brad paid', 'shared 50/50'],
       ['Smoothies 250, just for me', 'personal — not in group totals'],
-      ['I paid Brad’s Grab, 320 pesos', 'Brad owes you ₱320'],
+      ['I paid Brad’s Grab, 320 ' + cw, 'Brad owes you ' + cs + '320'],
       ['Dinner 1,200 from pocket money', 'paid from the pot'],
-      ['I put 2,000 pesos in the pocket money', 'adds to the pot'],
+      ['I put 2,000 ' + cw + ' in the pocket money', 'adds to the pot'],
       ['Tour balance 11,396, Kate will pay later', 'not paid yet']]],
     ['FIX THINGS  (penpen asks Yes / No first)', [
       ['The Jollibee lunch was 1,000, not 800', 'changes the amount'],
@@ -3103,7 +3117,7 @@ function ppMapUrl_(place) {
 }
 
 function ppEvents_(ss) {
-  const tz = ppTz_(ss), out = [], country = ppPlaceName_(ss).slice(1);
+  const tz = ppTz_(ss), out = [], country = ppPlaceName_(ss);   // ", Japan" or ''
   ppBookings_(ss).forEach(b => {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(b.day)) return;
     const m = (b.details || '').match(PP_TIME) || (b.what || '').match(PP_TIME);
@@ -3117,7 +3131,7 @@ function ppEvents_(ss) {
   });
   out.forEach(e => {
     e.at = e.hm ? Utilities.parseDate(e.day + ' ' + e.hm, tz, 'yyyy-MM-dd HH:mm').getTime() : Utilities.parseDate(e.day + ' 08:00', tz, 'yyyy-MM-dd HH:mm').getTime();
-    e.dir = ppMapUrl_(e.place ? e.place + ',' + country : '');
+    e.dir = ppMapUrl_(e.place ? e.place + country : '');
   });
   const seen = {};
   return out.sort((a, b) => a.at - b.at || (a.src === 'booking' ? -1 : 1)).filter(e => { if (!e.hm) return true; const k = e.day + e.hm; if (seen[k]) return false; seen[k] = 1; return true; });

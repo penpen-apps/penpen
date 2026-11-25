@@ -588,8 +588,8 @@ th .pp-qt{position:absolute;right:0;top:100%;width:210px;z-index:5;box-shadow:0 
   function speak(t) {
     if (!talk || !window.speechSynthesis) return;
     var pl = window.ppPlace(), clean = String(t).replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}\u{FE0F}\u{200D}]/gu, '');
-    if (pl.sym && pl.sym !== '$') clean = clean.split(pl.sym).join(' ' + pl.word + ' ');   // "¥500" is read out as "500 yen"
-    clean = clean.replace(/\$(?=\d)/g, ' dollars ').replace(/\s+/g, ' ').trim();
+    if (pl.sym && pl.sym !== '$') clean = clean.replace(new RegExp(pl.sym.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s?(\\d[\\d,.]*)', 'g'), '$1 ' + pl.word);   // "¥500" is read out as "500 yen"
+    clean = clean.replace(/\$(\d[\d,.]*)/g, '$1 dollars').replace(/\s+/g, ' ').trim();
     if (!clean) return;
     try { speechSynthesis.cancel(); var u = new SpeechSynthesisUtterance(clean); u.rate = 1.03; u.pitch = 1.15; speechSynthesis.speak(u); } catch (e) {}
   }

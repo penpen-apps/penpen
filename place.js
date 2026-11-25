@@ -54,7 +54,10 @@
   function json(k) { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch (e) { return null; } }
   function tripId() { return localStorage.getItem('pp_trip_id') || ''; }
   function phoneTz() { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (e) { return ''; } }
-  function saved() { var s = json('pp_place'); return s && s.trip === tripId() ? s : null; }   // what the server said about this trip
+  function saved() {   // what the server said about this trip (cached Today answers are per trip, so they count too)
+    var s = json('pp_place'); if (s && s.trip === tripId()) return s;
+    var T = json('pp_c_penpenToday:[]'); return (T && T.place) || null;
+  }
 
   // countries the trip's name, "Where to?", plan stops (and `extra`) point to, in the order they appear
   function fromText(txt) {

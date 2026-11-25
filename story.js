@@ -263,7 +263,7 @@
       }).join('') + (function () {
         var mine = l.filter(function (x) { return (x.id || '') === (cur || '') && !x.home && x.role === 'creator'; })[0], p = window.ppPlace();
         if (!mine) return '';
-        return '<button type="button" class="it" data-place="1"><span class="ic">📍</span><span><b>Trip country: ' + esc(p.name || 'not set') + '</b><small>' +
+        return '<button type="button" class="it" data-place="1"><span class="ic">📍</span><span><b>Trip country: ' + esc(p.name || (p.set ? 'somewhere else' : 'not set')) + '</b><small>' +
           (p.set ? esc(p.cur) + ' · ' + esc(window.ppPlace.zoneName(p.tz)) + ' time · tap to change' : 'Tap to set it, so money, times and the map are right') + '</small></span></button>';
       })() + '<button type="button" class="go" data-new="1">＋ New trip</button>';
       bd.onclick = function (e) {
@@ -288,17 +288,20 @@
      shows for countries with more than one (US, Canada, Mexico, Australia, Indonesia). */
   function placeFields(id, cc) {
     return '<label for="' + id + '-cc">Country</label><select id="' + id + '-cc"><option value="">Choose a country</option>' +
-      window.ppPlace.list().map(function (c) { return '<option value="' + c.cc + '"' + (c.cc === cc ? ' selected' : '') + '>' + esc(c.name) + '</option>'; }).join('') + '</select>' +
-      '<div id="' + id + '-tzw" hidden><label for="' + id + '-tz">Time zone</label><select id="' + id + '-tz"></select></div>';
+      window.ppPlace.list().map(function (c) { return '<option value="' + c.cc + '"' + (c.cc === cc ? ' selected' : '') + '>' + esc(c.name) + '</option>'; }).join('') +
+      '<option value="XX"' + (cc === 'XX' ? ' selected' : '') + '>Somewhere else</option></select>' +
+      '<div id="' + id + '-tzw" hidden><label for="' + id + '-tz">Time zone</label><select id="' + id + '-tz"></select></div>' +
+      '<div class="note" id="' + id + '-xx" hidden>penpen will count money in your home currency for this trip.</div>';
   }
   function wirePlace(id, tz) {
     var cc = document.getElementById(id + '-cc'), tzs = document.getElementById(id + '-tz'), w = document.getElementById(id + '-tzw'), out = { touched: false };
     function zones(keep) {
-      var c = window.ppPlace.info(cc.value), list = c ? c.tzs : [], phone = '';
+      var c = window.ppPlace.info(cc.value), list = c ? c.tzs : [], phone = '', other = cc.value === 'XX';
       try { phone = Intl.DateTimeFormat().resolvedOptions().timeZone; } catch (e) {}
+      if (other) { try { list = Intl.supportedValuesOf('timeZone'); } catch (e) { list = [phone]; } }   // somewhere else: every time zone
       var pick = list.indexOf(keep) >= 0 ? keep : list.indexOf(phone) >= 0 ? phone : list[0] || '';
       tzs.innerHTML = list.map(function (z) { return '<option value="' + z + '"' + (z === pick ? ' selected' : '') + '>' + esc(window.ppPlace.zoneName(z)) + ' time</option>'; }).join('');
-      w.hidden = list.length < 2;
+      w.hidden = list.length < 2; document.getElementById(id + '-xx').hidden = !other;
     }
     cc.onchange = function () { out.touched = true; zones(); };
     out.set = function (k) { cc.value = k; zones(); };
@@ -306,11 +309,11 @@
     return out;
   }
   function placeSetting(s) {   // trip creator: fix the country of a trip made before trips had one
-    var p = window.ppPlace(), bd = s.querySelector('.bd');
+    var p = window.ppPlace(), bd = s.querySelector('.bd'), pick = p.cc || (p.set ? 'XX' : '');
     s.querySelector('h2').firstChild.textContent = 'Trip country';
-    bd.innerHTML = '<p style="margin:0 0 4px">Sets the money, clock, map and emergency numbers for everyone on this trip.</p>' + placeFields('pp-tc', p.cc) +
+    bd.innerHTML = '<p style="margin:0 0 4px">Sets the money, clock, map and emergency numbers for everyone on this trip.</p>' + placeFields('pp-tc', pick) +
       '<button type="button" class="go" id="pp-tc-go">Save country</button>' +
-      '<div class="note">Expenses already logged keep their currency. If they\'re in a different one, fix them in Money afterwards.</div>';
+      '<div class="note">Places in the plan that still use the old currency move to the new one; places you set to their own country keep theirs. Expenses already logged keep their currency. If they\'re in a different one, fix them in Money afterwards.</div>';
     bd.onclick = null;
     wirePlace('pp-tc', p.tz);
     var go = document.getElementById('pp-tc-go');
