@@ -262,7 +262,8 @@
       el.classList.add('swim'); pop(el, pick(['💦', '🌊', '💙']));
       next(2500 + Math.random() * 2000, function () {
         var b = spot() || a;
-        next(go(el, b[0], b[1], 4) * 1000 + 2500 + Math.random() * 3000, function () { el.classList.remove('swim'); el.ppSwim = false; later(el, key, 200); });
+        // climbing out: walk off at once (stroll), so a friend never stands at pond height without being marked as a swimmer
+        next(go(el, b[0], b[1], 4) * 1000 + 2500 + Math.random() * 3000, function () { el.classList.remove('swim'); el.ppSwim = false; stroll(el, key); });
       });
     });
     return true;
