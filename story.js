@@ -163,7 +163,7 @@
     // who's coming
     // nobody else yet: use the trip type picked in setup, so a Friends trip isn't called solo
     var kind = (cached('penpenProfiles') || {}).tripType, WAIT = { couple: '💑 Couple trip · invite your partner', family: '👨‍👩‍👧 Family trip · invite your family', friends: '🐧 Friends trip · invite your friends' };
-    var o = others(I), crew = !o.length ? (WAIT[kind] || '🧳 Solo trip · just you & penpen') : o.length === 1 ? '👫 You & ' + esc(o[0]) + ' · your crew' : '🐧 Your crew of ' + (o.length + 1);
+    var o = others(I), crew = !o.length ? (WAIT[kind] || '🧳 Solo trip · just you & penpen') : o.length === 1 ? '👫 You & ' + esc(o[0]) + ' · travel buddies' : '🐧 ' + (o.length + 1) + ' travel buddies';
     put(t, 'pp-story-crew', 'div', crew, sc);
     // penpen's line now pops up over his head when you tap him (me.js)
     var old = document.getElementById('pp-story-say'); if (old) old.remove();
@@ -197,7 +197,7 @@
     if (!S || !trip || role === 'viewer' || localStorage.getItem('pp_start_hide@' + trip)) return null;
     var creator = role === 'creator', prof = cached('penpenProfiles') || {}, steps = [];
     if (creator) steps.push({ k: 'country', ok: !!((T.place && T.place.set) || window.ppPlace().set), t: 'Set the trip\u2019s country', s: 'So money, times and the map are right' });
-    if (creator) steps.push({ k: 'crew', ok: (T.people || []).length > 1 || prof.tripType === 'solo' || !!localStorage.getItem('pp_start_solo@' + trip), t: 'Add your crew', s: 'Add friends by their Google email' });
+    if (creator) steps.push({ k: 'crew', ok: (T.people || []).length > 1 || prof.tripType === 'solo' || !!localStorage.getItem('pp_start_solo@' + trip), t: 'Add your travel buddies', s: 'Add them by their Google email' });
     steps.push({ k: 'stop', ok: S.stops > 0, t: 'Add your first stop', s: 'A hotel check-in, a tour, dinner\u2026' });
     steps.push({ k: 'contact', ok: S.emergency > 0, t: 'Add an emergency contact', s: 'Someone at home to call if something goes wrong' });
     steps.push({ k: 'money', ok: S.expenses > 0, t: 'Log your first expense', s: 'Tell penpen, e.g. \u201CLunch 450, I paid\u201D' });
@@ -303,7 +303,7 @@
     var list = items(), S = seen();
     var body = list.length ? list.map(function (x, i) {
       return '<button type="button" class="it' + (S[x.id] && !x.todo ? '' : ' new') + '" data-i="' + i + '"><span class="ic">' + x.ic + '</span><span><b>' + esc(x.t) + '</b><small>' + esc(x.s) + '</small></span></button>';
-    }).join('') : '<div class="empty">🐧 All quiet! Updates, reminders and what your crew logs show up here.</div>';
+    }).join('') : '<div class="empty">🐧 All quiet! Updates, reminders and what your travel buddies log show up here.</div>';
     var s = sheet('Notifications', body, document.getElementById('pp-bell'), 'right');
     list.forEach(function (x) { S[x.id] = 1; }); localStorage.setItem('pp_bell_seen', JSON.stringify(S)); bell();
     s.querySelector('.bd').onclick = function (e) { var b = e.target.closest('.it'); if (!b) return; s.remove(); nav(list[+b.dataset.i].go); };
@@ -391,7 +391,7 @@
       '<label for="pp-nt-where">Where to?</label><input id="pp-nt-where" placeholder="e.g. Bohol" maxlength="80">' +
       placeFields('pp-nt', '') +
       '<div class="two"><div><label for="pp-nt-start">From</label><input id="pp-nt-start" type="date"></div><div><label for="pp-nt-end">To</label><input id="pp-nt-end" type="date"></div></div>' +
-      '<button type="button" class="go" id="pp-nt-go">Start this trip 🐧</button><div class="note">You\'ll be the trip creator — invite your crew right after.</div>';
+      '<button type="button" class="go" id="pp-nt-go">Start this trip 🐧</button><div class="note">You\'ll be the trip creator — invite your travel buddies right after.</div>';
     bd.onclick = null;
     var pf = wirePlace('pp-nt');
     // "Where to?" picks the country for you ("Tokyo" → Japan) until you choose one yourself
