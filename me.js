@@ -343,8 +343,8 @@
       if (w && !tidy.whole && days.offsetParent) { tidy.whole = 1; w.click(); } }   // open the Plan on the whole trip
     buddies(); dress();
     var fr = document.querySelector('#p-safety .fred');
-    if (fr && /Crew & contacts/.test(fr.textContent)) fr.childNodes.forEach(function (n) { if (n.nodeType === 3 && /Crew & contacts/.test(n.textContent)) n.textContent = n.textContent.replace('Crew & contacts', 'Crew & safety'); });
-    if (fr && fr.firstElementChild && /Crew & contacts/.test(fr.firstElementChild.textContent) && !fr.firstElementChild.children.length) fr.firstElementChild.textContent = 'Crew & safety';
+    if (fr && /Travel buddies & contacts/.test(fr.textContent)) fr.childNodes.forEach(function (n) { if (n.nodeType === 3 && /Travel buddies & contacts/.test(n.textContent)) n.textContent = n.textContent.replace('Travel buddies & contacts', 'Travel buddies & safety'); });
+    if (fr && fr.firstElementChild && /Travel buddies & contacts/.test(fr.firstElementChild.textContent) && !fr.firstElementChild.children.length) fr.firstElementChild.textContent = 'Travel buddies & safety';
   }
 
   /* ---------- penguins with a mind of their own ---------- */

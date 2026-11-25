@@ -123,8 +123,8 @@
       '<div class="pc"><div class="ph"><i>🎙️</i><div><b>Microphone</b><small>Used only while you talk to penpen or translate. Your phone asks first, and you can change it in your phone’s settings.</small></div></div></div>' +
       '<h3 class="ptitle">What happens to your data</h3>' +
       '<div class="pc col"><ul class="plist">' +
-      '<li><b>Your trip</b> (plans, expenses, crew names and emails) is saved in the trip’s Google Sheet, in the Google Drive of the person who created the trip. Only the crew can see it in penpen.</li>' +
-      '<li><b>Your diary</b>: “Just me” entries go to a doc only you can open. “Group” entries are shared with your crew.</li>' +
+      '<li><b>Your trip</b> (plans, expenses, your travel buddies’ names and emails) is saved in the trip’s Google Sheet, in the Google Drive of the person who created the trip. Only your travel buddies can see it in penpen.</li>' +
+      '<li><b>Your diary</b>: “Just me” entries go to a doc only you can open. “Group” entries are shared with your travel buddies.</li>' +
       '<li><b>Chat, voice and translation</b> are sent to Google’s Gemini service to make penpen’s replies. penpen doesn’t keep recordings of your voice.</li>' +
       '<li><b>On this phone</b> penpen keeps a copy of your trip so it works offline, plus your Play pet and settings.</li>' +
       '<li><b>We never sell</b> your data or use it for ads.</li></ul></div>' +
@@ -186,7 +186,7 @@
 
   /* ---------- 7. penpen gives the tour (voice or bubbles), always skippable ---------- */
   var TOUR = [
-    ['Hi, I’m penpen! 🐧', 'Your travel buddy. Just tell me things and I’ll remember them, so your crew doesn’t have to.'],
+    ['Hi, I’m penpen! 🐧', 'Your travel buddy. Just tell me things and I’ll remember them, so your travel buddies don’t have to.'],
     ['Spent money? Just say it 💸', '“Lunch 450, I paid.” I write it down, split it and keep score. Ask me “Who owes who?” anytime.'],
     ['Your trip, day by day 🗺️', 'Today shows what’s next. Itinerary has every stop, time and direction. Tell me to change things.'],
     ['Lost for words? 🌐', 'Tap Translate, hold your button and talk. I’ll say it in Bisaya, Tagalog and more.'],
@@ -400,7 +400,7 @@
     c.setAttribute('data-pp', '1');
     var h = c.previousElementSibling; if (h && /quick tour/i.test(h.textContent)) h.textContent = 'You’re all set! 🎉';
     // two optional extras; "Start the trip" below is the one main button (travelling solo = just tap Start)
-    c.innerHTML = '<button type="button" class="stbtn" data-st="invite">📲 Invite your crew<small>Send a link or show a QR code</small></button><button type="button" class="stbtn" data-st="tour">▶ Quick tour<small>penpen shows you around in 30 seconds</small></button>';
+    c.innerHTML = '<button type="button" class="stbtn" data-st="invite">📲 Invite your travel buddies<small>Send a link or show a QR code</small></button><button type="button" class="stbtn" data-st="tour">▶ Quick tour<small>penpen shows you around in 30 seconds</small></button>';
     c.onclick = function (e) {
       var b = e.target.closest('[data-st]'); if (!b) return;
       if (b.dataset.st === 'tour') return window.ppTour();
@@ -437,14 +437,18 @@
       var next = function () {
         if (i >= list.length) {
           DPH = []; dStrip(); if ($('#d-cap')) $('#d-cap').value = '';
-          if (hasVid) { ta.value = ''; sv.disabled = false; return orig && orig.call(sv); }
+          if (hasVid) { sv.disabled = false; return orig && orig.call(sv); }   // the words go with the video (they weren't sent with the photos)
           ta.value = ''; sv.disabled = false; sv.textContent = 'Save to the diary';
           var ok = $('#d-ok'); if (ok) { ok.style.display = 'block'; ok.textContent = (msg || 'Saved to the diary') + ' 📸 ' + n + ' photo' + (n > 1 ? 's' : '') + '. '; if (url) { var a = document.createElement('a'); a.className = 'linkbtn'; a.href = url; a.target = '_blank'; a.rel = 'noopener'; a.textContent = 'Open it ↗'; ok.appendChild(a); } }
           return;
         }
         sv.textContent = 'Saving photo ' + (i + 1) + ' of ' + n + '…';
         window.ppCall('penpenDiaryAdd', [{ text: i === 0 && !hasVid ? t : '', kind: kind, photo: list[i], video: null, caption: i === 0 ? cap.trim() : '' }])
-          .then(function (r) { if (r) { url = r.url || url; msg = msg || r.msg; } i++; next(); },
+          .then(function (r) {
+            if (r) { url = r.url || url; msg = msg || r.msg; }
+            if (i === 0 && t && !hasVid) { t = ''; ta.value = ''; if (window.ppDiaryDraft) ppDiaryDraft.clear(); }   // the words are saved now: a retry of the other photos mustn't add them twice
+            i++; next();
+          },
             function (e) { sv.disabled = false; DPH = list.slice(i); dStrip(); if (window.ppDiaryErr) ppDiaryErr(e); else alert((e && e.message) || 'Couldn’t save that photo — try again.'); });
       };
       next();
