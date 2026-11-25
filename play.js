@@ -1,6 +1,7 @@
 /* penpen's Igloo — a little pet to look after (works with no signal).
-   penpen gets hungry, bored and sleepy over time. Look after him and he levels up;
-   leave him starving and exhausted and he gets sick… and can even become a ghost 👻 (you can always start over).
+   penpen gets hungry, bored and sleepy over time. Look after him and he levels up.
+   No-fail: he never dies or runs away, games are always open, and while you're away he only
+   gets a bit hungry and bored (never below 20) and naps, so he's always fine when you come back.
    Tabs: penpen (feed, rub belly, sleep, medicine) · Slide (snowy downhill run) · Exercise (jumping jacks) · Quiz · Shop.
    Every expense you log on the trip earns a 🐟. Everything is saved on this phone. */
 (function () {
@@ -43,21 +44,25 @@
   // the coin shows the trip's money sign (¥, ₱, €…); for longer ones like "NT$" or "RM", one character
   var COIN_SIGN = (function (y) { var m = y.match(/\p{Sc}/u), c = m ? m[0] : y.charAt(0); return /^[\p{L}\p{Sc}]$/u.test(c) ? c : '$'; })(window.ppPlace().sym || '');
   function now() { return Date.now(); }
-  function fresh() { return { food: 80, joy: 75, energy: 80, hp: 100, xp: 0, fit: 0, coins: 20, best: 0, bag: { fish: 3, meds: 1 }, own: { none: 1, hat: 1 }, wear: 'none', t: now(), exp: -1, asleep: false, ghost: false, born: now() }; }
+  var FLOOR = 20;   // how low hunger and happiness can drop while you're away
+  function fresh() { return { food: 80, joy: 75, energy: 80, hp: 100, xp: 0, fit: 0, coins: 20, best: 0, bag: { fish: 3, meds: 1 }, own: { none: 1, hat: 1 }, wear: 'none', t: now(), exp: -1, asleep: false, born: now() }; }
+  function away(v, drop) { return v > FLOOR ? Math.max(FLOOR, v - drop) : v; }
   function load() {
     var p = null; try { p = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) {}
     p = p || fresh();
     if (p.hp == null) { p.hp = 100; p.fit = 0; p.bag.meds = p.bag.meds || 1; }
+    if (p.ghost) {   // older versions could turn penpen into a ghost: bring him back, keep everything he had
+      delete p.ghost; p.asleep = false; p.hi = 1;
+      p.food = Math.max(p.food, 50); p.joy = Math.max(p.joy, 50); p.energy = Math.max(p.energy, 60); p.hp = Math.max(p.hp, 60);
+    }
     var hrs = Math.max(0, (now() - (p.t || now())) / 36e5);
-    if (hrs > 0.01 && !p.ghost) {
-      // life goes on while you're away
-      p.food = clamp(p.food - hrs * (p.asleep ? 1.5 : 3));
-      p.joy = clamp(p.joy - hrs * (p.asleep ? 0.5 : 2));
-      p.energy = clamp(p.energy + hrs * (p.asleep ? 60 : -2.5));
+    if (hrs > 0.01) {
+      // life goes on while you're away, gently: a bit hungry and bored, never sick, and he naps
+      p.food = away(p.food, hrs * (p.asleep ? 1.5 : 3));
+      p.joy = away(p.joy, hrs * (p.asleep ? 0.5 : 2));
+      p.energy = clamp(p.energy + hrs * (p.asleep ? 60 : 10));
       if (p.asleep && p.energy >= 100) p.asleep = false;
-      var bad = (p.food < 20 ? 1 : 0) + (p.energy < 10 ? 1 : 0) + (p.joy < 10 ? 0.5 : 0);
-      p.hp = clamp(p.hp + hrs * (bad ? -6 * bad : (p.food > 50 && p.energy > 30 ? 3 : 0)));
-      if (p.hp <= 0) { p.ghost = true; p.asleep = false; }
+      p.hp = clamp(p.hp + hrs * 3);
       p.t = now();
     }
     return p;
@@ -66,7 +71,7 @@
   function save(p) { p.t = now(); try { localStorage.setItem(KEY, JSON.stringify(p)); } catch (e) {} }
   function level(p) { return 1 + Math.floor(Math.sqrt(p.xp / 20)); }
   function speedSkill(p) { return Math.min(10, 1 + Math.floor(level(p) / 3) + Math.floor((p.fit || 0) / 40)); }
-  function sick(p) { return !p.ghost && p.hp < 30; }
+  function sick(p) { return p.hp < 30; }
   function pick(a) { return a[Math.floor(Math.random() * a.length)]; }
 
   // one fish for every expense logged on the trip
@@ -99,11 +104,6 @@
     var g = window.ppGuideNow ? window.ppGuideNow() : 'bubbly', m = window.ppLook && window.ppLook.svg(g).match(/rx="36" ry="44" fill="([^"]+)"/);
     return m ? m[1] : '#1E2B4A';
   }
-  function ghostSvg() {
-    return '<svg viewBox="-7 -14 134 134" width="160" height="160" aria-hidden="true"><ellipse cx="60" cy="16" rx="22" ry="6" fill="none" stroke="#F4C542" stroke-width="4"/>' +
-      '<path d="M24 64 Q24 20 60 20 Q96 20 96 64 L96 104 L86 96 L76 106 L66 96 L56 106 L46 96 L36 106 L24 98 Z" fill="#fff" opacity=".85" stroke="#C9D6E2" stroke-width="2"/>' +
-      '<circle cx="50" cy="56" r="5" fill="#13324A"/><circle cx="70" cy="56" r="5" fill="#13324A"/><path d="M55 70 Q60 64 65 70" fill="none" stroke="#13324A" stroke-width="3" stroke-linecap="round"/></svg>';
-  }
 
   /* ---------- screen ---------- */
   var w = null, tab = 'pet', G = null, X = null, Q = null;
@@ -111,8 +111,8 @@
     if (document.getElementById('pp-play')) return;
     w = document.createElement('div'); w.id = 'pp-play'; w.setAttribute('role', 'dialog'); w.setAttribute('aria-label', 'Play');
     document.body.appendChild(w); tab = 'pet';
-    var p = load(); var a = rewardExpenses(p); save(p);
-    paint(a ? '+' + a + ' 🐟 for the expenses you logged!' : '');
+    var p = load(), a = rewardExpenses(p), hi = p.hi; delete p.hi; save(p);
+    paint(hi ? 'I’m back! 🐣 Missed you' : a ? '+' + a + ' 🐟 for the expenses you logged!' : '');
     w.addEventListener('click', click);
   }
   function close() { stopAll(); if (w) w.remove(); w = null; }
@@ -123,7 +123,6 @@
     return '<button type="button" class="bat" data-bat="' + label + '" title="' + label + ' ' + Math.round(n) + '%"><span class="tip"></span><span class="cell"><u style="height:' + Math.round(n) + '%;background:' + c + '"></u></span><b>' + ic + '</b><small>' + label + '</small></button>';
   }
   function mood(p) {
-    if (p.ghost) return 'Boo… I got too hungry and tired 👻';
     if (p.asleep) return 'Zzz… 💤 (tap Wake up when he’s rested)';
     if (sick(p)) return 'I don’t feel well 🤒 Medicine please?';
     if (p.food < 25) return 'Hungry… 🥺 drag me some food!';
@@ -140,19 +139,15 @@
     var p = load(), wear = WEAR[p.wear] || WEAR.none;
     var h = '<div class="top"><button class="back" aria-label="Back">‹</button><h2>' + (tab === 'pet' ? 'Play' : { games: 'Games', slide: 'Belly Slide', quiz: 'Professor Pen’s quiz', learn: 'Learn with penpen', sing: 'Sing with penpen', shop: 'Shop' }[tab]) + '</h2><span class="coins">' + COIN + ' <b id="pp-coins">' + p.coins + '</b></span></div><div class="wrap">' + tabs();
     if (tab === 'pet') {
-      h += '<div class="petrow"><div class="bats">' + battery(p.food, '🍽️', 'Full') + battery(p.joy, '💛', 'Happy') + '</div><div class="stage' + (p.asleep ? ' night' : '') + '"><div class="pen' + (p.ghost ? ' ghost' : sick(p) ? ' sick' : p.asleep ? ' zz' : '') + '" id="pp-petpen">' +
-        (p.ghost ? ghostSvg() : '<svg viewBox="-7 -14 134 134" width="160" height="160" aria-hidden="true">' + inner() + (p.asleep ? '<path class="shut" d="M45 49 Q51 54 57 49 M63 49 Q69 54 75 49" fill="none" stroke="#1F2A36" stroke-width="3" stroke-linecap="round"/>' : '') + '</svg>' + (wear.e ? '<span class="wear">' + wear.e + '</span>' : '') + (sick(p) ? '<span class="fx">🤒</span>' : p.asleep ? '<span class="fx">💤</span><span class="bed">🛏️</span>' : '')) +
+      h += '<div class="petrow"><div class="bats">' + battery(p.food, '🍽️', 'Full') + battery(p.joy, '💛', 'Happy') + '</div><div class="stage' + (p.asleep ? ' night' : '') + '"><div class="pen' + (sick(p) ? ' sick' : p.asleep ? ' zz' : '') + '" id="pp-petpen">' +
+        ('<svg viewBox="-7 -14 134 134" width="160" height="160" aria-hidden="true">' + inner() + (p.asleep ? '<path class="shut" d="M45 49 Q51 54 57 49 M63 49 Q69 54 75 49" fill="none" stroke="#1F2A36" stroke-width="3" stroke-linecap="round"/>' : '') + '</svg>' + (wear.e ? '<span class="wear">' + wear.e + '</span>' : '') + (sick(p) ? '<span class="fx">🤒</span>' : p.asleep ? '<span class="fx">💤</span><span class="bed">🛏️</span>' : '')) +
         '</div><div class="say" id="pp-say">' + (msg || mood(p)) + '</div>' +
-        (p.ghost ? '' : p.asleep ? '<button data-act="wake" class="zbtn">☀️ Wake</button>' : '<button data-act="sleep" class="zbtn">💤 Sleep</button>') +
+        (p.asleep ? '<button data-act="wake" class="zbtn">☀️ Wake</button>' : '<button data-act="sleep" class="zbtn">💤 Sleep</button>') +
         '</div><div class="bats">' + battery(p.energy, '⚡', 'Energy') + battery(p.hp, '❤️', 'Health') + '</div></div>' +
         '<div class="lv">Level ' + level(p) + '</div>';
-      if (p.ghost) {
-        h += '<div class="row2"><button data-act="reset">✨ Start over with a new penpen</button></div><p class="tip">Ghosts don’t eat. Start over to hatch a new penpen (your coins stay).</p>';
-      } else {
-        h += '<h3>Drag food to penpen <small>(or tap it)</small></h3><div class="foods">' + Object.keys(FOODS).map(function (k) { var n = p.bag[k] || 0; return '<button data-feed="' + k + '"' + (n ? '' : ' disabled') + '><span>' + FOODS[k].e + '</span>' + FOODS[k].n + '<small>×' + n + '</small></button>'; }).join('') + '</div>' +
+      h += '<h3>Drag food to penpen <small>(or tap it)</small></h3><div class="foods">' + Object.keys(FOODS).map(function (k) { var n = p.bag[k] || 0; return '<button data-feed="' + k + '"' + (n ? '' : ' disabled') + '><span>' + FOODS[k].e + '</span>' + FOODS[k].n + '<small>×' + n + '</small></button>'; }).join('') + '</div>' +
           '<div class="petacts"><button data-act="tickle">🪶 Tickle</button><button data-act="selfie">📸 Selfie</button><button data-act="album">🖼 Album' + (album().length ? ' (' + album().length + ')' : '') + '</button></div>' +
-          '<p class="tip">Rub or tap his belly for love 💕 · Log an expense → get a 🐟 · He gets tired if he never sleeps, and sick if he’s starving.</p>';
-      }
+          '<p class="tip">Rub or tap his belly for love 💕 · Log an expense → get a 🐟 · Games are always open, even when he’s sleepy.</p>';
     } else if (tab === 'slide') {
       h += '<div class="game"><canvas id="pp-slide" width="360" height="230"></canvas><div class="ghud" id="pp-ghud">Jump over rocks & snowmen, duck under snowballs ❄️</div>' +
         '<div class="pad"><button class="go" data-act="start">▶ Start</button><button class="ctl" id="pp-duck" aria-label="Duck">⬇ Duck</button><button class="ctl" id="pp-jump" aria-label="Jump">⬆ Jump</button></div></div>';
@@ -160,16 +155,16 @@
       h += '<div class="gym"><div class="stage"><div class="pen" id="pp-gympen"><svg viewBox="-7 -14 134 134" width="150" height="150" aria-hidden="true">' + inner() + '</svg></div><div class="say" id="pp-gsay">Tap “Jump!” when the ring turns green 🟢</div></div>' +
         '<div class="beat"><i id="pp-beat"></i></div><div class="ghud" id="pp-gcount">Jumping jacks: 0 / 20</div>' +
         '<div class="pad"><button class="go" data-act="gym">▶ Start workout</button><button class="ctl big" id="pp-jj">Jump!</button></div>' +
-        '<p class="tip">Workouts make penpen fitter (faster in Slide) but use energy. Too much and he’s exhausted.</p></div>';
+        '<p class="tip">Workouts make penpen fitter (faster in Slide). He gets a bit tired, but never too tired to play.</p></div>';
     } else if (tab === 'quiz' || tab === 'games' || tab === 'sing' || tab === 'learn') {
       h += '<div id="pp-ghost-host"></div>';
     } else {
       h += '<h3>Food & care</h3><div class="shop">' + Object.keys(FOODS).filter(function (k) { return FOODS[k].price; }).map(function (k) { return '<button data-buy="f:' + k + '"><span>' + FOODS[k].e + '</span>' + FOODS[k].n + '<small>' + COIN + ' ' + FOODS[k].price + '</small><em>' + eff(FOODS[k]) + '</em></button>'; }).join('') + '</div>' +
         '<h3>Outfits</h3><div class="shop">' + Object.keys(WEAR).map(function (k) { var own = p.own[k], on = p.wear === k; return '<button data-buy="w:' + k + '" class="' + (on ? 'on' : '') + '"><span>' + (WEAR[k].e || '🚫') + '</span>' + WEAR[k].n + '<small>' + (on ? 'wearing' : own ? 'wear' : WEAR[k].price ? COIN + ' ' + WEAR[k].price : 'free') + '</small></button>'; }).join('') + '</div>' +
-        '<p class="tip">Earn coins in Games and Quiz. A 🔋 Battery tops up energy so he can keep playing.</p>';
+        '<p class="tip">Earn coins in Games and Quiz. A 🔋 Battery perks him up when he’s sleepy.</p>';
     }
     w.innerHTML = h + '</div>';
-    if (tab === 'pet' && !p.ghost) petHooks();
+    if (tab === 'pet') petHooks();
     if (tab === 'slide') { drawIdle(); slideHooks(); }
     var gh = document.getElementById('pp-ghost-host');
     if (gh && window.ppGames) {
@@ -221,7 +216,7 @@
     };
   }
   function feed(k) {
-    var p = load(), f = FOODS[k]; if (p.ghost || !(p.bag[k] > 0)) return;
+    var p = load(), f = FOODS[k]; if (!(p.bag[k] > 0)) return;
     if (p.asleep) return say('Shh… he’s sleeping 💤');
     if (k !== 'meds' && k !== 'bat' && p.food >= 100) return say('I’m stuffed! Maybe later 😋');
     if (k === 'bat' && p.energy >= 100) return say('Already fully charged! ⚡');
@@ -236,7 +231,7 @@
     pen.addEventListener('pointerdown', function (e) { love(e, 2); });
     pen.addEventListener('pointermove', function (e) { if (e.buttons || e.pointerType === 'touch') { rub += Math.abs(e.movementX || 0) + Math.abs(e.movementY || 0); if (rub > 40) { rub = 0; love(e, 1); } } });
     function love(e, n) {
-      var p = load(); if (p.ghost) return;
+      var p = load();
       if (p.asleep) { say('Zzz… *happy snore* 💤'); return; }
       hearts(e.clientX, e.clientY - 20, n);
       if (now() - last > 700) { last = now(); p.joy = clamp(p.joy + 3); p.xp += 1; save(p); say(pick(['Hehe that tickles 💕', 'More belly rubs! 🥰', 'Best hooman ever 💛', 'Purr… wait, penguins don’t purr 🐧'])); refreshBats(p); }
@@ -261,33 +256,31 @@
   function refreshBats(p) { var b = w && w.querySelector('.bats'); if (b) b.innerHTML = battery(p.food, '🍽️', 'Full') + battery(p.joy, '💛', 'Happy') + battery(p.energy, '⚡', 'Energy') + battery(p.hp, '❤️', 'Health'); }
   function click(e) {
     var b = e.target.closest('button'); if (!b || !w) return;
-    if (b.dataset.bat) { var sy = document.getElementById('pp-say'); if (sy) sy.textContent = { Full: '🍽️ Full: drops over time. Drag food to penpen — bigger meals fill more.', Happy: '💛 Happy: rub or tap his belly, play games or the quiz.', Energy: '⚡ Energy: each game uses some. Put him to sleep to recharge.', Health: '❤️ Health: drops if he’s starving, exhausted or bumps around in games. Medicine helps.' }[b.dataset.bat] || ''; return; }
+    if (b.dataset.bat) { var sy = document.getElementById('pp-say'); if (sy) sy.textContent = { Full: '🍽️ Full: drops over time. Drag food to penpen — bigger meals fill more.', Happy: '💛 Happy: rub or tap his belly, play games or the quiz.', Energy: '⚡ Energy: games use a little. He naps to recharge, but you can always play.', Health: '❤️ Health: comes back on its own over time. Medicine helps fast.' }[b.dataset.bat] || ''; return; }
     var p = load();
     if (b.classList.contains('back')) return back();
     if (b.dataset.tab) { stopAll(); tab = b.dataset.tab; return paint(); }
     if (b.dataset.game && window.ppGames) {
-      if (!canPlay(p, 10)) return;
-      p.energy = clamp(p.energy - 10); save(p);
+      wakeToPlay(p); p.energy = clamp(p.energy - 10); save(p);
       var host = document.getElementById('pp-ghost-host'), id = b.dataset.game;
       return window.ppGames.open(id, host, function (score, coins, ended) {
         if (score === null) return paint();
         if (!ended) return;
-        var q = load(); q.coins += coins; q.xp += Math.ceil(coins / 2); q.joy = clamp(q.joy + 8); q.hp = clamp(q.hp - 4); q.bests = q.bests || {}; if (score > (q.bests[id] || 0)) q.bests[id] = score; if (id === 'slide' && score > q.best) q.best = score; save(q); setCoins(q);
+        var q = load(); q.coins += coins; q.xp += Math.ceil(coins / 2); q.joy = clamp(q.joy + 8); q.bests = q.bests || {}; if (score > (q.bests[id] || 0)) q.bests[id] = score; if (id === 'slide' && score > q.best) q.best = score; save(q); setCoins(q);
       });
     }
     if (b.dataset.act === 'tickle') {
-      if (p.ghost) return; if (p.asleep) return say('Zzz… *giggles in his sleep* 💤');
+      if (p.asleep) return say('Zzz… *giggles in his sleep* 💤');
       p.joy = clamp(p.joy + 6); p.energy = clamp(p.energy - 1); p.xp += 1; save(p); refreshBats(p);
       say(pick(['Hahaha stop it!! 🤣', 'Not the flippers! 😂', 'Hehehe… again! 🪶', 'I’m… so… ticklish 🤭']));
       var tp = document.getElementById('pp-petpen'); if (tp && tp.animate) tp.animate([{ transform: 'rotate(0)' }, { transform: 'rotate(-10deg)' }, { transform: 'rotate(10deg)' }, { transform: 'rotate(-8deg)' }, { transform: 'rotate(8deg)' }, { transform: 'rotate(0)' }], { duration: 600 });
       if (tp) { var tr = tp.getBoundingClientRect(); hearts(tr.left + tr.width / 2, tr.top + tr.height * 0.3, 3, '😂'); }
       return;
     }
-    if (b.dataset.act === 'selfie') { if (p.ghost) return; return selfie(); }
+    if (b.dataset.act === 'selfie') return selfie();
     if (b.dataset.act === 'album') return showAlbum();
     if (b.dataset.act === 'sleep') { p.asleep = true; save(p); return paint('Night night 💤'); }
     if (b.dataset.act === 'wake') { p.asleep = false; save(p); return paint(p.energy > 70 ? 'Good morning! ☀️ Fully charged' : 'Yawn… still a bit sleepy 😪'); }
-    if (b.dataset.act === 'reset') { var c = p.coins, np = fresh(); np.coins = c; np.exp = p.exp; save(np); return paint('Hello again! 🐣 A brand-new penpen'); }
     if (b.dataset.act === 'start') return startSlide();
     if (b.dataset.act === 'gym') return startGym();
     if (b.dataset.q != null) return answer(+b.dataset.q);
@@ -300,13 +293,8 @@
       p.coins -= wp; p.own[id] = 1; p.wear = id; save(p); toast('New outfit: ' + WEAR[id].e + ' ' + WEAR[id].n); return paint();
     }
   }
-  function canPlay(p, cost) {
-    if (p.ghost) { toast('penpen is a ghost 👻 — start over on the penpen tab'); return false; }
-    if (sick(p)) { toast('penpen is sick 🤒 — give him medicine first'); return false; }
-    if (p.asleep) { toast('Shh, he’s sleeping 💤'); return false; }
-    if (p.energy < cost) { toast('Too tired 😪 — let penpen sleep first'); return false; }
-    return true;
-  }
+  // games are always open: if he's napping, he wakes up to play
+  function wakeToPlay(p) { if (p.asleep) { p.asleep = false; toast('penpen woke up to play! ☀️'); } }
 
   /* ---------- Belly Slide: down a snowy hill ---------- */
   function drawPen(c, x, y, air, duck, t) {
@@ -340,7 +328,7 @@
     if (d) { d.addEventListener('pointerdown', function (e) { e.preventDefault(); if (G) G.duck = true; }); ['pointerup', 'pointerleave', 'pointercancel'].forEach(function (ev) { d.addEventListener(ev, function () { if (G) G.duck = false; }); }); }
   }
   function startSlide() {
-    var p = load(); if (!canPlay(p, 10)) return;
+    var p = load(); wakeToPlay(p);
     var cv = document.getElementById('pp-slide'); if (!cv) return;
     stopAll();
     var c = cv.getContext('2d'), W = cv.width, H = cv.height, px = 80, gy = groundY(px, H) - 10;
@@ -391,7 +379,7 @@
 
   /* ---------- Exercise: jumping jacks to the beat ---------- */
   function startGym() {
-    var p = load(); if (!canPlay(p, 15)) return;
+    var p = load(); wakeToPlay(p);
     stopAll(); p.energy = clamp(p.energy - 15); save(p);
     var go = w.querySelector('.go'); if (go) go.style.display = 'none';
     X = { reps: 0, miss: 0, t0: performance.now(), period: 900, raf: 0 };
@@ -413,7 +401,6 @@
   function endGym() {
     var x = X; stopAll();
     var p = load(), gain = Math.max(0, x.reps); p.fit = (p.fit || 0) + gain; p.xp += Math.floor(gain / 2); p.food = clamp(p.food - 6);
-    if (p.energy < 10) p.hp = clamp(p.hp - 10);   // overdoing it
     save(p);
     var s = document.getElementById('pp-gsay'); if (s) s.textContent = x.reps >= 20 ? 'Workout done! 💪 Fitness +' + gain : 'Phew… ' + x.reps + ' reps 😮‍💨';
     var go = w && w.querySelector('.go'); if (go) { go.style.display = ''; go.textContent = '↻ Another set'; }
@@ -455,9 +442,9 @@
     '#pp-play .wrap{max-width:560px;margin:0 auto}#pp-play h3{font:900 13px ' + F + ';letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:16px 4px 8px}#pp-play h3 small{text-transform:none;letter-spacing:0;font-weight:700}' +
     '#pp-play .tabs{display:flex;gap:4px;background:var(--chip);border-radius:18px;padding:4px;margin-bottom:12px}#pp-play .tabs button{flex:1;border:0;background:none;border-radius:14px;padding:6px 2px;font:800 12px ' + F + ';color:var(--ink);cursor:pointer;display:flex;flex-direction:column;align-items:center}#pp-play .tabs span{font-size:20px}#pp-play .tabs .on{background:var(--card);box-shadow:0 2px 6px rgba(0,0,0,.08)}' +
     '#pp-play .petrow{display:flex;gap:10px;align-items:stretch}#pp-play .stage{flex:1;background:linear-gradient(180deg,var(--accentSoft),var(--card));border-radius:24px;padding:12px 8px;text-align:center;position:relative;transition:background .4s}#pp-play .stage.night{background:linear-gradient(180deg,#24324F,#3C4C70)}' +
-    '#pp-play .pen{position:relative;display:inline-block;animation:pppb 1.6s ease-in-out infinite alternate;touch-action:none;cursor:pointer}#pp-play .pen.zz{animation-duration:3s}#pp-play .pen.sick{filter:saturate(.5) hue-rotate(40deg)}#pp-play .pen.ghost{animation:ppgh 2.4s ease-in-out infinite alternate}' +
+    '#pp-play .pen{position:relative;display:inline-block;animation:pppb 1.6s ease-in-out infinite alternate;touch-action:none;cursor:pointer}#pp-play .pen.zz{animation-duration:3s}#pp-play .pen.sick{filter:saturate(.5) hue-rotate(40deg)}' +
     '#pp-play .wear{position:absolute;left:50%;top:4px;transform:translateX(-50%);font-size:42px;pointer-events:none}#pp-play .fx{position:absolute;right:-6px;top:6px;font-size:30px;pointer-events:none}' +
-    '@keyframes pppb{from{transform:translateY(0) rotate(-3deg)}to{transform:translateY(-6px) rotate(3deg)}}@keyframes ppgh{from{transform:translateY(0)}to{transform:translateY(-14px)}}' +
+    '@keyframes pppb{from{transform:translateY(0) rotate(-3deg)}to{transform:translateY(-6px) rotate(3deg)}}' +
     '#pp-play .say{display:inline-block;background:var(--card);color:var(--ink);border-radius:16px;padding:6px 12px;font-weight:800;margin-top:4px;font-size:14.5px}' +
     '#pp-play .bats{display:grid;grid-template-columns:1fr;gap:6px;width:58px;align-content:center}#pp-play .bat{border:0;font:inherit;color:inherit;cursor:pointer}#pp-play .bat .cell{width:20px!important;height:36px!important}' +
     '#pp-play .zbtn{position:absolute;top:10px;right:10px;border:0;border-radius:99px;background:rgba(255,255,255,.9);color:#13324A;padding:6px 10px;font:800 13px ' + F + ';cursor:pointer;z-index:2}' +
