@@ -174,10 +174,12 @@
     '<path d="M746 384 L778 384 L796 355 L772 355 Z" fill="#C98A52" stroke="#8B5530" stroke-width="1.5" stroke-linejoin="round"/>' +
     '<path d="M752 375 H783 M758 366 H788 M764 360 H791" stroke="#8B5530" stroke-width="1.2"/>';
   // the sled hill in the mountains behind the pond: a snowy hill with a winding Belly Slide track and a little red sled
-  var SLED_HILL = '<path d="M682 336 Q742 252 800 246 Q862 252 920 336 Z" fill="#F4FAFF"/><path d="M800 246 Q862 252 920 336 H880 Q852 290 800 246 Z" fill="#DCEBF5"/>' +
-    '<path d="M800 250 Q770 272 802 290 Q834 306 794 332" fill="none" stroke="#BFD7E8" stroke-width="6" stroke-linecap="round"/>' +
-    '<path d="M800 250 Q770 272 802 290 Q834 306 794 332" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-dasharray="2 6"/>' +
-    '<rect x="808" y="287" width="17" height="5" rx="2" fill="#E0533D"/><path d="M806 294 h20 q4 0 5 -4" fill="none" stroke="#8B5530" stroke-width="1.4" stroke-linecap="round"/>';
+  var SLED_HILL = '<path d="M688 322 Q748 212 804 204 Q866 212 920 322 Z" fill="#F4FAFF"/><path d="M804 204 Q866 212 920 322 H880 Q854 262 804 204 Z" fill="#DCEBF5"/>' +
+    '<path d="M804 208 Q770 236 806 256 Q842 274 800 302" fill="none" stroke="#A9C8DE" stroke-width="7" stroke-linecap="round"/>' +
+    '<path d="M804 208 Q770 236 806 256 Q842 274 800 302" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-dasharray="2 6"/>' +
+    // a little penguin riding a red sled down the track
+    '<rect x="810" y="257" width="18" height="5" rx="2" fill="#E0533D"/><path d="M808 264 h21 q4 0 5 -5" fill="none" stroke="#8B5530" stroke-width="1.4" stroke-linecap="round"/>' +
+    '<ellipse cx="819" cy="251" rx="5" ry="6.5" fill="#2A3A4C"/><ellipse cx="820" cy="253" rx="3" ry="4.2" fill="#fff"/><path d="M823.5 248.5 l3.5 1.2 l-3.5 1.2 Z" fill="#F4A62A"/>';
   // the garden field: 1080 x 600, three phone screens wide. Left: the igloo. Middle (where the view opens): the fountain. Right: the race pond with a wooden dock, and the sled hill in the mountains behind it.
   // Penguins walk only on the grass in front of the igloo and the fountain (see far()); on a phone the far left and right edges are cropped a little.
   function gardenArt() {
