@@ -4,6 +4,7 @@
    gets a bit hungry and bored (never below 20) and naps, so he's always fine when you come back.
    A new game starts with an egg: tap it to hatch, then pick his name, colours, eyes and outfit (change them later in Wardrobe).
    Tabs: penpen (feed, rub belly, sleep) · Games · Quiz · Learn · Sing · Shop.
+   Tap the garden's igloo to go inside: a cozy games room where you walk penpen to a thing (goggles = Dive, rug = Chase, sled = Belly Slide, trumpet = Honk!, chalkboard = Quiz, bookshelf = Learn, record player = Sing, wardrobe = Shop) and Play pops up.
    Every expense you log on the trip earns a 🐟. Everything is saved on this phone. */
 (function () {
   var F = 'Nunito,-apple-system,BlinkMacSystemFont,sans-serif';
@@ -126,6 +127,8 @@
   var PALS = ['sweet', 'surfer', 'sunny', 'buddy', 'goofydad', 'grandma'];   // penguin friends who wander the garden (ids from guides.js)
   var START = [[20, 22], [80, 16], [32, 30], [68, 28], [12, 8], [88, 6]];   // where each friend stands when the garden opens (% across, % up)
   var MUSIC_FILE = '';              // set to a music file (e.g. 'audio/garden.m4a') to play it instead of the code-made tune
+  // the garden's igloo: the cozy games room is inside (tap it or its sign to go in)
+  var IGLOO = '<path d="M22 176 A36 36 0 0 1 94 176 Z" fill="#F4FAFF" stroke="#C9DCEA" stroke-width="2"/><path d="M50 176 A8 11 0 0 1 66 176Z" fill="#5B7A99"/><path d="M30 164 H86 M40 152 H76" stroke="#C9DCEA" stroke-width="2"/>';
   var SHUT = '<path class="shut" d="M45 49 Q51 54 57 49 M63 49 Q69 54 75 49" fill="none" stroke="#1F2A36" stroke-width="3" stroke-linecap="round"/>';
   // the egg a new game starts with; its cracks show one by one as you tap
   var EGG = '<ellipse cx="60" cy="112" rx="24" ry="4" fill="#13324A" opacity=".14"/><path d="M60 20 C80 20 92 56 92 78 C92 98 78 110 60 110 C42 110 28 98 28 78 C28 56 40 20 60 20 Z" fill="#FFF8EE" stroke="#C9DCEA" stroke-width="2"/>' +
@@ -165,7 +168,7 @@
       '<g transform="translate(0 160)">' +
       '<path d="M0 156 Q90 132 180 152 T360 144 V440 H0Z" fill="#A6DA92"/><path d="M0 184 Q120 164 220 182 T360 174 V440 H0Z" fill="#86C977"/><path d="M0 300 Q140 284 250 298 T360 292 V440 H0Z" fill="#7BBF6C"/>' +
       '<ellipse cx="282" cy="194" rx="54" ry="13" fill="#7FC8E8"/><ellipse cx="270" cy="191" rx="24" ry="4" fill="#BFE6F5" opacity=".75"/>' +
-      '<path d="M22 176 A36 36 0 0 1 94 176 Z" fill="#F4FAFF" stroke="#C9DCEA" stroke-width="2"/><path d="M50 176 A8 11 0 0 1 66 176Z" fill="#5B7A99"/><path d="M30 164 H86 M40 152 H76" stroke="#C9DCEA" stroke-width="2"/>' +
+      '<g transform="translate(40 0)">' + IGLOO + '</g>' +
       fl + '</g></svg>';
   }
   var GD = { t: {}, hold: 0, s: [] }, Y = 37;   // Y: how far back (in % of the garden) the penguins can walk
@@ -282,7 +285,7 @@
   var NOTES = [523.25, 587.33, 659.25, 783.99, 880, 1046.5], PADS = [[130.81, 196, 329.63], [110, 164.81, 261.63], [174.61, 220, 349.23], [146.83, 220, 293.66]];
   function music(on) {
     if (MU) { if (MU.el) MU.el.pause(); clearInterval(MU.iv); if (MU.g) MU.g.disconnect(); MU = null; }
-    if (!on || !soundOn() || !w || tab !== 'pet') return;
+    if (!on || !soundOn() || !w || (tab !== 'pet' && tab !== 'igloo')) return;
     if (MUSIC_FILE) { var el = new Audio(MUSIC_FILE), pr; el.loop = true; el.volume = 0.35; pr = el.play(); if (pr && pr.catch) pr.catch(function () {}); MU = { el: el }; return; }
     var c = ac(); if (!c) return;
     var g = c.createGain(), n = 0; g.gain.value = 0.05; g.connect(c.destination);
@@ -293,10 +296,132 @@
       n++;
     }, 600) };
   }
-  document.addEventListener('visibilitychange', function () { if (document.hidden) music(false); else if (w && tab === 'pet') music(true); });
+  document.addEventListener('visibilitychange', function () { if (document.hidden) music(false); else if (w && (tab === 'pet' || tab === 'igloo')) music(true); });
+
+  /* ---------- the cozy igloo: a games room inside the garden's igloo. Walk penpen to a thing and Play pops up ---------- */
+  // the door layer over the garden art: the igloo's doorway glows, and a little Games sign points the way in
+  function doorArt() {
+    return '<svg class="gart gdoor" viewBox="0 0 360 600" preserveAspectRatio="xMidYMax slice"><g transform="translate(40 160)" class="door" data-act="igloo" role="button" tabindex="0" aria-label="Igloo: go inside to play">' +
+      '<rect class="hit" x="16" y="120" width="122" height="62" rx="12" fill="transparent"/><path class="glow" d="M50 176 A8 11 0 0 1 66 176Z" fill="#F7B955"/>' +
+      '<path d="M116 178 V146" stroke="#8B5530" stroke-width="3" stroke-linecap="round"/><rect x="98" y="132" width="36" height="16" rx="3" fill="#C98A52" stroke="#8B5530" stroke-width="1.5"/>' +
+      '<text x="116" y="143.5" text-anchor="middle" font-family="' + F + '" font-size="8.5" font-weight="900" fill="#fff">Games</text></g></svg>';
+  }
+  // the room: ice-brick walls, a warm wood floor, string lights, a little window and a crackling fire
+  function iglooArt() {
+    var bulbs = [30, 66, 102, 138, 222, 258, 294, 330].map(function (x, i) { return '<circle class="bulb" cx="' + x + '" cy="' + (98 + (i % 2) * 7) + '" r="4" fill="' + ['#F7B955', '#F28AA5', '#8FD3F0', '#B7E08F'][i % 4] + '"/>'; }).join('');
+    var planks = [392, 428, 470, 518, 572].map(function (y) { return '<path d="M0 ' + y + ' H360" stroke="#9A6438" stroke-width="2" opacity=".55"/>'; }).join('');
+    return '<svg class="gart" viewBox="0 0 360 600" preserveAspectRatio="xMidYMax slice" aria-hidden="true"><defs>' +
+      '<pattern id="pp-ice" width="48" height="26" patternUnits="userSpaceOnUse"><rect width="48" height="26" fill="#D8ECF6"/><path d="M0 1H48 M0 14H48 M24 1V14 M0 14V26 M48 14V26" stroke="#AFCFE2" stroke-width="1.6" fill="none"/></pattern>' +
+      '<radialGradient id="pp-warm" cx=".5" cy=".6" r=".6"><stop offset="0" stop-color="#FFB45A" stop-opacity=".55"/><stop offset="1" stop-color="#FFB45A" stop-opacity="0"/></radialGradient></defs>' +
+      '<rect width="360" height="360" fill="url(#pp-ice)"/><path d="M0 0 H360 V150 Q180 -30 0 150 Z" fill="#A9CCE0" opacity=".45"/>' +
+      '<path d="M10 92 Q66 116 120 96 M240 96 Q294 116 350 92" fill="none" stroke="#5B7A99" stroke-width="1.5"/>' + bulbs +
+      '<circle cx="60" cy="200" r="26" fill="#C9DCEA"/><circle cx="60" cy="200" r="21" fill="#28406B"/><circle cx="52" cy="192" r="2" fill="#fff"/><circle cx="68" cy="206" r="1.5" fill="#fff"/><circle cx="66" cy="190" r="5" fill="#FFF3C4"/><path d="M39 200 H81 M60 179 V221" stroke="#C9DCEA" stroke-width="3"/>' +
+      '<rect y="356" width="360" height="244" fill="#C8875A"/>' + planks + '<rect y="352" width="360" height="8" fill="#9A6438"/>' +
+      '<ellipse cx="180" cy="420" rx="170" ry="90" fill="url(#pp-warm)"/>' +
+      // the fireplace: a stone surround, logs and three flames that flicker
+      '<rect x="138" y="272" width="84" height="9" rx="3" fill="#8B5530"/><path d="M146 281 H214 V358 H146 Z" fill="#9C8F86"/><path d="M146 296 H214 M146 316 H214 M146 336 H214 M168 281 V296 M192 296 V316 M168 316 V336 M192 336 V358" stroke="#7F736B" stroke-width="1.5"/>' +
+      '<path d="M158 358 V320 A22 22 0 0 1 202 320 V358 Z" fill="#3A2A22"/><circle cx="180" cy="300" r="34" fill="url(#pp-warm)"/>' +
+      '<g class="flm"><path d="M166 352 Q160 334 172 322 Q170 336 178 340 Q180 328 188 320 Q186 334 194 330 Q200 342 192 352 Z" fill="#F28A2E"/></g>' +
+      '<g class="flm f2"><path d="M172 352 Q170 340 178 332 Q180 342 186 338 Q190 346 186 352 Z" fill="#FFD25A"/></g>' +
+      '<rect x="160" y="350" width="40" height="6" rx="3" fill="#6E4224"/><rect x="166" y="345" width="30" height="6" rx="3" fill="#8B5530" transform="rotate(-8 181 348)"/></svg>';
+  }
+  // the eight things in the room, each drawn in code: [id, name, what it is, % across, % up, width in px, drawing]
+  var ROOM = [
+    ['shop', 'Shop', 'a wardrobe', 12, 41, 70, '<svg viewBox="0 -14 64 110"><path d="M4 12 Q32 0 60 12Z" fill="#8B5530"/><rect x="6" y="10" width="52" height="80" rx="5" fill="#A8683A" stroke="#7A4A26" stroke-width="2"/><rect x="10" y="16" width="21" height="66" rx="3" fill="#BD7C4A"/><rect x="33" y="16" width="21" height="66" rx="3" fill="#BD7C4A"/><path d="M32 60 q5 10 -2 24" stroke="#E46F5A" stroke-width="4" fill="none" stroke-linecap="round"/><circle cx="28" cy="48" r="2" fill="#F4C542"/><circle cx="36" cy="48" r="2" fill="#F4C542"/><rect x="10" y="89" width="6" height="6" fill="#7A4A26"/><rect x="48" y="89" width="6" height="6" fill="#7A4A26"/><rect x="24" y="-12" width="16" height="13" rx="1" fill="#1F2A36"/><rect x="24" y="-4" width="16" height="2.5" fill="#D9534F"/><rect x="19" y="0" width="26" height="3" rx="1.5" fill="#1F2A36"/></svg>'],
+    ['learn', 'Learn', 'a bookshelf', 31, 41, 66, '<svg viewBox="0 0 64 96"><rect x="4" y="4" width="56" height="88" rx="4" fill="#9A6438" stroke="#7A4A26" stroke-width="2"/><rect x="9" y="9" width="46" height="78" fill="#6E4224"/><path d="M9 35 H55 M9 62 H55" stroke="#9A6438" stroke-width="4"/>' +
+      [[11, 7, 22, '#D9534F'], [19, 6, 18, '#3B8FD9'], [26, 8, 24, '#F4A62A'], [35, 6, 20, '#3FAF6B'], [42, 7, 23, '#7C6BB8'], [11, 8, 22, '#3FAF6B', 1], [20, 6, 17, '#F28AA5', 1], [27, 7, 24, '#3B8FD9', 1], [44, 9, 21, '#D9534F', 1], [12, 6, 20, '#F4A62A', 2], [19, 8, 23, '#7C6BB8', 2], [36, 6, 18, '#3FAF6B', 2], [43, 7, 24, '#3B8FD9', 2]].map(function (b) { var floor = [33, 60, 87][b[4] || 0]; return '<rect x="' + b[0] + '" y="' + (floor - b[2]) + '" width="' + b[1] + '" height="' + b[2] + '" rx="1" fill="' + b[3] + '"/>'; }).join('') +
+      '<circle cx="38" cy="50" r="7" fill="#5DA9E9"/><path d="M33 47 Q38 52 43 46" stroke="#3FAF6B" stroke-width="3" fill="none"/><path d="M38 57 V60" stroke="#C9962B" stroke-width="2"/></svg>'],
+    ['quiz', 'Quiz', 'a chalkboard', 69, 41, 72, '<svg viewBox="0 0 70 96"><path d="M14 52 L7 94 M56 52 L63 94 M35 52 L35 92" stroke="#8B5530" stroke-width="4" stroke-linecap="round"/><rect x="5" y="6" width="60" height="48" rx="3" fill="#2F5444" stroke="#A8683A" stroke-width="4"/><rect x="9" y="56" width="52" height="4" rx="2" fill="#A8683A"/><rect x="40" y="53" width="8" height="3" rx="1" fill="#fff"/>' +
+      '<text x="12" y="27" font-family="' + F + '" font-size="12" font-weight="900" fill="#F4FAFF">A B C</text><text x="50" y="44" font-family="' + F + '" font-size="18" font-weight="900" fill="#FFE58A">?</text><path d="M13 38 H40 M13 45 H32" stroke="#F4FAFF" stroke-width="1.6" opacity=".7"/></svg>'],
+    ['sing', 'Sing', 'a record player and a mic', 89, 41, 74, '<svg viewBox="0 0 80 96"><rect x="2" y="54" width="50" height="6" rx="2" fill="#8B5530"/><path d="M8 60 V94 M46 60 V94" stroke="#7A4A26" stroke-width="4"/><rect x="5" y="38" width="44" height="16" rx="3" fill="#1F8FA6"/><ellipse cx="25" cy="38" rx="17" ry="5.5" fill="#1F2A36"/><ellipse cx="25" cy="38" rx="5" ry="1.8" fill="#F4C542"/><path d="M45 30 L34 37" stroke="#C9DCEA" stroke-width="2.5" stroke-linecap="round"/><circle cx="45" cy="30" r="2.5" fill="#C9DCEA"/>' +
+      '<path d="M12 22 V12 L20 10 V20 M28 16 V6 L34 5 V14" stroke="#13324A" stroke-width="1.8" fill="none"/><circle cx="10" cy="22" r="2.6" fill="#13324A"/><circle cx="18" cy="20" r="2.6" fill="#13324A"/><circle cx="26" cy="16" r="2.4" fill="#13324A"/><circle cx="32" cy="14" r="2.4" fill="#13324A"/>' +
+      '<path d="M68 36 V90" stroke="#5B6470" stroke-width="3"/><ellipse cx="68" cy="92" rx="10" ry="3" fill="#5B6470"/><rect x="62" y="16" width="12" height="20" rx="6" fill="#9AA7B4" stroke="#5B6470" stroke-width="1.5"/><path d="M62 24 H74 M62 29 H74" stroke="#5B6470" stroke-width="1"/></svg>'],
+    ['dive', 'Dive', 'swim goggles and a snorkel', 15, 27, 62, '<svg viewBox="0 0 64 80"><rect x="6" y="52" width="52" height="26" rx="5" fill="#E8F4FA" stroke="#AFCFE2" stroke-width="2"/><path d="M8 65 H56" stroke="#AFCFE2" stroke-width="1.5"/>' +
+      '<path d="M52 4 V40 Q52 50 42 50" stroke="#F4D03F" stroke-width="6" fill="none" stroke-linecap="round"/><rect x="47" y="2" width="10" height="6" rx="2" fill="#F28A2E"/>' +
+      '<path d="M6 40 Q32 30 58 40" stroke="#1F2A36" stroke-width="3" fill="none"/><circle cx="21" cy="40" r="9" fill="#8FD3F0" stroke="#F28A2E" stroke-width="3"/><circle cx="41" cy="40" r="9" fill="#8FD3F0" stroke="#F28A2E" stroke-width="3"/><path d="M30 40 H32" stroke="#F28A2E" stroke-width="3"/><path d="M16 36 L19 33 M36 36 L39 33" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>'],
+    ['chase', 'Chase', 'a polar bear rug', 50, 26, 132, '<svg viewBox="0 0 120 64"><g fill="#F7F9FB" stroke="#D5DEE6" stroke-width="1.5"><ellipse cx="34" cy="14" rx="9" ry="7" transform="rotate(-30 34 14)"/><ellipse cx="34" cy="50" rx="9" ry="7" transform="rotate(30 34 50)"/><ellipse cx="94" cy="12" rx="9" ry="7" transform="rotate(30 94 12)"/><ellipse cx="94" cy="52" rx="9" ry="7" transform="rotate(-30 94 52)"/><circle cx="110" cy="32" r="4"/><ellipse cx="64" cy="32" rx="38" ry="19"/><circle cx="10" cy="22" r="5"/><circle cx="10" cy="42" r="5"/><circle cx="18" cy="32" r="14"/></g>' +
+      '<ellipse cx="9" cy="32" rx="6" ry="5" fill="#EEF2F6"/><circle cx="5" cy="32" r="2.4" fill="#1F2A36"/><circle cx="17" cy="26" r="1.8" fill="#1F2A36"/><circle cx="17" cy="38" r="1.8" fill="#1F2A36"/><path d="M60 22 Q64 32 60 42 M72 24 Q75 32 72 40" stroke="#E2E9EF" stroke-width="2" fill="none"/></svg>'],
+    ['slide', 'Belly Slide', 'a sled', 85, 27, 86, '<svg viewBox="0 0 90 54"><path d="M20 34 L24 22 M40 34 L42 22 M60 34 L62 22" stroke="#8B5530" stroke-width="3"/><rect x="14" y="14" width="64" height="9" rx="3" fill="#C98A52" stroke="#8B5530" stroke-width="1.5"/><path d="M30 14 V23 M46 14 V23 M62 14 V23" stroke="#8B5530" stroke-width="1"/>' +
+      '<path d="M6 38 H72 Q86 38 84 26 Q82 18 75 21" stroke="#D9534F" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M76 18 Q60 6 40 12" stroke="#F4D03F" stroke-width="1.8" fill="none"/></svg>'],
+    ['honk', 'Honk!', 'a trumpet', 30, 14, 76, '<svg viewBox="0 0 80 66"><path d="M22 40 L16 64 M58 40 L64 64 M40 42 V64" stroke="#8B5530" stroke-width="4" stroke-linecap="round"/><ellipse cx="40" cy="40" rx="26" ry="6" fill="#A8683A"/>' +
+      '<g stroke="#C9962B" stroke-width="1.5"><rect x="8" y="22" width="44" height="6" rx="3" fill="#F4C542"/><path d="M50 25 L72 13 V37 Z" fill="#F4C542" stroke-linejoin="round"/><ellipse cx="72" cy="25" rx="3" ry="12" fill="#FFE58A"/><rect x="22" y="14" width="4" height="10" rx="1" fill="#F4C542"/><rect x="29" y="14" width="4" height="10" rx="1" fill="#F4C542"/><rect x="36" y="14" width="4" height="10" rx="1" fill="#F4C542"/><path d="M14 28 Q12 36 22 36 H44 Q50 36 48 28" fill="none"/><rect x="3" y="23" width="6" height="4" rx="1" fill="#C9962B"/></g></svg>']
+  ];
+  var BIG = { dive: 1, chase: 1, honk: 1, slide: 1 };   // the four that open in the games player; the rest are their own tabs
+  function spot(it) { return [it[3], Math.min(it[4], 38)]; }   // where penpen stands to use it (the back row's things are against the wall)
+  function iglooRoom(p) {
+    var wear = WEAR[p.wear] || WEAR.none;
+    return '<div class="garden igl" id="pp-igloo">' + iglooArt() +
+      '<div class="gtop"><button class="back" aria-label="Back to the garden">‹</button><b class="ititle">' + esc(nameOf(p)) + '’s igloo</b><span class="coins">' + COIN + ' <b id="pp-coins">' + p.coins + '</b></span>' +
+      '<button type="button" data-act="sound" class="gbtn" aria-pressed="' + soundOn() + '" aria-label="Music and sounds">' + (soundOn() ? '🔊' : '🔇') + '</button></div>' +
+      '<div class="say" id="pp-say">Walk to something to play 🎮</div>' +
+      ROOM.map(function (it) {
+        return '<button type="button" class="iitem" data-item="' + it[0] + '" aria-label="' + it[1] + ': ' + it[2] + '" style="left:' + it[3] + '%;bottom:' + it[4] + '%;width:' + it[5] + 'px;z-index:' + (it[0] === 'chase' ? 1 : Math.max(1, 40 - it[4])) + ';--d:' + (1 - it[4] / 160).toFixed(3) + '">' + it[6] + '<span class="itag">' + it[1] + '</span></button>';
+      }).join('') +
+      '<div class="walker' + (sad(p) ? ' sad' : '') + '" id="pp-iwalk" style="left:50%;bottom:10%;z-index:30"><div class="pen" aria-label="' + esc(nameOf(p)) + '">' + views(inner(p) + faceBits(51, 69, 49, 6) + JOY, window.ppLook ? window.ppLook.side(look(p)) : '') + (wear.e ? '<span class="wear">' + wear.e + '</span>' : '') + '</div></div>' +
+      '<button type="button" class="iplay" id="pp-iplay" hidden></button>' +
+      '<div class="ijoy" id="pp-ijoy" role="img" aria-label="Joystick: drag to walk (arrow keys work too)"><i></i></div></div>';
+  }
+  var I = null;   // the igloo while it's open: penpen's spot, the joystick, the keys, the thing he's next to
+  function enterIgloo() { var p = load(); wakeToPlay(p); save(p); stopAll(); tab = 'igloo'; paint(); }
+  function iglooHooks() {
+    var me = document.getElementById('pp-iwalk'), base = document.getElementById('pp-ijoy'), knob = base.firstChild, id = null;
+    I = { x: 50, y: 10, v: null, keys: {}, near: null, last: 0 };
+    function stick(e) {
+      var r = base.getBoundingClientRect(), R = r.width / 2 || 1, x = (e.clientX - r.left - R) / R, y = (e.clientY - r.top - R) / R, m = Math.hypot(x, y);
+      if (m > 1) { x /= m; y /= m; }
+      I.v = { x: x, y: y }; knob.style.transform = 'translate(' + Math.round(x * 30) + 'px,' + Math.round(y * 30) + 'px)';
+    }
+    base.addEventListener('pointerdown', function (e) { e.preventDefault(); id = e.pointerId; if (base.setPointerCapture) { try { base.setPointerCapture(id); } catch (x) {} } base.classList.add('on'); stick(e); });
+    base.addEventListener('pointermove', function (e) { if (e.pointerId === id) stick(e); });
+    ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(function (ev) { base.addEventListener(ev, function (e) { if (e.pointerId !== id) return; id = null; I.v = null; base.classList.remove('on'); knob.style.transform = ''; }); });
+    I.key = function (e) {
+      var k = { ArrowLeft: 'l', ArrowRight: 'r', ArrowUp: 'u', ArrowDown: 'd' }[e.key];
+      if (!k || !I || (e.target && e.target.closest && e.target.closest('dialog,input'))) return;
+      e.preventDefault(); I.keys[k] = e.type === 'keydown';
+    };
+    document.addEventListener('keydown', I.key); document.addEventListener('keyup', I.key);
+    I.last = performance.now();
+    (function frame(t) {
+      if (!I || !me.isConnected) return;
+      var dt = Math.min(0.05, (t - I.last) / 1000), k = I.keys, v = I.v && Math.hypot(I.v.x, I.v.y) > 0.2 ? I.v : null; I.last = t;
+      var vx = v ? v.x : (k.r ? 1 : 0) - (k.l ? 1 : 0), vy = v ? v.y : (k.d ? 1 : 0) - (k.u ? 1 : 0);
+      if (vx || vy) {
+        I.x = Math.max(6, Math.min(94, I.x + vx * 30 * dt)); I.y = Math.max(6, Math.min(38, I.y - vy * 20 * dt));
+        me.style.transitionDuration = '0s'; me.style.left = I.x + '%'; me.style.bottom = I.y + '%'; me.style.zIndex = String(40 - Math.round(I.y)); me.style.setProperty('--d', (1 - I.y / 160).toFixed(3));
+        if (Math.abs(vx) > 0.1) me.classList.toggle('l', vx < 0);
+        me.classList.add('walking'); clearTimeout(me.ppStop); me.ppStop = setTimeout(function () { me.classList.remove('walking'); }, 150);
+        nearBy();
+      }
+      I.raf = requestAnimationFrame(frame);
+    })(I.last);
+    music(true);
+  }
+  // which thing is penpen next to? Light it up and pop up its Play button
+  function nearBy() {
+    var best = null, bd = 11;
+    ROOM.forEach(function (it) { var s = spot(it), d = Math.hypot(I.x - s[0], (I.y - s[1]) * 1.5); if (d < bd) { bd = d; best = it; } });
+    var id = best ? best[0] : null; if (id === I.near) return; I.near = id;
+    [].slice.call(w.querySelectorAll('.iitem')).forEach(function (b) { b.classList.toggle('near', b.dataset.item === id); });
+    var pb = document.getElementById('pp-iplay');
+    if (!best) { pb.hidden = true; return say('Walk to something to play 🎮'); }
+    pb.hidden = false; pb.dataset.play = id; pb.textContent = '▶ Play ' + best[1]; sfx('hi');
+    say(best[1] + '! ' + { shop: 'Food and outfits 🛍️', learn: 'Read a little 📚', quiz: 'Professor Pen’s quiz 🎓', sing: 'Sing along 🎤', dive: 'Catch fish, dodge the sea lion 🌊', chase: 'Eat the fish, flee the bear 🐻‍❄️', slide: 'Down the mountain 🛷', honk: 'Sneak up and HONK 📣' }[id]);
+  }
+  // tap a thing: penpen walks over to it
+  function walkTo(id) {
+    var it = ROOM.filter(function (x) { return x[0] === id; })[0], me = document.getElementById('pp-iwalk'); if (!it || !me || !I) return;
+    var s = spot(it), secs = go(me, s[0], s[1], 30); I.x = s[0]; I.y = s[1];
+    clearTimeout(I.arrive); I.arrive = setTimeout(nearBy, secs * 1000);
+  }
+  // Play: the four big games open in the games player; Quiz, Learn, Sing and Shop open their own screens. Back comes home to the igloo
+  function playFromIgloo(id) {
+    stopAll(); ret = 'igloo';
+    if (BIG[id]) { tab = 'games'; paint(); return playGame(id); }
+    tab = id; paint();
+  }
 
   /* ---------- screen ---------- */
-  var w = null, tab = 'pet', G = null, X = null, Q = null;
+  var w = null, tab = 'pet', G = null, X = null, Q = null, ret = null;   // ret: the screen Back returns to (the igloo, when a game was opened from it)
   function open() {
     if (document.getElementById('pp-play')) return;
     w = document.createElement('div'); w.id = 'pp-play'; w.setAttribute('role', 'dialog'); w.setAttribute('aria-label', 'Garden');
@@ -304,10 +429,11 @@
     var p = load(), a = rewardExpenses(p), hi = p.hi; delete p.hi; save(p);
     paint(hi ? 'I’m back! 🐣 Missed you' : a ? '+' + a + ' 🐟 for the expenses you logged!' : '');
     w.addEventListener('click', click);
+    w.addEventListener('keydown', function (e) { if ((e.key === 'Enter' || e.key === ' ') && e.target.closest && e.target.closest('[data-act="igloo"]')) { e.preventDefault(); enterIgloo(); } });
     w.addEventListener('pointerdown', function () { if (AC && AC.state === 'suspended') AC.resume(); });
   }
   function close() { stopAll(); if (w) w.remove(); w = null; }
-  function back() { if (tab !== 'pet') { stopAll(); tab = 'pet'; paint(); } else close(); }
+  function back() { if (tab === 'pet') return close(); stopAll(); tab = tab !== 'igloo' && ret ? ret : 'pet'; paint(); }
   window.ppPlayBack = function () { if (!document.getElementById('pp-play')) return false; back(); return true; };
   function tint(n) { return n > 60 ? '#3FAF6B' : n > 30 ? '#F4A62A' : '#D9534F'; }
   function meters(p) {
@@ -342,13 +468,15 @@
       '<button data-act="selfie"><span>📸</span>Selfie</button><button data-act="album"><span>🖼</span>Album' + (n ? ' (' + n + ')' : '') + '</button></div></details>';
   }
   function paint(msg) {
+    if (tab === 'pet') ret = null;   // back in the garden: Back no longer leads to the igloo
     var p = load(), wear = WEAR[p.wear] || WEAR.none;
     var coins = '<span class="coins">' + COIN + ' <b id="pp-coins">' + p.coins + '</b></span>';
     // the garden tab is the whole phone screen: only a back arrow, the meters, coins, sound and one menu button float on top
-    var h = tab === 'pet' ? '<div class="wrap">' : '<div class="top"><button class="back" aria-label="Back">‹</button><h2>' + { games: 'Games', slide: 'Belly Slide', quiz: 'Professor Pen’s quiz', learn: 'Learn with penpen', sing: 'Sing with penpen', shop: 'Shop' }[tab] + '</h2>' + coins + '</div><div class="wrap">' + tabs();
-    if (tab === 'pet') {
+    var h = tab === 'pet' || tab === 'igloo' ? '<div class="wrap">' : '<div class="top"><button class="back" aria-label="Back">‹</button><h2>' + { games: 'Games', slide: 'Belly Slide', quiz: 'Professor Pen’s quiz', learn: 'Learn with penpen', sing: 'Sing with penpen', shop: 'Shop' }[tab] + '</h2>' + coins + '</div><div class="wrap">' + tabs();
+    if (tab === 'igloo') h += iglooRoom(p);
+    else if (tab === 'pet') {
       var face = (p.asleep ? SHUT : '') + JOY;
-      h += '<div class="garden' + (p.asleep ? ' night' : '') + '" id="pp-garden">' + gardenArt() +
+      h += '<div class="garden' + (p.asleep ? ' night' : '') + '" id="pp-garden">' + gardenArt() + (p.egg ? '' : doorArt()) +
         '<div class="gtop"><button class="back" aria-label="Back">‹</button><span class="meters">' + meters(p) + '</span>' + coins + '<button type="button" data-act="sound" class="gbtn" aria-pressed="' + soundOn() + '" aria-label="Music and sounds">' + (soundOn() ? '🔊' : '🔇') + '</button>' + menu(p) + '</div>' +
         (window.ppLook ? PALS.map(function (id, i) { return '<button type="button" class="walker pal" data-pal="' + id + '" aria-label="' + window.ppLook.name(id) + ', penpen’s friend" style="left:' + START[i][0] + '%;bottom:' + START[i][1] + '%;--d:' + (1 - START[i][1] / 160).toFixed(3) + '"><span class="pen' + (p.asleep ? ' zz' : '') + '">' + views(window.ppLook.svg(id) + faceBits(51, 69, 49, 6) + (p.asleep ? SHUT : ''), window.ppLook.side(id)) + '</span></button>'; }).join('') : '') +
         (p.egg ? '<button type="button" class="egg" id="pp-egg" data-act="hatch" aria-label="Your egg. Tap to hatch it"><svg viewBox="-7 -14 134 134" width="120" height="120" aria-hidden="true">' + EGG + '</svg></button>' :
@@ -373,9 +501,10 @@
         '<h3>Outfits</h3><div class="shop">' + Object.keys(WEAR).map(function (k) { var own = p.own[k], on = p.wear === k; return '<button data-buy="w:' + k + '" class="' + (on ? 'on' : '') + '"><span>' + (WEAR[k].e || '🚫') + '</span>' + WEAR[k].n + '<small>' + (on ? 'wearing' : own ? 'wear' : WEAR[k].price ? COIN + ' ' + WEAR[k].price : 'free') + '</small></button>'; }).join('') + '</div>' +
         '<p class="tip">Earn coins in Games and Quiz. A 🔋 Battery perks him up when he’s sleepy.</p>';
     }
-    w.classList.toggle('imm', tab === 'pet');   // the garden fills the screen; other tabs scroll as before
+    w.classList.toggle('imm', tab === 'pet' || tab === 'igloo');   // the garden fills the screen; other tabs scroll as before
     w.innerHTML = h + '</div>';
     if (tab === 'pet') { petHooks(); startGarden(); }
+    if (tab === 'igloo') iglooHooks();
     if (tab === 'slide') { drawIdle(); slideHooks(); }
     var gh = document.getElementById('pp-ghost-host');
     if (gh && window.ppGames) {
@@ -548,21 +677,15 @@
     if (!w) return;
     var gm = w.querySelector('.gmenu[open]'), b = e.target.closest('button');
     if (gm && (!e.target.closest('.gmenu') || b)) gm.open = false;   // a tap outside the menu, or on one of its buttons, closes it
+    if (e.target.closest('[data-act="igloo"]')) return enterIgloo();
     if (!b) return;
     if (b.dataset.bat) { var sy = document.getElementById('pp-stip') || document.getElementById('pp-say'); if (sy) sy.textContent = { Full: '🍽️ Full: drops over time. Drag food to penpen — bigger meals fill more.', Happy: '💛 Happy: rub or tap his belly, play games or the quiz.', Energy: '⚡ Energy: games use a little. He naps to recharge, but you can always play.' }[b.dataset.bat] || ''; return; }
     var p = load();
     if (b.classList.contains('back')) return back();
     if (b.dataset.tab) { stopAll(); tab = b.dataset.tab; return paint(); }
-    if (b.dataset.game && window.ppGames) {
-      wakeToPlay(p); p.energy = clamp(p.energy - 10); save(p);
-      var host = document.getElementById('pp-ghost-host'), id = b.dataset.game;
-      return window.ppGames.open(id, host, function (score, coins, ended) {
-        if (score === null) return paint();
-        if (!ended) return;
-        var q = load(), gl = winGlass(q, id, coins); q.coins += coins; q.xp += Math.ceil(coins / 2); q.joy = clamp(q.joy + 8); q.bests = q.bests || {}; if (score > (q.bests[id] || 0)) q.bests[id] = score; if (id === 'slide' && score > q.best) q.best = score; save(q); setCoins(q);
-        var res = host && host.querySelector('.gres'); if (res && gl) res.insertAdjacentHTML('beforeend', '<span class="gl">' + glassLine(id, gl) + '</span>');
-      });
-    }
+    if (b.dataset.game) return playGame(b.dataset.game);
+    if (b.dataset.item) return walkTo(b.dataset.item);
+    if (b.dataset.play) return playFromIgloo(b.dataset.play);
     if (b.dataset.act === 'stats') return showStats();
     if (b.dataset.stat) { var ss = STATS.filter(function (x) { return x[0] === b.dataset.stat; })[0], st = document.getElementById('pp-sttip'); if (ss && st) st.textContent = ss[1] + ' ' + ss[2] + ' grows from sea glass you win in ' + ss[4] + '.'; return; }
     if (b.dataset.act === 'stats-x') { var sd = w.querySelector('.pp-stats'); if (sd && sd.close && sd.open) sd.close(); else if (sd) sd.remove(); return; }
@@ -591,6 +714,17 @@
       var wp = WEAR[id].price; if (p.coins < wp) return toast('Not enough coins — play games or the quiz for more!');
       p.coins -= wp; p.own[id] = 1; p.wear = id; save(p); toast('New outfit: ' + WEAR[id].e + ' ' + WEAR[id].n); return paint();
     }
+  }
+  function playGame(id) {
+    if (!window.ppGames) return;
+    var p = load(); wakeToPlay(p); p.energy = clamp(p.energy - 10); save(p);
+    var host = document.getElementById('pp-ghost-host');
+    window.ppGames.open(id, host, function (score, coins, ended) {
+      if (score === null) { if (ret) tab = ret; return paint(); }
+      if (!ended) return;
+      var q = load(), gl = winGlass(q, id, coins); q.coins += coins; q.xp += Math.ceil(coins / 2); q.joy = clamp(q.joy + 8); q.bests = q.bests || {}; if (score > (q.bests[id] || 0)) q.bests[id] = score; if (id === 'slide' && score > q.best) q.best = score; save(q); setCoins(q);
+      var res = host && host.querySelector('.gres'); if (res && gl) res.insertAdjacentHTML('beforeend', '<span class="gl">' + glassLine(id, gl) + '</span>');
+    });
   }
   // games are always open: if he's napping, he wakes up to play
   function wakeToPlay(p) { if (p.asleep) { p.asleep = false; toast('penpen woke up to play! ☀️'); } }
@@ -727,6 +861,7 @@
 
   function stopAll() {
     stopGarden();
+    if (I) { cancelAnimationFrame(I.raf); clearTimeout(I.arrive); document.removeEventListener('keydown', I.key); document.removeEventListener('keyup', I.key); I = null; }
     if (window.ppGames) window.ppGames.stop();
     if (G) { cancelAnimationFrame(G.raf); document.removeEventListener('keydown', G.key); document.removeEventListener('keyup', G.key); G = null; }
     if (X) { cancelAnimationFrame(X.raf); var b = document.getElementById('pp-jj'); if (b) b.removeEventListener('pointerdown', X.tap); X = null; }
@@ -816,7 +951,16 @@
     '.pp-stats .st-st{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:6px}.pp-stats .st-st button{display:grid;grid-template-columns:22px 64px 1fr 26px;align-items:center;gap:8px;width:100%;border:0;border-radius:12px;padding:6px 8px;background:var(--bg,#F5F8FA);font:inherit;font-size:14px;font-weight:800;color:inherit;cursor:pointer;text-align:left}' +
     '.pp-stats .st-st button:focus-visible{outline:3px solid #3B8FD9;outline-offset:2px}.pp-stats .st-st i{height:10px;border-radius:6px;background:var(--line,#DDE6EE);overflow:hidden}.pp-stats .st-st u{display:block;height:100%;border-radius:6px;min-width:4px}.pp-stats .st-st em{font-style:normal;text-align:right}' +
     '.sg{display:inline-block;width:11px;height:13px;vertical-align:-1px;background:var(--c);opacity:.85;clip-path:polygon(30% 0,85% 12%,100% 60%,62% 100%,8% 82%,0 30%);border-radius:2px}.gres .gl{display:block;font-weight:800}' +
-    '@media (prefers-reduced-motion: reduce){#pp-play .walker{transition:none}#pp-play .pen,#pp-play .walker .pen.eat,#pp-play .walker .pen.tk{animation:none}}' +
+    // the door into the igloo, and the cozy games room inside
+    '#pp-play .gdoor{pointer-events:none}#pp-play .gdoor .door{pointer-events:auto;cursor:pointer;outline:none}#pp-play .gdoor .door:focus-visible .hit{stroke:#fff;stroke-width:3}#pp-play .gdoor .glow{animation:ppglow 2.2s ease-in-out infinite alternate}@keyframes ppglow{from{opacity:.55}to{opacity:1}}' +
+    '#pp-play.imm .garden.igl{--fb:0px;background:#C8875A}#pp-play .igl .gtop .ititle{flex:1;min-width:0;background:rgba(255,255,255,.9);color:#13324A;border-radius:99px;padding:6px 12px;font:900 14px ' + F + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
+    '#pp-play .iitem{position:absolute;transform:translateX(-50%) scale(var(--d,1));transform-origin:50% 100%;border:0;background:none;padding:0 0 18px;cursor:pointer;-webkit-tap-highlight-color:transparent}#pp-play .iitem svg{display:block;width:100%;height:auto;overflow:visible;transition:filter .2s}' +
+    '#pp-play .iitem .itag{position:absolute;left:50%;bottom:0;transform:translateX(-50%);white-space:nowrap;background:rgba(255,255,255,.85);color:#13324A;border-radius:99px;padding:1px 8px;font:900 11.5px/16px ' + F + '}' +
+    '#pp-play .iitem.near svg{filter:drop-shadow(0 0 6px #FFE58A) drop-shadow(0 0 2px #fff);animation:ppnear .9s ease-in-out infinite alternate}#pp-play .iitem.near .itag{background:#F7B955}#pp-play .iitem:focus-visible{outline:3px solid #fff;outline-offset:2px;border-radius:12px}@keyframes ppnear{to{transform:translateY(-4px)}}' +
+    '#pp-play .igl .flm{transform-box:fill-box;transform-origin:50% 100%;animation:ppflm .45s ease-in-out infinite alternate}#pp-play .igl .flm.f2{animation-duration:.33s}@keyframes ppflm{to{transform:scale(.88,1.12)}}#pp-play .igl .bulb{animation:ppglow 1.6s ease-in-out infinite alternate}#pp-play .igl .bulb:nth-of-type(2n){animation-delay:.8s}' +
+    '#pp-play .iplay{position:absolute;left:14px;bottom:calc(24px + env(safe-area-inset-bottom));z-index:60;border:0;border-radius:99px;background:#3FAF6B;color:#fff;font:900 17px ' + F + ';padding:14px 20px;box-shadow:0 4px 0 #2B8550,0 8px 18px rgba(0,0,0,.2);cursor:pointer;animation:pppop .25s ease-out}#pp-play .iplay[hidden]{display:none}@keyframes pppop{from{transform:scale(.6);opacity:0}}' +
+    '#pp-play .ijoy{position:absolute;right:16px;bottom:calc(16px + env(safe-area-inset-bottom));z-index:60;width:112px;height:112px;border-radius:50%;background:rgba(255,255,255,.55);box-shadow:inset 0 0 0 2px rgba(19,50,74,.2);display:flex;align-items:center;justify-content:center;touch-action:none;cursor:grab}#pp-play .ijoy i{width:50px;height:50px;border-radius:50%;background:#13324A;box-shadow:0 4px 10px rgba(19,50,74,.3);pointer-events:none}#pp-play .ijoy.on i{background:#237566}' +
+    '@media (prefers-reduced-motion: reduce){#pp-play .walker{transition:none}#pp-play .pen,#pp-play .walker .pen.eat,#pp-play .walker .pen.tk,#pp-play .flm,#pp-play .bulb,#pp-play .glow,#pp-play .iitem.near svg,#pp-play .iplay{animation:none}}' +
     '.pp-heart{position:fixed;z-index:99990;font-size:24px;pointer-events:none;animation:pphrt 1.2s ease-out forwards}@keyframes pphrt{to{transform:translateY(-70px) scale(1.4);opacity:0}}' +
     '.pp-drag{position:fixed;z-index:99990;font-size:40px;pointer-events:none;transform:translate(-50%,-60%)}' +
     '.pp-pt{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);z-index:99970;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:16px;padding:9px 14px;font:800 14px ' + F + ';box-shadow:0 8px 20px rgba(0,0,0,.15);max-width:86vw;text-align:center}.pp-pt.out{opacity:0;transition:.35s}';
