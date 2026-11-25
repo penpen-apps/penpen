@@ -153,7 +153,8 @@
     var el = document.getElementById('pp-walk'), g = document.getElementById('pp-garden'); GD.hold = now() + ms; endPlay();
     if (!el || !g || !el.classList.contains('walking')) return;
     var r = el.getBoundingClientRect(), b = g.getBoundingClientRect();
-    if (b.width) { el.style.transitionDuration = '0s'; el.style.left = ((r.left + r.width / 2 - b.left) / b.width * 100) + '%'; el.style.bottom = ((b.bottom - r.bottom) / b.height * 100) + '%'; }
+    var mb = parseFloat(getComputedStyle(el).marginBottom) || 0;   // full screen lifts the walkers above the food bar with a bottom margin
+    if (b.width) { el.style.transitionDuration = '0s'; el.style.left = ((r.left + r.width / 2 - b.left) / b.width * 100) + '%'; el.style.bottom = ((b.bottom - r.bottom - mb) / b.height * 100) + '%'; }
     el.classList.remove('walking');
   }
 
@@ -287,29 +288,37 @@
     if (p.food < 25) return 'Hungry… 🥺 drag me some food!';
     if (p.energy < 20) return 'So sleepy… 😪';
     if (p.joy < 25) return 'Bored. Rub my belly? 🥱';
-    return pick(['Happy penpen! 🐧', 'Rub my belly! 💕', 'Let’s slide! 🛷', 'I love this trip ✨']);
+    return pick(['Happy penpen! 🐧', 'Rub me to tickle! 🪶', 'Let’s slide! 🛷', 'I love this trip ✨']);
   }
   function tabs() {
     return '<div class="tabs">' + [['pet', '🐧', 'My penpen'], ['games', '🎮', 'Games'], ['quiz', '🎓', 'Quiz'], ['learn', '📚', 'Learn'], ['sing', '🎤', 'Sing'], ['shop', '🛍️', 'Shop']].map(function (t) {
       return '<button data-tab="' + t[0] + '" class="' + (tab === t[0] ? 'on' : '') + '"><span>' + t[1] + '</span>' + t[2] + '</button>';
     }).join('') + '</div>';
   }
+  // the garden's one menu: games and the other screens, plus stats, sleep, selfie and album (a native <details>, so it opens and closes with no extra code)
+  function menu(p) {
+    var n = album().length;
+    return '<details class="gmenu"><summary class="gbtn" aria-label="Menu: games, quiz, learn, sing, shop and more">☰</summary><div class="gm"><b class="gm-lv">Level ' + level(p) + '</b>' +
+      [['games', '🎮', 'Games'], ['quiz', '🎓', 'Quiz'], ['learn', '📚', 'Learn'], ['sing', '🎤', 'Sing'], ['shop', '🛍️', 'Shop']].map(function (t) { return '<button data-tab="' + t[0] + '"><span>' + t[1] + '</span>' + t[2] + '</button>'; }).join('') +
+      '<button data-act="stats" aria-haspopup="dialog"><span>📊</span>Stats</button>' + (p.asleep ? '' : '<button data-act="sleep"><span>💤</span>Sleep</button>') +
+      '<button data-act="selfie"><span>📸</span>Selfie</button><button data-act="album"><span>🖼</span>Album' + (n ? ' (' + n + ')' : '') + '</button></div></details>';
+  }
   function paint(msg) {
     var p = load(), wear = WEAR[p.wear] || WEAR.none;
-    var h = '<div class="top"><button class="back" aria-label="Back">‹</button><h2>' + (tab === 'pet' ? 'Garden' : { games: 'Games', slide: 'Belly Slide', quiz: 'Professor Pen’s quiz', learn: 'Learn with penpen', sing: 'Sing with penpen', shop: 'Shop' }[tab]) + '</h2><span class="coins">' + COIN + ' <b id="pp-coins">' + p.coins + '</b></span></div><div class="wrap">' + tabs();
+    var coins = '<span class="coins">' + COIN + ' <b id="pp-coins">' + p.coins + '</b></span>';
+    // the garden tab is the whole phone screen: only a back arrow, the meters, coins, sound and one menu button float on top
+    var h = tab === 'pet' ? '<div class="wrap">' : '<div class="top"><button class="back" aria-label="Back">‹</button><h2>' + { games: 'Games', slide: 'Belly Slide', quiz: 'Professor Pen’s quiz', learn: 'Learn with penpen', sing: 'Sing with penpen', shop: 'Shop' }[tab] + '</h2>' + coins + '</div><div class="wrap">' + tabs();
     if (tab === 'pet') {
       var face = (p.asleep ? SHUT : '') + JOY;
       h += '<div class="garden' + (p.asleep ? ' night' : '') + '" id="pp-garden">' + gardenArt() +
-        '<div class="gtop"><span class="meters">' + meters(p) + '</span><button type="button" data-act="stats" class="gbtn" aria-haspopup="dialog">📊 Stats</button><button type="button" data-act="sound" class="gbtn" aria-pressed="' + soundOn() + '" aria-label="Music and sounds">' + (soundOn() ? '🔊' : '🔇') + '</button></div>' +
+        '<div class="gtop"><button class="back" aria-label="Back">‹</button><span class="meters">' + meters(p) + '</span>' + coins + '<button type="button" data-act="sound" class="gbtn" aria-pressed="' + soundOn() + '" aria-label="Music and sounds">' + (soundOn() ? '🔊' : '🔇') + '</button>' + menu(p) + '</div>' +
         (window.ppLook ? PALS.map(function (id, i) { return '<button type="button" class="walker pal" data-pal="' + id + '" aria-label="' + window.ppLook.name(id) + ', penpen’s friend" style="left:' + START[i][0] + '%;bottom:' + START[i][1] + '%;--d:' + (1 - START[i][1] / 160).toFixed(3) + '"><span class="pen' + (p.asleep ? ' zz' : '') + '"><svg viewBox="-7 -14 134 134" width="74" height="74" aria-hidden="true">' + window.ppLook.svg(id) + (p.asleep ? SHUT : '') + '</svg></span></button>'; }).join('') : '') +
         '<div class="walker" id="pp-walk" style="left:50%;bottom:8%"><div class="pen' + (sick(p) ? ' sick' : p.asleep ? ' zz' : '') + '" id="pp-petpen">' +
         '<svg viewBox="-7 -14 134 134" width="74" height="74" aria-hidden="true">' + inner() + face + '</svg>' + (wear.e ? '<span class="wear">' + wear.e + '</span>' : '') + (sick(p) ? '<span class="fx">🤒</span>' : p.asleep ? '<span class="fx">💤</span><span class="bed">🛏️</span>' : '') +
         '</div></div><div class="say" id="pp-say">' + (msg || mood(p)) + '</div>' +
-        (p.asleep ? '<button data-act="wake" class="zbtn">☀️ Wake</button>' : '<button data-act="sleep" class="zbtn">💤 Sleep</button>') +
-        '</div><div class="lv">Level ' + level(p) + '</div>';
-      h += '<h3>Food pile <small>(drag to penpen, or tap)</small></h3><div class="foods">' + Object.keys(FOODS).map(function (k) { var n = p.bag[k] || 0; return '<button data-feed="' + k + '"' + (n ? '' : ' disabled') + '><span>' + FOODS[k].e + '</span>' + FOODS[k].n + '<small>×' + n + '</small></button>'; }).join('') + '</div>' +
-          '<div class="petacts"><button data-act="tickle">🪶 Tickle</button><button data-act="selfie">📸 Selfie</button><button data-act="album">🖼 Album' + (album().length ? ' (' + album().length + ')' : '') + '</button></div>' +
-          '<p class="tip">Rub or tap his belly for love 💕 · Tap his friends to say hi · Log an expense → get a 🐟 · Games are always open, even when he’s sleepy.</p>';
+        (p.asleep ? '<button data-act="wake" class="zbtn">☀️ Wake</button>' : '') +
+        // food: just the pictures with a small count; drag one to penpen, or tap it
+        '<div class="foods" aria-label="Food: drag to penpen, or tap">' + Object.keys(FOODS).map(function (k) { var n = p.bag[k] || 0; return '<button data-feed="' + k + '"' + (n ? '' : ' disabled') + ' title="' + FOODS[k].n + '"><span aria-hidden="true">' + FOODS[k].e + '</span><i class="sr">' + FOODS[k].n + '</i><small>×' + n + '</small></button>'; }).join('') + '</div></div>';
     } else if (tab === 'slide') {
       h += '<div class="game"><canvas id="pp-slide" width="360" height="230"></canvas><div class="ghud" id="pp-ghud">Jump over rocks & snowmen, duck under snowballs ❄️</div>' +
         '<div class="pad"><button class="go" data-act="start">▶ Start</button><button class="ctl" id="pp-duck" aria-label="Duck">⬇ Duck</button><button class="ctl" id="pp-jump" aria-label="Jump">⬆ Jump</button></div></div>';
@@ -407,15 +416,22 @@
   }
   function petHooks() {
     var pen = document.getElementById('pp-petpen'); if (!pen) return;
-    // tap or rub the belly → hearts
+    // tap him for love; rub him with your finger to tickle (he wiggles and giggles). There's no Tickle button: your finger is the tickle.
     var last = 0, rub = 0;
-    pen.addEventListener('pointerdown', function (e) { love(e, 2); });
-    pen.addEventListener('pointermove', function (e) { if (e.buttons || e.pointerType === 'touch') { rub += Math.abs(e.movementX || 0) + Math.abs(e.movementY || 0); if (rub > 40) { rub = 0; love(e, 1); } } });
+    pen.addEventListener('pointerdown', function (e) { rub = 0; if (pen.setPointerCapture && e.pointerId != null) { try { pen.setPointerCapture(e.pointerId); } catch (x) {} } love(e, 2); });
+    pen.addEventListener('pointermove', function (e) { if (e.buttons || e.pointerType === 'touch') { rub += Math.abs(e.movementX || 0) + Math.abs(e.movementY || 0); if (rub > 40) { rub = 0; tickle(e); } } });
     function love(e, n) {
       var p = load(); freeze(3000);
       if (p.asleep) { say('Zzz… *happy snore* 💤'); return; }
       hearts(e.clientX, e.clientY - 20, n);
-      if (now() - last > 700) { last = now(); p.joy = clamp(p.joy + 3); p.xp += 1; save(p); say(pick(['Hehe that tickles 💕', 'More belly rubs! 🥰', 'Best hooman ever 💛', 'Purr… wait, penguins don’t purr 🐧'])); refreshBats(p); }
+      if (now() - last > 700) { last = now(); p.joy = clamp(p.joy + 3); p.xp += 1; save(p); say(pick(['Aww, love you too 💕', 'More belly rubs! 🥰', 'Best hooman ever 💛', 'Purr… wait, penguins don’t purr 🐧'])); refreshBats(p); }
+    }
+    function tickle(e) {
+      var p = load(); freeze(3000);
+      if (p.asleep) { say('Zzz… *giggles in his sleep* 💤'); return; }
+      hearts(e.clientX, e.clientY - 20, 1, pick(['😂', '🤣', '💕']));
+      pen.classList.remove('tk'); void pen.offsetWidth; pen.classList.add('tk'); clearTimeout(pen.ppTk); pen.ppTk = setTimeout(function () { pen.classList.remove('tk'); }, 650);
+      if (now() - last > 700) { last = now(); p.joy = clamp(p.joy + 4); p.xp += 1; save(p); say(pick(['Hahaha stop it!! 🤣', 'Not the flippers! 😂', 'Hehehe… again! 🪶', 'I’m… so… ticklish 🤭'])); sfx('hi'); refreshBats(p); }
     }
     // drag food onto penpen
     [].slice.call(w.querySelectorAll('[data-feed]')).forEach(function (b) {
@@ -437,7 +453,10 @@
   }
   function refreshBats(p) { if (!w) return; var m = w.querySelector('.meters'), b = w.querySelector('#pp-sbats'); if (m) m.innerHTML = meters(p); if (b) b.innerHTML = bats4(p); }
   function click(e) {
-    var b = e.target.closest('button'); if (!b || !w) return;
+    if (!w) return;
+    var gm = w.querySelector('.gmenu[open]'), b = e.target.closest('button');
+    if (gm && (!e.target.closest('.gmenu') || b)) gm.open = false;   // a tap outside the menu, or on one of its buttons, closes it
+    if (!b) return;
     if (b.dataset.bat) { var sy = document.getElementById('pp-stip') || document.getElementById('pp-say'); if (sy) sy.textContent = { Full: '🍽️ Full: drops over time. Drag food to penpen — bigger meals fill more.', Happy: '💛 Happy: rub or tap his belly, play games or the quiz.', Energy: '⚡ Energy: games use a little. He naps to recharge, but you can always play.', Health: '❤️ Health: comes back on its own over time. Medicine helps fast.' }[b.dataset.bat] || ''; return; }
     var p = load();
     if (b.classList.contains('back')) return back();
@@ -450,14 +469,6 @@
         if (!ended) return;
         var q = load(); q.coins += coins; q.xp += Math.ceil(coins / 2); q.joy = clamp(q.joy + 8); q.bests = q.bests || {}; if (score > (q.bests[id] || 0)) q.bests[id] = score; if (id === 'slide' && score > q.best) q.best = score; save(q); setCoins(q);
       });
-    }
-    if (b.dataset.act === 'tickle') {
-      if (p.asleep) return say('Zzz… *giggles in his sleep* 💤');
-      p.joy = clamp(p.joy + 6); p.energy = clamp(p.energy - 1); p.xp += 1; save(p); refreshBats(p);
-      say(pick(['Hahaha stop it!! 🤣', 'Not the flippers! 😂', 'Hehehe… again! 🪶', 'I’m… so… ticklish 🤭']));
-      var tp = document.getElementById('pp-petpen'); if (tp && tp.animate) tp.animate([{ transform: 'rotate(0)' }, { transform: 'rotate(-10deg)' }, { transform: 'rotate(10deg)' }, { transform: 'rotate(-8deg)' }, { transform: 'rotate(8deg)' }, { transform: 'rotate(0)' }], { duration: 600 });
-      if (tp) { var tr = tp.getBoundingClientRect(); hearts(tr.left + tr.width / 2, tr.top + tr.height * 0.3, 3, '😂'); }
-      return;
     }
     if (b.dataset.act === 'stats') return showStats();
     if (b.dataset.act === 'stats-x') { var sd = w.querySelector('.pp-stats'); if (sd && sd.close && sd.open) sd.close(); else if (sd) sd.remove(); return; }
@@ -659,9 +670,20 @@
     '#pp-play .qcard{background:var(--card);border-radius:22px;padding:18px;text-align:center}#pp-play .qq{font:900 19px/1.3 ' + F + ';margin:6px 0 14px}' +
     '#pp-play .qa{display:block;width:100%;margin:8px 0;border:1.5px solid var(--line);background:var(--bg);color:var(--ink);border-radius:14px;padding:13px;font:800 15px ' + F + ';cursor:pointer}#pp-play .qa.ok{background:#DFF3E6;border-color:#3FAF6B}#pp-play .qa.no{background:#FBE1DE;border-color:#D9534F}' +
     '#pp-play .garden{position:relative;aspect-ratio:9/11;min-height:340px;max-height:500px;border-radius:24px;overflow:hidden;background:#CDEBFA}#pp-play .gart{position:absolute;inset:0;width:100%;height:100%;transition:filter .4s}#pp-play .garden.night .gart{filter:brightness(.5) saturate(.6)}' +
-    '#pp-play.imm{display:flex;flex-direction:column;padding-bottom:calc(12px + env(safe-area-inset-bottom))}#pp-play.imm .top{width:100%}#pp-play.imm .wrap{flex:1;width:100%;display:flex;flex-direction:column;min-height:0}' +
-    '#pp-play.imm .garden{flex:1 1 auto;aspect-ratio:auto;min-height:340px;max-height:none}#pp-play.imm h3,#pp-play.imm .tip{display:none}#pp-play.imm .lv{margin:6px 0}#pp-play.imm .foods button{padding:6px 2px}#pp-play.imm .foods span{font-size:24px}#pp-play.imm .petacts{margin-top:8px}#pp-play.imm .petacts button{padding:8px 4px}' +
-    '@media(max-width:600px){#pp-play.imm .garden{margin:0 -16px;border-radius:0}}' +
+    // full screen: the garden is the whole Play screen, edge to edge; everything else floats small on top of it
+    '#pp-play.imm{padding:0;overflow:hidden}#pp-play.imm .wrap{max-width:none;height:100%;margin:0}' +
+    '#pp-play.imm .garden{position:absolute;inset:0;aspect-ratio:auto;min-height:0;max-height:none;border-radius:0;--fb:calc(64px + env(safe-area-inset-bottom))}' +
+    '#pp-play.imm .walker,#pp-play.imm .ball{margin-bottom:var(--fb)}' +
+    '#pp-play.imm .gtop{top:calc(8px + env(safe-area-inset-top));left:8px;right:8px;z-index:60}#pp-play.imm .gtop .back{width:36px;height:36px;font-size:22px;background:rgba(255,255,255,.9);color:#13324A;flex:none}#pp-play.imm .gtop .coins{background:rgba(255,255,255,.9);color:#13324A;padding:5px 10px;font-size:14px;flex:none}#pp-play.imm .mtr{padding:5px 7px}#pp-play.imm .gbtn{flex:none;min-width:36px;height:34px;padding:0 9px}' +
+    '#pp-play.imm .garden .say{top:calc(56px + env(safe-area-inset-top))}#pp-play.imm .garden .zbtn{top:calc(96px + env(safe-area-inset-top));bottom:auto;right:10px}' +
+    '#pp-play .gmenu{position:relative;flex:none}#pp-play .gmenu summary{list-style:none;display:grid;place-items:center;font-size:18px;line-height:1;cursor:pointer}#pp-play .gmenu summary::-webkit-details-marker{display:none}' +
+    '#pp-play .gm{position:absolute;right:0;top:42px;width:min(78vw,250px);display:grid;grid-template-columns:repeat(3,1fr);gap:6px;background:rgba(255,255,255,.96);color:#13324A;border-radius:18px;padding:10px;box-shadow:0 10px 28px rgba(0,0,0,.2)}#pp-play .gm-lv{grid-column:1/-1;text-align:center;font-size:13px;color:#5B7A99}' +
+    '#pp-play .gm button{border:0;background:#EEF5FA;color:#13324A;border-radius:14px;padding:8px 2px;font:800 12px ' + F + ';display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer}#pp-play .gm button span{font-size:22px}' +
+    '#pp-play.imm .foods{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(8px + env(safe-area-inset-bottom));z-index:50;display:flex;gap:6px;background:rgba(255,255,255,.55);border-radius:99px;padding:5px 8px}' +
+    '#pp-play.imm .foods button{position:relative;width:46px;height:46px;border:0;border-radius:50%;background:rgba(255,255,255,.85);padding:0;display:grid;place-items:center}#pp-play.imm .foods span{font-size:26px;line-height:1}' +
+    '#pp-play.imm .foods small{position:absolute;right:-3px;top:-3px;min-width:18px;height:18px;border-radius:9px;background:#13324A;color:#fff;font:900 10.5px/18px ' + F + ';text-align:center;padding:0 3px;box-sizing:border-box}' +
+    '#pp-play .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}' +
+    '#pp-play .walker .pen.tk{animation:pptk .6s ease-in-out}@keyframes pptk{20%{transform:rotate(-12deg) scale(1.05,.95)}40%{transform:rotate(12deg)}60%{transform:rotate(-9deg) translateY(-4px)}80%{transform:rotate(7deg)}}' +
     '#pp-play .cloud{animation:ppcloud 60s linear infinite alternate}#pp-play .cloud.c2{animation-duration:90s}@keyframes ppcloud{to{transform:translateX(40px)}}@media(prefers-reduced-motion:reduce){#pp-play .cloud{animation:none}}' +
     '#pp-play .gtop{position:absolute;left:10px;right:10px;top:10px;display:flex;gap:6px;align-items:center;z-index:50}#pp-play .meters{flex:1;display:flex;gap:6px}' +
     '#pp-play .mtr{flex:1;max-width:120px;border:0;background:rgba(255,255,255,.88);border-radius:99px;padding:5px 8px;display:flex;align-items:center;gap:5px;cursor:pointer}#pp-play .mtr b{font-size:14px}#pp-play .mtr i{flex:1;height:8px;border-radius:9px;background:#DDE6EE;overflow:hidden}#pp-play .mtr u{display:block;height:100%;border-radius:9px;transition:width .4s}' +
@@ -677,7 +699,7 @@
     '.pp-stats .st-top{display:flex;justify-content:space-between;align-items:center;font-size:18px;margin-bottom:12px}.pp-stats .st-top button{border:0;background:none;font-size:20px;color:inherit;cursor:pointer}' +
     '#pp-play .pp-stats .bats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;width:auto}.pp-stats .st-tip{color:var(--muted,#7A8B99);font-size:13.5px;font-weight:700;text-align:center;margin:10px 0}' +
     '.pp-stats .st-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.pp-stats .st-grid span{background:var(--bg,#F5F8FA);border-radius:14px;padding:8px;text-align:center;font-size:12.5px;font-weight:800;color:var(--muted,#7A8B99)}.pp-stats .st-grid b{display:block;font-size:20px;color:var(--ink,#13324A)}' +
-    '@media (prefers-reduced-motion: reduce){#pp-play .walker{transition:none}#pp-play .pen,#pp-play .walker .pen.eat{animation:none}}' +
+    '@media (prefers-reduced-motion: reduce){#pp-play .walker{transition:none}#pp-play .pen,#pp-play .walker .pen.eat,#pp-play .walker .pen.tk{animation:none}}' +
     '.pp-heart{position:fixed;z-index:99990;font-size:24px;pointer-events:none;animation:pphrt 1.2s ease-out forwards}@keyframes pphrt{to{transform:translateY(-70px) scale(1.4);opacity:0}}' +
     '.pp-drag{position:fixed;z-index:99990;font-size:40px;pointer-events:none;transform:translate(-50%,-60%)}' +
     '.pp-pt{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);z-index:99970;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:16px;padding:9px 14px;font:800 14px ' + F + ';box-shadow:0 8px 20px rgba(0,0,0,.15);max-width:86vw;text-align:center}.pp-pt.out{opacity:0;transition:.35s}';
