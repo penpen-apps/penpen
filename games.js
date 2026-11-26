@@ -5,7 +5,7 @@
   var F = 'Nunito,-apple-system,BlinkMacSystemFont,sans-serif';
   var GAMES = {
     slide: { t: 'Belly Slide', e: '🛷', how: 'Slide down the mountain! Tap ◀ ▶ (or swipe) to dodge rocks and trees. Grab the fish.', pad: 'lr' },
-    dive:  { t: 'Dive', e: '🌊', how: 'Drag the joystick down to dive for fish, up to swim up. When a sea lion comes, get up onto the ice!', pad: 'ud' },
+    dive:  { t: 'Dive', e: '🌊', how: 'Swim with the joystick: down to dive for fish, up to swim up, and a little left and right. When a sea lion comes, get up onto the ice!', pad: 'ud' },
     chase: { t: 'Chase', e: '🐻‍❄️', how: 'Steer with the joystick and eat every fish in the maze. Don’t let the polar bear catch you! ❄️ freezes him.', pad: 'dpad' },
     honk:  { t: 'Honk!', e: '📣', how: 'Walk with the joystick, sneak up on tourists, HONK to make them drop things, and carry the loot to your igloo. Don’t get caught!', pad: 'honk' }
   };
@@ -13,8 +13,8 @@
   // "How to play": the ? button in every game opens this and pauses the game until you close it
   var HELP = {
     slide: ['Slide down the mountain as far as you can.', ['Tap <b>◀</b> or <b>▶</b> (or swipe) to move one lane left or right.', 'Grab 🐟 fish for 10 points. You also score as you go.', 'Don’t hit a rock, tree or snowman. One bump ends the run.', 'It gets faster the longer you last.']],
-    dive: ['Catch fish, and hide from the sea lion.', ['Drag the <b>joystick</b> down to dive, up to swim up. Let go and you float up slowly.', 'Swim into 🐟 for 1 point, 🦐 for 3.', 'When “Sea lion! Swim up!” shows, get up onto the ice at the top and stay there until it swims past (+5).', 'If the sea lion reaches you underwater, the game is over.']],
-    chase: ['Eat every fish in the maze before the polar bear gets you.', ['Push the <b>joystick</b> (or swipe) to turn. You keep moving that way until a wall.', 'Each 🐟 is 1 point. Clear the maze for +20 and the next level, with a faster bear.', 'Grab a ❄️ for 5 points: it freezes the bear for 5 seconds.', 'You have 3 hearts ❤️. The bear takes one each time he catches you.']],
+    dive: ['Catch fish, and hide from the sea lion.', ['Swim with the <b>joystick</b>: down to dive, up to swim up, and a little left and right. Push further to swim faster. Let go and you float up slowly.', 'Swim into 🐟 for 1 point, 🦐 for 3.', 'When “Sea lion! Swim up!” shows, get up onto the ice at the top and stay there until it swims past (+5).', 'If the sea lion reaches you underwater, the game is over.']],
+    chase: ['Eat every fish in the maze before the polar bear gets you.', ['Push the <b>joystick</b> (or swipe) to turn. You keep moving that way until a wall. Push diagonally to take the next turn that way.', 'Each 🐟 is 1 point. Clear the maze for +20 and the next level, with a faster bear.', 'Grab a ❄️ for 5 points: it freezes the bear for 5 seconds.', 'You have 3 hearts ❤️. The bear takes one each time he catches you.']],
     honk: ['Steal the tourists’ stuff and bring it home to your igloo (bottom left).', ['Walk with the <b>joystick</b>, in any direction, until you’re right next to a tourist holding something.', 'Tap <b>HONK</b>. They drop it (+2), then get angry 💢 and chase you for a few seconds.', 'Walk over the dropped thing to pick it up, then carry it to the igloo (+10). You’re slower while carrying.', 'If an angry tourist catches you, you lose a heart ❤️ and drop what you’re carrying.', 'Reach the goal score at the top before the clock hits 0 to go up a level. Tip: honk, then run!']]
   };
   // difficulty (all games) and Honk!'s scene, remembered on this phone
@@ -131,16 +131,17 @@
     });
   }
   // On-screen joystick: put a thumb on it and drag any way. It presses the same keys as the arrow keys
-  // (Dive: up/down only, Chase: one way at a time), and S.stick ({x, y} from -1 to 1) lets Honk! walk smoothly.
+  // (Dive: up/down, Chase: one way at a time), and S.stick ({x, y} from -1 to 1) lets Dive, Chase and Honk! read the exact push.
+  var DZ = 0.12;   // the joystick's dead zone: a tiny nudge (about 8px) already moves him
   function joy(S, kind, base) {
     var knob = base.firstChild, id = null;
     function set(x, y) {
-      var on = {}, far = Math.max(Math.abs(x), Math.abs(y)) > 0.35;
+      var on = {}, far = Math.max(Math.abs(x), Math.abs(y)) > DZ;
       S.stick = id === null ? null : { x: x, y: y };
       knob.style.transform = id === null ? '' : 'translate(' + Math.round(x * 36) + 'px,' + Math.round(y * 36) + 'px)';
-      if (kind === 'ud') { if (y < -0.35) on.up = 1; if (y > 0.35) on.down = 1; }
+      if (kind === 'ud') { if (y < -DZ) on.up = 1; if (y > DZ) on.down = 1; }
       else if (kind === 'dpad') { if (far) on[Math.abs(x) > Math.abs(y) ? (x > 0 ? 'right' : 'left') : (y > 0 ? 'down' : 'up')] = 1; }
-      else { if (x < -0.35) on.left = 1; if (x > 0.35) on.right = 1; if (y < -0.35) on.up = 1; if (y > 0.35) on.down = 1; }
+      else { if (x < -DZ) on.left = 1; if (x > DZ) on.right = 1; if (y < -DZ) on.up = 1; if (y > DZ) on.down = 1; }
       ['up', 'down', 'left', 'right'].forEach(function (k) { if (on[k] && !S.keys[k] && S.game && S.game.press) S.game.press(k); S.keys[k] = !!on[k]; });
     }
     function move(e) {
@@ -216,13 +217,15 @@
 
   /* ---------- Dive: catch fish, hop on the ice when a sea lion comes ---------- */
   MAKERS.dive = function (S) {
-    var c = S.c, W = S.W, H = S.H, ice = H * 0.2, x = W * 0.3, y = H * 0.55, vy = 0, fish = [], sp = 0, foe = null, warn = 0, next = 6, t = 0, bub = [];
+    var c = S.c, W = S.W, H = S.H, ice = H * 0.2, x = W * 0.3, y = H * 0.55, vy = 0, vx = 0, fish = [], sp = 0, foe = null, warn = 0, next = 6, t = 0, bub = [];
     for (var i = 0; i < 14; i++) bub.push([Math.random() * W, ice + Math.random() * (H - ice), rnd(1, 4)]);
     return {
       step: function (dt) {
         t += dt; var k = S.keys, base = (90 + Math.min(80, t * 2)) * S.diff;
-        if (k.down) vy += 520 * dt; else if (k.up) vy -= 560 * dt; else vy -= 140 * dt;
-        vy *= 0.9; y += vy * dt;
+        // the joystick sets his speed directly (push further, swim faster) and he gets there in a blink; let go and he floats up slowly
+        var j = S.stick && Math.hypot(S.stick.x, S.stick.y) > DZ ? S.stick : null, ty = j ? j.y * 320 : k.down ? 320 : k.up ? -320 : -70, tx = j ? j.x * 200 : (k.right ? 200 : 0) - (k.left ? 200 : 0), e = Math.min(1, dt * 14);
+        vy += (ty - vy) * e; vx += (tx - vx) * e; y += vy * dt; x = clamp(x + vx * dt, 30, W * 0.7);
+        this.pos = [x, y];
         if (y > H - 26) { y = H - 26; vy = 0; }
         var safe = y <= ice - 6; if (y < ice - 22) { y = ice - 22; vy = Math.max(vy, 0); }
         sp -= dt; if (sp <= 0) { sp = rnd(0.5, 1.1); fish.push({ x: W + 20, y: rnd(ice + 30, H - 30), k: Math.random() < 0.15 ? '🦐' : '🐟' }); }
@@ -271,15 +274,29 @@
       while (p && !(p[0] === fr && p[1] === fc)) { cur2 = p; p = prev[p[0] + ',' + p[1]]; }
       return cur2;
     }
+    var OPP = { up: 'down', down: 'up', left: 'right', right: 'left' };
+    // the joystick's way: on a diagonal push, the side he isn't already going is tried first, so up-right while running right turns up at the next gap
+    function steer() {
+      var j = S.stick; if (!j) return null;
+      var ax = Math.abs(j.x), ay = Math.abs(j.y); if (Math.max(ax, ay) < DZ) return null;
+      var h = j.x > 0 ? 'right' : 'left', v = j.y > 0 ? 'down' : 'up', ks = ax > ay ? [h, v] : [v, h];
+      if (Math.min(ax, ay) < 0.4 * Math.max(ax, ay)) ks.pop(); else if (ks[0] === P.d) ks.reverse();
+      for (var i = 0; i < ks.length; i++) if (open(P.r + D[ks[i]][0], P.c + D[ks[i]][1])) return ks[i];
+      return ks[0];
+    }
+    // turning back the way he came happens at once, even between squares
+    function turn(k) { P.want = k; if (P.d && k === OPP[P.d] && P.p > 0 && P.p < 1) { var r = P.r, cc = P.c; P.r = P.fr; P.c = P.fc; P.fr = r; P.fc = cc; P.p = 1 - P.p; P.d = k; } }
     function reset() { P.r = P.fr = PR; P.c = P.fc = 5; P.p = 1; P.d = P.want = null; B.r = B.fr = 5; B.c = B.fc = 5; B.p = 1; frozen = 1.5; }
     return {
-      press: function (k) { if (D[k]) P.want = k; },
+      press: function (k) { if (D[k]) turn(k); },
       step: function (dt) {
-        var ps = 5.2, bs = (3.4 + lvl * 0.5) * S.diff;
+        var ps = 5.2, bs = (3.4 + lvl * 0.5) * S.diff, w = steer();
+        if (w && w !== P.want) turn(w);
         P.p += dt * ps;
         if (P.p >= 1) {
           P.fr = P.r; P.fc = P.c; P.p = 0;
           var e = grid[P.r][P.c]; if (e === '.') { grid[P.r][P.c] = ' '; S.add(1); } if (e === '*') { grid[P.r][P.c] = ' '; S.add(5); frozen = 5; }
+          if (w = steer()) P.want = w;   // decide again at each square, where he can turn
           if (P.want && open(P.r + D[P.want][0], P.c + D[P.want][1])) P.d = P.want;
           if (P.d && open(P.r + D[P.d][0], P.c + D[P.d][1])) { P.r += D[P.d][0]; P.c += D[P.d][1]; } else P.p = 1;
           if (!left()) { lvl++; grid = M.map(function (r) { return r.split(''); }); reset(); S.add(20); }
@@ -330,7 +347,7 @@
       },
       step: function (dt) {
         var k = S.keys, sp = P.carry ? 120 : 150;
-        var j = S.stick && Math.hypot(S.stick.x, S.stick.y) > 0.2 ? S.stick : null, mx = j ? j.x : (k.right ? 1 : 0) - (k.left ? 1 : 0), my = j ? j.y : (k.down ? 1 : 0) - (k.up ? 1 : 0);
+        var j = S.stick && Math.hypot(S.stick.x, S.stick.y) > DZ ? S.stick : null, mx = j ? j.x : (k.right ? 1 : 0) - (k.left ? 1 : 0), my = j ? j.y : (k.down ? 1 : 0) - (k.up ? 1 : 0);
         P.x = clamp(P.x + mx * sp * dt, 16, W - 16); P.y = clamp(P.y + my * sp * dt, S.top + 16, H - 16);
         time -= dt; honkT -= dt; saidT -= dt;
         if (!P.carry) for (var i = items.length - 1; i >= 0; i--) if (Math.hypot(items[i].x - P.x, items[i].y - P.y) < 26) { P.carry = items[i].k; items.splice(i, 1); break; }
