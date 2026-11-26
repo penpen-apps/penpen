@@ -4,7 +4,7 @@
    gets a bit hungry and bored (never below 20) and naps, so he's always fine when you come back.
    A new game starts with an egg: tap it to hatch, then pick his name, colours, eyes and outfit (change them later in Wardrobe).
    Tabs: penpen (feed, rub belly, sleep) · Games · Quiz · Learn · Sing · Shop.
-   Tap the garden's igloo to go inside: a cozy games room where you walk penpen to a thing (goggles = Dive, polar bear rug = Chase, sled = Belly Slide, trumpet = Honk!, chalkboard = Quiz, bookshelf = Learn, record player = Sing, wardrobe = Shop) and Play pops up.
+   Tap 🕹️ in the garden's corner to steer penpen yourself (one button picks a flower, gives it to a friend, high-fives, or jumps in the pond; tap 🐾 and he roams free). Tap the garden's igloo, or walk him into its door, to go inside: a cozy games room where you walk penpen to a thing (goggles = Dive, polar bear rug = Chase, sled = Belly Slide, trumpet = Honk!, chalkboard = Quiz, bookshelf = Learn, record player = Sing, wardrobe = Shop) and Play pops up.
    Every expense you log on the trip earns a 🐟. Everything is saved on this phone. */
 (function () {
   var F = 'Nunito,-apple-system,BlinkMacSystemFont,sans-serif';
@@ -187,14 +187,14 @@
   // the garden field: 1080 x 600, three phone screens wide. Left: the igloo. Middle (where the view opens): the fountain. Right: the race pond with a wooden dock, and the sled hill in the mountains behind it.
   // Penguins walk only on the grass in front of the igloo and the fountain (see far()); on a phone the far left and right edges are cropped a little.
   function gardenArt() {
-    var fl = '', n = 0, seed = 7;
+    var fl = '', n = 0, seed = 7; FL = [];
     function rnd() { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; }
     function blocked(x, y) { return (y < 376 && ((x > 200 && x < 380) || (x > 488 && x < 592) || (x > 668 && x < 712) || (x > 942 && x < 990))) || (y < 392 && x > 706 && x < 950); }
     while (n < 90) {
       var x = 110 + rnd() * 860, y = n < 24 ? 318 + rnd() * 50 : 382 + rnd() * 210, c = ['#F28AA5', '#FFFFFF', '#F4A62A', '#B7A2F0', '#FF7A7A'][Math.floor(rnd() * 5)], k = 0.7 + (y - 300) / 300;
       if (blocked(x, y)) continue;
-      n++;
-      fl += '<g><path d="M' + x.toFixed(1) + ' ' + (y + 4 * k).toFixed(1) + ' v' + (10 * k).toFixed(1) + '" stroke="#4E9A48" stroke-width="2"/>' + (n % 2 ?
+      n++; FL.push([x, y]);
+      fl += '<g id="pp-fl' + (n - 1) + '"><path d="M' + x.toFixed(1) + ' ' + (y + 4 * k).toFixed(1) + ' v' + (10 * k).toFixed(1) + '" stroke="#4E9A48" stroke-width="2"/>' + (n % 2 ?
         [0, 72, 144, 216, 288].map(function (d) { var r = d * Math.PI / 180; return '<circle cx="' + (x + Math.cos(r) * 4 * k).toFixed(1) + '" cy="' + (y + Math.sin(r) * 4 * k).toFixed(1) + '" r="' + (3 * k).toFixed(1) + '" fill="' + c + '"/>'; }).join('') :
         '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="' + (5 * k).toFixed(1) + '" fill="' + c + '"/>') + '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="' + (2 * k).toFixed(1) + '" fill="#F4C542"/></g>';
     }
@@ -244,6 +244,7 @@
   // walk to a random spot, then rest a bit (unless he's busy playing)
   function stroll(el, key) {
     if (!el.isConnected) return;
+    if (key === 'me' && DRIVE) return;   // you're steering him; he roams again when you let go
     if ((key === 'me' && GD.hold > now()) || el.ppBusy) return later(el, key, 1200);
     if (key !== 'me' && Math.random() < 0.18 && swim(el, key)) return;
     var me = document.getElementById('pp-walk'), from = pos(key === 'me' || !me ? el : me)[0];
@@ -274,8 +275,12 @@
   }
   // stop penpen where he is (while you drag food or rub his belly)
   function freeze(ms) {
-    var el = document.getElementById('pp-walk'), g = el && el.parentNode; GD.hold = now() + ms; endPlay();
-    if (!el || !g || !el.classList.contains('walking')) return;
+    GD.hold = now() + ms; endPlay(); halt(document.getElementById('pp-walk'));
+  }
+  // stop a walker on the spot it has reached, mid-walk
+  function halt(el) {
+    var g = el && el.parentNode;
+    if (!g || !el.classList.contains('walking')) return;
     var r = el.getBoundingClientRect(), b = g.getBoundingClientRect();
     var mb = parseFloat(getComputedStyle(el).marginBottom) || 0;   // full screen lifts the walkers above the food bar with a bottom margin
     if (b.width) { el.style.transitionDuration = '0s'; el.style.left = ((r.left + r.width / 2 - b.left) / b.width * 100) + '%'; el.style.bottom = ((b.bottom - r.bottom - mb) / b.height * 100) + '%'; }
@@ -297,7 +302,7 @@
   function playTime() {
     var me = document.getElementById('pp-walk'), pals = w ? [].slice.call(w.querySelectorAll('#pp-garden .walker.pal')).filter(function (el) { return !el.ppSwim; }) : [];   // swimmers stay in the pond
     if (!me || !me.isConnected) return;
-    if (load().asleep || still() || document.hidden || GD.hold > now() || !pals.length) return playSoon();
+    if (DRIVE || load().asleep || still() || document.hidden || GD.hold > now() || !pals.length) return playSoon();
     var f = pick(pals), nm = window.ppLook ? window.ppLook.name(f.dataset.pal) : 'his friend', mine = nameOf(load()), who = [me].concat(pals), game = pick(['meet', 'tag', 'dance', 'ball']);
     var k = 1 / wide(me), c = Math.max(15, Math.min(85, pos(me)[0])), Y = far(me);   // k turns a screen's % into the field's %; c: play near where penpen is
     function done(ms) { step(ms, function () { endPlay(); playSoon(); }); }
@@ -346,10 +351,11 @@
   }
   function startGarden() {
     stopGarden();
-    if (!load().asleep && !still()) { [].slice.call(w.querySelectorAll('#pp-garden .walker')).forEach(function (el, i) { var me = el.id === 'pp-walk'; later(el, me ? 'me' : 'p' + i, me ? 700 : 1300 + i * 600); }); playSoon(); }   // penpen sets off first, then his friends one by one
+    if (!load().asleep && !still()) { [].slice.call(w.querySelectorAll('#pp-garden .walker')).forEach(function (el, i) { var me = el.id === 'pp-walk'; if (!me || !DRIVE) later(el, me ? 'me' : 'p' + i, me ? 700 : 1300 + i * 600); }); playSoon(); }   // penpen sets off first, then his friends one by one
     music(true); camera(); requestAnimationFrame(settle);
+    if (DRIVE) requestAnimationFrame(function () { drive(true); });   // still steering: back from the igloo, he steps out of the door
   }
-  function stopGarden() { Object.keys(GD.t).forEach(function (k) { clearTimeout(GD.t[k]); }); GD.t = {}; endPlay(); music(false); cancelAnimationFrame(CAM.raf); }
+  function stopGarden() { Object.keys(GD.t).forEach(function (k) { clearTimeout(GD.t[k]); }); GD.t = {}; endPlay(); music(false); cancelAnimationFrame(CAM.raf); unsteer(); }
   // the view follows penpen across the wide field. Swipe to look around; a few seconds after you let go, it glides back to him
   function camera() {
     var f = document.getElementById('pp-field'); if (!f) return;
@@ -362,6 +368,127 @@
       if (now() - CAM.user < 4000 || Math.abs(dx) <= dead) return;
       f.scrollLeft += (dx - (dx > 0 ? dead : -dead)) * (still() ? 1 : 0.08);
     })();
+  }
+
+  /* ---------- you steer: the 🕹️ button in the corner gives you a joystick; tap 🐾 and penpen roams free again ---------- */
+  // Walk him into the igloo's door to go inside. One button does what fits where he stands: pick a flower, give it to a friend, high-five a friend, jump in the pond, climb out.
+  var DRIVE = false, DV = null, OUT = false, FL = [];   // DRIVE: you're steering (kept while the garden is open, through the igloo too); DV: the steering loop; OUT: he just walked into the igloo; FL: each flower's [x, y] in art units
+  var DOOR = [258, 372];   // the igloo's doorway, in art units (the igloo is drawn 180 to the left of IGLOO's own numbers)
+  // where a walker's feet are, in art units: the reverse of artAt
+  function toArt(el) {
+    var wd = document.getElementById('pp-world'), W = wd ? wd.clientWidth : 0, H = wd ? wd.clientHeight : 0; if (!W || !H) return null;
+    var k = Math.max(W / 1080, H / 600), mb = parseFloat(getComputedStyle(el).marginBottom) || 0, p = pos(el);
+    return [(p[0] / 100 * W + (1080 * k - W) / 2) / k, 600 - (p[1] / 100 * H + mb) / k];
+  }
+  // a thumb joystick (garden and igloo): drag any way; S.v is the push ({x, y} from -1 to 1) while a thumb is on it. Arrow keys work too
+  function thumbPad(base, S) {
+    var knob = base.firstChild, id = null;
+    function stick(e) {
+      var r = base.getBoundingClientRect(), R = r.width / 2 || 1, x = (e.clientX - r.left - R) / R, y = (e.clientY - r.top - R) / R, m = Math.hypot(x, y);
+      if (m > 1) { x /= m; y /= m; }
+      S.v = { x: x, y: y }; knob.style.transform = 'translate(' + Math.round(x * 30) + 'px,' + Math.round(y * 30) + 'px)';
+    }
+    base.addEventListener('pointerdown', function (e) { e.preventDefault(); id = e.pointerId; if (base.setPointerCapture) { try { base.setPointerCapture(id); } catch (x) {} } base.classList.add('on'); stick(e); });
+    base.addEventListener('pointermove', function (e) { if (e.pointerId === id) stick(e); });
+    ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(function (ev) { base.addEventListener(ev, function (e) { if (e.pointerId !== id) return; id = null; S.v = null; base.classList.remove('on'); knob.style.transform = ''; }); });
+    S.keys = {};
+    S.key = function (e) {
+      var k = { ArrowLeft: 'l', ArrowRight: 'r', ArrowUp: 'u', ArrowDown: 'd' }[e.key];
+      if (!k || (e.target && e.target.closest && e.target.closest('dialog,input'))) return;
+      e.preventDefault(); S.keys[k] = e.type === 'keydown';
+    };
+    document.addEventListener('keydown', S.key); document.addEventListener('keyup', S.key);
+  }
+  function unPad(S) { document.removeEventListener('keydown', S.key); document.removeEventListener('keyup', S.key); }
+  // this frame's push: the joystick when it's pushed past a nudge, else the arrow keys
+  function push(S) { var v = S.v && Math.hypot(S.v.x, S.v.y) > 0.2 ? S.v : null, k = S.keys; return v ? [v.x, v.y] : [(k.r ? 1 : 0) - (k.l ? 1 : 0), (k.d ? 1 : 0) - (k.u ? 1 : 0)]; }
+  function controls(p) {
+    return p.egg ? '' : '<button type="button" class="gdrive" id="pp-drive" aria-pressed="' + DRIVE + '" aria-label="' + (DRIVE ? 'Let penpen roam' : 'Walk penpen yourself') + '"' + (p.asleep ? ' hidden' : '') + '>' + (DRIVE ? '🐾' : '🕹️') + '</button>' +
+      '<button type="button" class="iplay gact" id="pp-gact" hidden></button><div class="ijoy" id="pp-gjoy" role="img" aria-label="Joystick: drag to walk penpen (arrow keys work too)" hidden><i></i></div>';
+  }
+  // take the joystick (on) or hand him back to roaming (off)
+  function drive(on) {
+    var g = document.getElementById('pp-garden'), b = document.getElementById('pp-drive'), me = document.getElementById('pp-walk');
+    DRIVE = on; if (!g || !b || !me || b.hidden) return;
+    g.classList.toggle('drive', on); b.setAttribute('aria-pressed', String(on)); b.setAttribute('aria-label', on ? 'Let penpen roam' : 'Walk penpen yourself'); b.textContent = on ? '🐾' : '🕹️';
+    document.getElementById('pp-gjoy').hidden = !on;
+    if (!on) { unsteer(); document.getElementById('pp-gact').hidden = true; if (me.ppSwim) climbOut(me); later(me, 'me', 800); return say(mood(load())); }
+    clearTimeout(GD.t.me); endPlay(); halt(me);
+    var d = OUT && artAt(me, DOOR[0], DOOR[1] + 18); OUT = false;
+    if (d) { place(me, d[0], d[1], 0); say('Back outside! 🌸'); }   // out of the igloo door
+    else say('You’re steering! Walk to a flower, a friend, the pond or the igloo door 🕹️');
+    steer(me);
+  }
+  // put a walker straight on a spot (no walking transition) and face the way it's going
+  function place(el, x, y, dx) {
+    el.style.transitionDuration = '0s'; el.style.left = x + '%'; el.style.bottom = y + '%'; el.style.zIndex = String(40 - Math.round(y)); el.style.setProperty('--d', (1 - y / 160).toFixed(3));
+    if (Math.abs(dx) > 0.1) el.classList.toggle('l', dx < 0);
+  }
+  function steer(me) {
+    unsteer(); DV = { v: null, last: performance.now(), act: null, who: null };
+    thumbPad(document.getElementById('pp-gjoy'), DV);
+    (function frame(t) {
+      if (!DV || !me.isConnected) return;
+      var dt = Math.min(0.05, (t - DV.last) / 1000), m = push(DV), p = pos(me); DV.last = t;
+      if (m[0] || m[1]) {
+        if (me.ppSwim) {   // paddling: he stays inside the pond
+          var a = toArt(me), s; if (a) { a[0] += m[0] * 70 * dt; a[1] += m[1] * 14 * dt; var ex = (a[0] - POND.x) / (POND.rx - 14), ey = (a[1] - POND.y - 2) / (POND.ry - 6), em = Math.hypot(ex, ey); if (em > 1) { a[0] = POND.x + ex / em * (POND.rx - 14); a[1] = POND.y + 2 + ey / em * (POND.ry - 6); } s = artAt(me, a[0], a[1]); }
+          if (s) place(me, s[0], s[1], m[0]);
+        } else place(me, clampX(p[0] + m[0] * 11 * dt), ground(me, p[1] - m[1] * 18 * dt), m[0]);
+        me.classList.add('walking'); clearTimeout(me.ppStop); me.ppStop = setTimeout(function () { me.classList.remove('walking'); }, 150);
+      }
+      if (sense(me)) return;
+      DV.raf = requestAnimationFrame(frame);
+    })(DV.last);
+  }
+  function unsteer() { if (DV) { cancelAnimationFrame(DV.raf); unPad(DV); DV = null; } }
+  // a friend right next to penpen (not one who's swimming), or null
+  function friendBy(me) {
+    var r = me.getBoundingClientRect(), best = null, bd = 70;
+    [].slice.call(w.querySelectorAll('#pp-garden .walker.pal')).forEach(function (f) { if (f.ppSwim) return; var q = f.getBoundingClientRect(), d = Math.abs(q.left + q.width / 2 - r.left - r.width / 2) + Math.abs(q.bottom - r.bottom) * 1.5; if (d < bd) { bd = d; best = f; } });
+    return best;
+  }
+  // the flower at his feet (its number in FL), or -1
+  function flowerBy(a) { var best = -1, bd = 30; FL.forEach(function (f, i) { var d = f.gone ? 99 : Math.hypot(f[0] - a[0], (f[1] - a[1]) * 1.4); if (d < bd) { bd = d; best = i; } }); return best; }
+  // what the one action button does where he stands; walking into the door goes inside. Returns true when he went in
+  function sense(me) {
+    var a = toArt(me); if (!a) return false;
+    if (!me.ppSwim && Math.abs(a[0] - DOOR[0]) < 16 && a[1] < DOOR[1] + 6) { unsteer(); OUT = true; sfx('hi'); enterIgloo(); return true; }
+    var who = me.ppSwim ? null : friendBy(me), held = me.querySelector('.hold'),
+      act = me.ppSwim ? 'out' : who ? (held ? 'give' : 'five') : !held && flowerBy(a) >= 0 ? 'pick' : Math.abs(a[0] - POND.x) < POND.rx && a[1] < POND.y + POND.ry + 16 ? 'swim' : '';
+    if (act === DV.act && who === DV.who) return false;
+    DV.act = act; DV.who = who;
+    var b = document.getElementById('pp-gact'); b.hidden = !act; b.dataset.do = act;
+    b.textContent = { pick: '🌸 Pick', give: '🌸 Give', five: '✋ High five', swim: '💦 Jump in', out: '🏖️ Climb out' }[act] || '';
+    return false;
+  }
+  function act() {
+    var me = document.getElementById('pp-walk'), b = document.getElementById('pp-gact'); if (!me || !DV || !b || b.hidden) return;
+    var d = b.dataset.do, f = DV.who, p = load(), mine = nameOf(p), nm = f && window.ppLook ? window.ppLook.name(f.dataset.pal) : 'his friend', held = me.querySelector('.hold');
+    DV.act = null;   // look again next frame
+    if (d === 'pick') {
+      var i = flowerBy(toArt(me) || [0, 0]), g = document.getElementById('pp-fl' + i); if (i < 0) return;
+      FL[i].gone = 1; if (g) g.style.display = 'none';   // it grows back the next time the garden opens
+      me.insertAdjacentHTML('beforeend', '<span class="hold" aria-hidden="true">🌸</span>'); hop(me.querySelector('.pen')); sfx('la');
+      return say(mine + ' picked a flower! Give it to a friend 🌸');
+    }
+    if (d === 'give' || d === 'five') {
+      if (!f) return; halt(f); f.ppBusy = true; face(me, f); hop(me.querySelector('.pen')); hop(f.querySelector('.pen'));
+      setTimeout(function () { f.ppBusy = false; }, 1600);
+      if (d === 'give') { if (held) held.remove(); pop(f, '🌸'); pop(f, '💕'); p.joy = clamp(p.joy + 5); p.xp += 1; save(p); refreshBats(p); sfx('la'); return say(nm + ' loves the flower! 💐'); }
+      pop(me, '✋'); p.joy = clamp(p.joy + 2); save(p); refreshBats(p); sfx('hi'); return say(mine + ' and ' + nm + ' high-five! ✋');
+    }
+    if (d === 'swim') {
+      var a = toArt(me), s = a && artAt(me, Math.max(POND.x - POND.rx + 24, Math.min(POND.x + POND.rx - 24, a[0])), POND.y + 2); if (!s) return;
+      me.ppSwim = true; me.classList.add('swim'); go(me, s[0], s[1], 20); pop(me, '💦'); sfx('splash');
+      return say('Splash! ' + mine + ' is swimming 🌊');
+    }
+    if (d === 'out') { climbOut(me); return say(mine + ' climbed out. Shake shake! 💦'); }
+  }
+  // out of the pond onto the grass in front of it
+  function climbOut(me) {
+    var a = toArt(me), s = a && artAt(me, a[0], POND.y + POND.ry + 12);
+    me.ppSwim = false; me.classList.remove('swim'); if (s) go(me, s[0], s[1], 20); sfx('splash');
   }
 
   /* ---------- sounds and music, made in code (no files) ---------- */
@@ -378,6 +505,12 @@
     if (kind === 'chomp') { [0, 0.17, 0.34].forEach(function (d) { tone(c, 230, 110, t + d, 0.09, 0.22, 'triangle'); }); tone(c, 880, 1320, t + 0.58, 0.16, 0.1); tone(c, 1175, 1760, t + 0.76, 0.2, 0.09); }
     else if (kind === 'la') [784, 988, 1175].forEach(function (f, i) { tone(c, f, 0, t + i * 0.22, 0.25, 0.09); });
     else if (kind === 'giggle') giggle(c, t);
+    else if (kind === 'splash') {   // a splash: a burst of hiss that drops from bright to low
+      var nb = c.createBuffer(1, Math.round(c.sampleRate * 0.45), c.sampleRate), nd = nb.getChannelData(0), ns = c.createBufferSource(), bp = c.createBiquadFilter(), ng = c.createGain();
+      for (var i = 0; i < nd.length; i++) nd[i] = (Math.random() * 2 - 1) * (1 - i / nd.length);
+      ns.buffer = nb; bp.type = 'bandpass'; bp.Q.value = 1.2; bp.frequency.setValueAtTime(2400, t); bp.frequency.exponentialRampToValueAtTime(400, t + 0.45); ng.gain.value = 0.45;
+      ns.connect(bp); bp.connect(ng); ng.connect(c.destination); ns.start(t);
+    }
     else if (kind === 'peep') { tone(c, 900, 1500, t, 0.07, 0.09); tone(c, 1400, 1000, t + 0.09, 0.1, 0.07); }   // penpen's own soft chirp
     else tone(c, 660, 990, t, 0.15, 0.08);
   }
@@ -526,27 +659,13 @@
   var I = null;   // the igloo while it's open: penpen's spot, the joystick, the keys, the thing he's next to
   function enterIgloo() { var p = load(); wakeToPlay(p); save(p); stopAll(); tab = 'igloo'; paint(); }
   function iglooHooks() {
-    var me = document.getElementById('pp-iwalk'), base = document.getElementById('pp-ijoy'), knob = base.firstChild, id = null;
-    I = { x: 50, y: 10, v: null, keys: {}, near: null, last: 0 };
-    function stick(e) {
-      var r = base.getBoundingClientRect(), R = r.width / 2 || 1, x = (e.clientX - r.left - R) / R, y = (e.clientY - r.top - R) / R, m = Math.hypot(x, y);
-      if (m > 1) { x /= m; y /= m; }
-      I.v = { x: x, y: y }; knob.style.transform = 'translate(' + Math.round(x * 30) + 'px,' + Math.round(y * 30) + 'px)';
-    }
-    base.addEventListener('pointerdown', function (e) { e.preventDefault(); id = e.pointerId; if (base.setPointerCapture) { try { base.setPointerCapture(id); } catch (x) {} } base.classList.add('on'); stick(e); });
-    base.addEventListener('pointermove', function (e) { if (e.pointerId === id) stick(e); });
-    ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(function (ev) { base.addEventListener(ev, function (e) { if (e.pointerId !== id) return; id = null; I.v = null; base.classList.remove('on'); knob.style.transform = ''; }); });
-    I.key = function (e) {
-      var k = { ArrowLeft: 'l', ArrowRight: 'r', ArrowUp: 'u', ArrowDown: 'd' }[e.key];
-      if (!k || !I || (e.target && e.target.closest && e.target.closest('dialog,input'))) return;
-      e.preventDefault(); I.keys[k] = e.type === 'keydown';
-    };
-    document.addEventListener('keydown', I.key); document.addEventListener('keyup', I.key);
+    var me = document.getElementById('pp-iwalk');
+    I = { x: 50, y: 10, v: null, near: null, last: 0 };
+    thumbPad(document.getElementById('pp-ijoy'), I);
     I.last = performance.now();
     (function frame(t) {
       if (!I || !me.isConnected) return;
-      var dt = Math.min(0.05, (t - I.last) / 1000), k = I.keys, v = I.v && Math.hypot(I.v.x, I.v.y) > 0.2 ? I.v : null; I.last = t;
-      var vx = v ? v.x : (k.r ? 1 : 0) - (k.l ? 1 : 0), vy = v ? v.y : (k.d ? 1 : 0) - (k.u ? 1 : 0);
+      var dt = Math.min(0.05, (t - I.last) / 1000), m = push(I), vx = m[0], vy = m[1]; I.last = t;
       if (vx || vy) {
         var at = inRoom(I.x + vx * 30 * dt, I.y - vy * 22 * dt); I.x = at[0]; I.y = at[1];
         me.style.transitionDuration = '0s'; me.style.left = I.x + '%'; me.style.bottom = I.y + '%'; me.style.zIndex = String(50 - Math.round(I.y)); me.style.setProperty('--d', (1 - I.y / DEEP).toFixed(3));
@@ -594,7 +713,7 @@
     w.addEventListener('keydown', function (e) { if ((e.key === 'Enter' || e.key === ' ') && e.target.closest && e.target.closest('[data-act="igloo"]')) { e.preventDefault(); enterIgloo(); } });
     w.addEventListener('pointerdown', function () { if (AC && AC.state === 'suspended') AC.resume(); });
   }
-  function close() { stopAll(); if (w) w.remove(); w = null; }
+  function close() { stopAll(); DRIVE = OUT = false; if (w) w.remove(); w = null; }
   function back() { if (tab === 'pet') return close(); stopAll(); tab = tab !== 'igloo' && ret ? ret : 'pet'; paint(); }
   window.ppPlayBack = function () { if (!document.getElementById('pp-play')) return false; back(); return true; };
   function tint(n) { return n > 60 ? '#3FAF6B' : n > 30 ? '#F4A62A' : '#D9534F'; }
@@ -635,7 +754,7 @@
     if (tab === 'igloo') h += iglooRoom(p);
     else if (tab === 'pet') {
       var face = (p.asleep ? SHUT : '') + JOY;
-      h += '<div class="garden' + (p.asleep ? ' night' : '') + '" id="pp-garden"><div class="gfield" id="pp-field"><div class="gworld" id="pp-world">' + gardenArt() + (p.egg ? '' : doorArt()) +
+      h += '<div class="garden' + (p.asleep ? ' night' : '') + (DRIVE && !p.asleep ? ' drive' : '') + '" id="pp-garden"><div class="gfield" id="pp-field"><div class="gworld" id="pp-world">' + gardenArt() + (p.egg ? '' : doorArt()) +
         (window.ppLook ? PALS.map(function (id, i) { return '<button type="button" class="walker pal" data-pal="' + id + '" aria-label="' + window.ppLook.name(id) + ', penpen’s friend" style="left:' + START[i][0] + '%;bottom:' + START[i][1] + '%;--d:' + (1 - START[i][1] / 160).toFixed(3) + '"><span class="pen' + (p.asleep ? ' zz' : '') + '">' + views(window.ppLook.svg(id) + faceBits(51, 69, 49, 6) + (p.asleep ? SHUT : ''), window.ppLook.side(id)) + '</span></button>'; }).join('') : '') +
         (p.egg ? '<button type="button" class="egg" id="pp-egg" data-act="hatch" aria-label="Your egg. Tap to hatch it"><svg viewBox="-7 -14 134 134" width="120" height="120" aria-hidden="true">' + EGG + '</svg></button>' :
         '<div class="walker' + (sad(p) ? ' sad' : '') + '" id="pp-walk" style="left:50%;bottom:8%"><div class="pen' + (p.asleep ? ' zz' : '') + '" id="pp-petpen" aria-label="' + esc(nameOf(p)) + '">' +
@@ -643,7 +762,7 @@
         '</div></div>') + '</div></div>' +
         '<div class="gtop"><button class="back" aria-label="Back">‹</button><span class="meters">' + meters(p) + '</span>' + coins + '<button type="button" data-act="sound" class="gbtn" aria-pressed="' + soundOn() + '" aria-label="Music and sounds">' + (soundOn() ? '🔊' : '🔇') + '</button>' + menu(p) + '</div>' +
         '<div class="say" id="pp-say">' + (msg || mood(p)) + '</div>' +
-        (p.asleep ? '<button data-act="wake" class="zbtn">☀️ Wake</button>' : '') +
+        (p.asleep ? '<button data-act="wake" class="zbtn">☀️ Wake</button>' : '') + controls(p) +
         // food: just the pictures with a small count; drag one to penpen, or tap it (hidden until he hatches)
         (p.egg ? '' : '<div class="foods" aria-label="Food: drag to penpen, or tap">' + Object.keys(FOODS).map(function (k) { var n = p.bag[k] || 0; return '<button data-feed="' + k + '"' + (n ? '' : ' disabled') + ' title="' + FOODS[k].n + '"><span aria-hidden="true">' + FOODS[k].e + '</span><i class="sr">' + FOODS[k].n + '</i><small>×' + n + '</small></button>'; }).join('') + '</div>') + '</div>';
     } else if (tab === 'slide') {
@@ -842,6 +961,8 @@
     if (b.dataset.bat) { var sy = document.getElementById('pp-stip') || document.getElementById('pp-say'); if (sy) sy.textContent = { Full: '🍽️ Full: drops over time. Drag food to penpen — bigger meals fill more.', Happy: '💛 Happy: rub or tap his belly, play games or the quiz.', Energy: '⚡ Energy: games use a little. He naps to recharge, but you can always play.' }[b.dataset.bat] || ''; return; }
     var p = load();
     if (b.classList.contains('back')) return back();
+    if (b.id === 'pp-drive') return drive(!DRIVE);
+    if (b.id === 'pp-gact') return act();
     if (b.dataset.tab) { stopAll(); tab = b.dataset.tab; return paint(); }
     if (b.dataset.item) return walkTo(b.dataset.item);
     if (b.dataset.play) return playFromIgloo(b.dataset.play);
@@ -1020,7 +1141,7 @@
 
   function stopAll() {
     stopGarden();
-    if (I) { cancelAnimationFrame(I.raf); clearTimeout(I.arrive); document.removeEventListener('keydown', I.key); document.removeEventListener('keyup', I.key); I = null; }
+    if (I) { cancelAnimationFrame(I.raf); clearTimeout(I.arrive); unPad(I); I = null; }
     if (window.ppGames) window.ppGames.stop();
     if (G) { cancelAnimationFrame(G.raf); document.removeEventListener('keydown', G.key); document.removeEventListener('keyup', G.key); G = null; }
     if (X) { cancelAnimationFrame(X.raf); var b = document.getElementById('pp-jj'); if (b) b.removeEventListener('pointerdown', X.tap); X = null; }
@@ -1125,6 +1246,10 @@
     '#pp-play .igl .flm{transform-box:fill-box;transform-origin:50% 100%;animation:ppflm .45s ease-in-out infinite alternate}#pp-play .igl .flm.f2{animation-duration:.33s}@keyframes ppflm{to{transform:scale(.88,1.12)}}#pp-play .igl .bulb{animation:ppglow 1.6s ease-in-out infinite alternate}#pp-play .smk circle{opacity:.7;transform-box:fill-box;transform-origin:center;animation:ppsmk 3s ease-out infinite backwards}#pp-play .smk circle:nth-child(2){animation-delay:1s}#pp-play .smk circle:nth-child(3){animation-delay:2s}@keyframes ppsmk{0%{opacity:0;transform:translate(0,14px) scale(.5)}25%{opacity:.8}100%{opacity:0;transform:translate(4px,-10px) scale(1.4)}}#pp-play .igl .bulb:nth-of-type(2n){animation-delay:.8s}' +
     '#pp-play .iplay{position:absolute;left:14px;bottom:calc(24px + env(safe-area-inset-bottom));z-index:60;border:0;border-radius:99px;background:#3FAF6B;color:#fff;font:900 17px ' + F + ';padding:14px 20px;box-shadow:0 4px 0 #2B8550,0 8px 18px rgba(0,0,0,.2);cursor:pointer;animation:pppop .25s ease-out}#pp-play .iplay[hidden]{display:none}@keyframes pppop{from{transform:scale(.6);opacity:0}}' +
     '#pp-play .ijoy{position:absolute;right:16px;bottom:calc(16px + env(safe-area-inset-bottom));z-index:60;width:112px;height:112px;border-radius:50%;background:rgba(255,255,255,.55);box-shadow:inset 0 0 0 2px rgba(19,50,74,.2);display:flex;align-items:center;justify-content:center;touch-action:none;cursor:grab}#pp-play .ijoy i{width:50px;height:50px;border-radius:50%;background:#13324A;box-shadow:0 4px 10px rgba(19,50,74,.3);pointer-events:none}#pp-play .ijoy.on i{background:#237566}' +
+    // steering in the garden: the 🕹️ / 🐾 button in the bottom-left corner, the action button beside it, the joystick bottom right (the food bar steps aside while you steer)
+    '#pp-play .gdrive{position:absolute;left:10px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:60;width:50px;height:50px;border:0;border-radius:50%;background:rgba(255,255,255,.9);font-size:24px;line-height:1;box-shadow:0 2px 8px rgba(0,0,0,.15);cursor:pointer}#pp-play .gdrive[aria-pressed="true"]{background:#13324A}' +
+    '#pp-play .gact{left:70px;bottom:calc(14px + env(safe-area-inset-bottom))}#pp-play .gdrive[hidden],#pp-play .ijoy[hidden]{display:none}#pp-play .garden.drive .foods{display:none}' +
+    '#pp-play .walker .hold{position:absolute;right:-4px;top:42%;font-size:22px;line-height:1;pointer-events:none}' +
     '@media (prefers-reduced-motion: reduce){#pp-play .walker{transition:none}#pp-play .pen,#pp-play .walker .pen.eat,#pp-play .walker .pen.tk,#pp-play .flm,#pp-play .bulb,#pp-play .smk circle,#pp-play .glow,#pp-play .iitem.near svg,#pp-play .iplay{animation:none}}' +
     '.pp-heart{position:fixed;z-index:99990;font-size:24px;pointer-events:none;animation:pphrt 1.2s ease-out forwards}@keyframes pphrt{to{transform:translateY(-70px) scale(1.4);opacity:0}}' +
     '.pp-drag{position:fixed;z-index:99990;font-size:40px;pointer-events:none;transform:translate(-50%,-60%)}' +
