@@ -57,7 +57,7 @@
     var G = GAMES[id], O = gset();
     function opts() { return chips('diff', DIFF, O.diff) + (id === 'honk' ? chips('scene', SCENES, O.scene) : ''); }
     // the game fills the phone: the picture runs edge to edge under a floating back arrow, How to play and the score, with the controls in a band at the bottom
-    host.innerHTML = '<div class="gx" data-g="' + id + '" role="region" aria-label="' + G.t + '"><div class="gtop"><button type="button" class="gback" aria-label="Back to games">‹</button><button type="button" class="ghelp" aria-label="How to play" title="How to play">?</button><span class="gs" aria-label="Score">0</span></div>' +
+    host.innerHTML = '<div class="gx" data-g="' + id + '" role="region" aria-label="' + G.t + '"><div class="gtop"><button type="button" class="gback" aria-label="Back to games">‹</button><button type="button" class="ghelp" aria-label="How to play" title="How to play">?</button>' + soundBtn() + '<span class="gs" aria-label="Score">0</span></div>' +
       '<div class="gstage"><canvas></canvas><div class="gover"><button type="button" class="gstart"><span>▶</span>Start</button><p>' + G.how + '</p><button type="button" class="ghow">How to play</button>' + opts() + '</div></div><div class="gctl"></div>' +
       '<dialog class="ghd" aria-label="How to play ' + G.t + '"><b>How to play ' + G.t + '</b><p>' + HELP[id][0] + '</p><ol>' + HELP[id][1].map(function (x) { return '<li>' + x + '</li>'; }).join('') + '</ol><form method="dialog"><button>Got it</button></form></dialog></div>';
     // size the picture to the space the screen gives it (no layout, as in tests: the old phone-sized box); wide screens keep a phone-width picture
@@ -76,8 +76,8 @@
       var n = 3, cd = document.createElement('div'); cd.className = 'gcd'; stage.appendChild(cd);
       (function step() {
         if (cur !== S) return cd.remove();
-        if (n === 0) { cd.textContent = 'Go!'; cd.className = 'gcd go'; setTimeout(function () { cd.remove(); }, 450); pad(S, G.pad, ctl); S.on = true; S.last = performance.now(); S.raf = requestAnimationFrame(loop); return; }
-        cd.textContent = n; cd.className = 'gcd'; void cd.offsetWidth; cd.className = 'gcd pop'; n--; setTimeout(step, 750);
+        if (n === 0) { sfx('go'); music(id); cd.textContent = 'Go!'; cd.className = 'gcd go'; setTimeout(function () { cd.remove(); }, 450); pad(S, G.pad, ctl); S.on = true; S.last = performance.now(); S.raf = requestAnimationFrame(loop); return; }
+        sfx('count'); cd.textContent = n; cd.className = 'gcd'; void cd.offsetWidth; cd.className = 'gcd pop'; n--; setTimeout(step, 750);
       })();
     }
     function loop(t) {
@@ -88,7 +88,7 @@
       S.raf = requestAnimationFrame(loop);
     }
     S.end = function (msg) {
-      S.on = false; cancelAnimationFrame(S.raf); ctl.innerHTML = '';
+      S.on = false; cancelAnimationFrame(S.raf); ctl.innerHTML = ''; music(null); sfx('over');
       var coins = Math.min(30, Math.floor(S.score / (id === 'slide' ? 40 : 2)));
       over.style.display = ''; over.innerHTML = '<div class="gres"><b>' + (msg || 'Game over!') + '</b><span>Score ' + S.score + ' · +' + coins + ' coins</span></div><button type="button" class="gstart"><span>↻</span>Again</button><button type="button" class="gclose">✕ Back to games</button>';
       over.insertAdjacentHTML('beforeend', '<button type="button" class="ghow">How to play</button>' + opts());
@@ -105,6 +105,7 @@
     hd.addEventListener('close', function () { S.paused = false; });
     if (!hd.showModal) $('form', hd).addEventListener('submit', function (e) { e.preventDefault(); hd.removeAttribute('open'); S.paused = false; });
     $('.ghelp', host).onclick = help;
+    $('.gsnd', host).onclick = function () { toggleSound(this, id, function () { return cur === S && S.on; }); };
     over.addEventListener('click', function (e) {   // Easy / Normal / Hard and the scene: pick before you start
       if (e.target.closest('.ghow')) return help();
       var b = e.target.closest('[data-diff],[data-scene]'); if (!b) return;
@@ -166,15 +167,128 @@
     e.preventDefault(); if (!cur.keys[k] && cur.game.press) cur.game.press(k); cur.keys[k] = true;
   });
   document.addEventListener('keyup', function (e) { if (!cur) return; var k = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down', ' ': 'honk' }[e.key]; if (k) cur.keys[k] = false; });
-  function stop() { if (cur) { cur.on = false; cancelAnimationFrame(cur.raf); } cur = null; sprite = null; if (song) song.stop(); }
+  function stop() { if (cur) { cur.on = false; cancelAnimationFrame(cur.raf); } cur = null; sprite = null; if (song) song.stop(); music(null); }
 
-  var MAKERS = {}, actx = null;
-  function honkSound() {
-    try {
-      actx = actx || new (window.AudioContext || window.webkitAudioContext)(); var t = actx.currentTime;
-      [0, 0.16].forEach(function (d) { var o = actx.createOscillator(), g = actx.createGain(); o.type = 'sawtooth'; o.frequency.setValueAtTime(330, t + d); o.frequency.exponentialRampToValueAtTime(260, t + d + 0.12); g.gain.setValueAtTime(0.0001, t + d); g.gain.exponentialRampToValueAtTime(0.18, t + d + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + d + 0.13); o.connect(g); g.connect(actx.destination); o.start(t + d); o.stop(t + d + 0.14); });
-    } catch (e) {}
+  var MAKERS = {};
+
+  /* ---------- music and sound effects, made in code (no files). The 🔊 button turns them all off: the same switch as the garden's ---------- */
+  var AU = null, NOISE = null, TUNE = null;
+  function soundOn() { try { return localStorage.getItem('pp_sound') !== 'off'; } catch (e) { return true; } }
+  function au() {
+    if (!soundOn()) return null;
+    try { AU = AU || new (window.AudioContext || window.webkitAudioContext)(); if (AU.state === 'suspended' && AU.resume) AU.resume(); return AU; } catch (e) { return null; }
   }
+  function hz(m) { return 440 * Math.pow(2, (m - 69) / 12); }   // a note number (60 = middle C) to its pitch
+  // one note: a wave that starts at f (gliding to f2 if given), fades in quickly and dies away over len seconds
+  function note(c, f, f2, t, len, vol, type, out) {
+    var o = c.createOscillator(), g = c.createGain(); o.type = type || 'sine'; o.frequency.setValueAtTime(f, t); if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + len);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + Math.min(0.02, len / 3)); g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+    o.connect(g); g.connect(out || c.destination); o.start(t); o.stop(t + len + 0.05);
+  }
+  // a burst of hiss through a band filter that sweeps from f to f2: splashes, whooshes, drum hits
+  function hiss(c, t, len, vol, f, f2, out) {
+    if (!NOISE) { NOISE = c.createBuffer(1, c.sampleRate, c.sampleRate); var d = NOISE.getChannelData(0); for (var i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }
+    var s = c.createBufferSource(), bp = c.createBiquadFilter(), g = c.createGain(); s.buffer = NOISE; bp.type = 'bandpass'; bp.Q.value = 1.2;
+    bp.frequency.setValueAtTime(f, t); if (f2) bp.frequency.exponentialRampToValueAtTime(f2, t + len);
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+    s.connect(bp); bp.connect(g); g.connect(out || c.destination); s.start(t); s.stop(t + len + 0.05);
+  }
+  // the cartoon honk: two buzzy reeds through a nasal filter, a quick squeak up then a droop down, twice ("HONK-onk")
+  function honk(c, t) {
+    [[0, 1, 0.3], [0.2, 0.86, 0.22]].forEach(function (h) {
+      var s = t + h[0], bp = c.createBiquadFilter(), g = c.createGain(); bp.type = 'bandpass'; bp.frequency.value = 1100; bp.Q.value = 3; bp.connect(g); g.connect(c.destination);
+      g.gain.setValueAtTime(0.0001, s); g.gain.exponentialRampToValueAtTime(0.5, s + 0.02); g.gain.setValueAtTime(0.5, s + h[2] * 0.6); g.gain.exponentialRampToValueAtTime(0.0001, s + h[2]);
+      [0, 7].forEach(function (cents) {
+        var o = c.createOscillator(); o.type = 'sawtooth'; o.detune.value = cents;
+        o.frequency.setValueAtTime(330 * h[1], s); o.frequency.exponentialRampToValueAtTime(440 * h[1], s + 0.04); o.frequency.exponentialRampToValueAtTime(290 * h[1], s + h[2]);
+        o.connect(bp); o.start(s); o.stop(s + h[2] + 0.05);
+      });
+    });
+  }
+  // every sound effect in the games, by name
+  var FX = {
+    count: function (c, t) { note(c, 660, 0, t, 0.14, 0.18, 'square'); },
+    go: function (c, t) { note(c, 990, 0, t, 0.3, 0.2, 'square'); note(c, 1320, 0, t + 0.08, 0.3, 0.12, 'square'); },
+    over: function (c, t) { [523, 392, 330, 262].forEach(function (f, i) { note(c, f, 0, t + i * 0.16, 0.22, 0.18, 'triangle'); }); },
+    level: function (c, t) { [523, 659, 784, 1047].forEach(function (f, i) { note(c, f, 0, t + i * 0.09, 0.16, 0.16, 'square'); }); },
+    fish: function (c, t) { note(c, 880, 1320, t, 0.08, 0.2, 'triangle'); note(c, 1320, 1760, t + 0.07, 0.1, 0.16, 'triangle'); },
+    shrimp: function (c, t) { [1047, 1319, 1568].forEach(function (f, i) { note(c, f, 0, t + i * 0.06, 0.1, 0.16, 'triangle'); }); },
+    splash: function (c, t) { hiss(c, t, 0.4, 0.7, 2400, 500); hiss(c, t + 0.05, 0.25, 0.35, 900, 300); [0.12, 0.2, 0.3].forEach(function (d) { note(c, 500 + Math.random() * 300, 1100, t + d, 0.06, 0.12); }); },
+    warn: function (c, t) { note(c, 196, 185, t, 0.35, 0.22, 'sawtooth'); note(c, 165, 155, t + 0.4, 0.45, 0.22, 'sawtooth'); },
+    safe: function (c, t) { note(c, 784, 0, t, 0.12, 0.16, 'triangle'); note(c, 1047, 0, t + 0.1, 0.2, 0.16, 'triangle'); },
+    whoosh: function (c, t) { hiss(c, t, 0.18, 0.35, 700, 2600); },
+    ding: function (c, t) { note(c, 1568, 0, t, 0.3, 0.16); note(c, 2093, 0, t + 0.05, 0.35, 0.12); },
+    bonk: function (c, t) { hiss(c, t, 0.2, 0.6, 400, 150); note(c, 140, 50, t, 0.3, 0.4, 'sine'); },
+    munch: function (c, t, hi) { var f = hi ? 620 : 480; note(c, f, f * 0.55, t, 0.07, 0.16, 'triangle'); },
+    freeze: function (c, t) { [1568, 2093, 2637, 3136, 2637].forEach(function (f, i) { note(c, f, 0, t + i * 0.05, 0.12, 0.1); }); },
+    ouch: function (c, t) { note(c, 440, 150, t, 0.45, 0.2, 'sawtooth'); },
+    drop: function (c, t) { note(c, 1250, 0, t, 0.06, 0.14, 'square'); note(c, 940, 0, t + 0.07, 0.08, 0.12, 'square'); },
+    loot: function (c, t) { note(c, 988, 0, t, 0.08, 0.15, 'square'); note(c, 1319, 0, t + 0.08, 0.25, 0.15, 'square'); },
+    grumble: function (c, t) { note(c, 170, 110, t, 0.18, 0.25, 'sawtooth'); note(c, 150, 95, t + 0.2, 0.25, 0.25, 'sawtooth'); },
+    honk: honk,
+    right: function (c, t) { [784, 988, 1319].forEach(function (f, i) { note(c, f, 0, t + i * 0.08, 0.2, 0.14, 'triangle'); }); },
+    wrong: function (c, t) { note(c, 220, 200, t, 0.2, 0.16, 'square'); note(c, 196, 160, t + 0.2, 0.3, 0.16, 'square'); }
+  };
+  function sfx(name, arg) { var c = au(); if (!c || !FX[name]) return; try { FX[name](c, c.currentTime + 0.01, arg); } catch (e) {} }
+  // each game's own little loop: notes in eighths (numbers from the root note, null = rest), a bass line and a drum line (k kick, s snare, h hat)
+  var TUNES = {
+    // Belly Slide: bright and quick, whee down the mountain
+    slide: { bpm: 152, root: 67, wave: 'square', len: 0.6,
+      lead: [0, 2, 4, 7, null, 4, 7, null, 9, 7, 4, 2, 4, null, null, null, 5, 4, 2, 0, 2, null, 4, null, 7, null, null, 4, 2, null, 0, null],
+      bass: [0, null, 7, null, 0, null, 7, null, 5, null, 12, null, 5, null, 12, null, 2, null, 9, null, 2, null, 9, null, 7, null, 14, null, 7, null, 2, null],
+      drum: 'k.hsk.hsk.hsk.hsk.hsk.hskkhsshs' },
+    // Dive: medium tempo, bouncy and fun, with an echo like being underwater
+    dive: { bpm: 116, root: 72, wave: 'triangle', len: 0.8, echo: 1,
+      lead: [0, null, 4, 7, 9, null, 7, null, 5, null, 4, null, 2, null, null, null, 0, null, 4, 7, 12, null, 11, 9, 7, null, 9, null, 7, null, null, null],
+      bass: [-24, -12, -24, -12, -19, -7, -19, -7, -17, -5, -17, -5, -24, -12, -17, -12],
+      drum: 'k.h.s.h.k.h.s.hh' },
+    // Chase: quick and a little tense, a minor run-around
+    chase: { bpm: 138, root: 69, wave: 'square', len: 0.5,
+      lead: [0, 3, 7, 12, 7, 3, 0, 3, 0, 3, 7, 12, 15, 12, 7, 3, -4, 0, 3, 8, 3, 0, -4, 0, -2, 2, 5, 10, 14, 10, 5, 2],
+      bass: [-24, -24, -12, -24, -24, -24, -12, -24, -28, -28, -16, -28, -26, -26, -14, -26],
+      drum: 'khshkhsh' },
+    // Honk!: sneaky tiptoe music, plucked and creeping, with a cheeky little run at the end
+    honk: { bpm: 104, root: 64, wave: 'triangle', len: 0.3,
+      lead: [0, null, 3, null, null, 4, null, null, 7, null, 6, null, null, null, null, null, 0, null, 3, null, null, 4, null, null, 10, 9, 7, 6, 7, null, null, null],
+      bass: [-24, null, -17, null, -24, null, -17, null, -21, null, -14, null, -21, null, -14, null, -19, null, -12, null, -19, null, -12, null, -18, null, -17, null, null, null, -24, null],
+      drum: 'k...h...k...h.h.' },
+    // Professor Pen's quiz: a calm thinking tune
+    quiz: { bpm: 92, root: 72, wave: 'sine', len: 1.2,
+      lead: [0, null, 4, null, 7, null, 4, null, 5, null, 9, null, 7, null, null, null, 4, null, 7, null, 12, null, 11, null, 9, null, 7, null, 5, null, null, null],
+      bass: [-24, null, null, null, -19, null, null, null, -20, null, null, null, -17, null, null, null],
+      drum: '' }
+  };
+  function music(id) {
+    if (TUNE) { TUNE.stop(); TUNE = null; }
+    var T = TUNES[id], c = T && au(); if (!c) return;
+    try {
+      var g = c.createGain(), step = 30 / T.bpm, n = 0, at = c.currentTime + 0.1, out = g;
+      g.gain.value = 0.32; g.connect(c.destination);
+      if (T.echo) { var dl = c.createDelay(1), fb = c.createGain(); dl.delayTime.value = step * 3; fb.gain.value = 0.3; g.connect(dl); dl.connect(fb); fb.connect(dl); dl.connect(c.destination); }
+      var play = function () {
+        while (at < c.currentTime + 0.3) {   // schedule a little ahead, so a busy moment doesn't make the beat stumble
+          var l = T.lead[n % T.lead.length], b = T.bass[n % T.bass.length], d = T.drum ? T.drum[n % T.drum.length] : '.';
+          if (l != null) note(c, hz(T.root + l), 0, at, step * (T.len * 2), 0.16, T.wave, out);
+          if (b != null) note(c, hz(T.root + b), 0, at, step * 1.6, 0.3, 'triangle', out);
+          if (d === 'k') note(c, 150, 45, at, 0.16, 0.6, 'sine', out);
+          if (d === 's') hiss(c, at, 0.12, 0.35, 1800, 1200, out);
+          if (d === 'h') hiss(c, at, 0.04, 0.18, 8000, 7000, out);
+          n++; at += step;
+        }
+      };
+      play(); var iv = setInterval(play, 100);
+      TUNE = { id: id, stop: function () { clearInterval(iv); try { g.gain.setTargetAtTime(0.0001, c.currentTime, 0.04); } catch (e) {} setTimeout(function () { g.disconnect(); }, 400); } };
+    } catch (e) { TUNE = null; }   // a browser missing a sound part plays no music rather than breaking the game
+  }
+  // the game's 🔊 button: the same switch as the garden's, so one press quiets everything everywhere
+  function soundBtn() { var on = soundOn(); return '<button type="button" class="gsnd" aria-pressed="' + on + '" aria-label="Music and sounds">' + (on ? '🔊' : '🔇') + '</button>'; }
+  function toggleSound(b, id, playing) {
+    var on = !soundOn(); try { localStorage.setItem('pp_sound', on ? 'on' : 'off'); } catch (e) {}
+    b.setAttribute('aria-pressed', String(on)); b.textContent = on ? '🔊' : '🔇';
+    if (!on) music(null); else if (playing()) music(id);
+  }
+  // put the phone away mid-game and the music waits for you
+  document.addEventListener('visibilitychange', function () { if (!AU || !AU.suspend) return; try { if (document.hidden) AU.suspend(); else if (TUNE) AU.resume(); } catch (e) {} });
 
   /* ---------- Belly Slide: front view, racing down toward you ---------- */
   MAKERS.slide = function (S) {
@@ -183,7 +297,7 @@
     function laneX(l, z) { var vx = W / 2, bw = W * 0.95; return vx + (l - 1) * (bw / 3) * (1 - z * 0.92); }
     function yOf(z) { return hz + (H * 0.86 - hz) * (1 - z); }
     return {
-      press: function (k) { if (k === 'left') lane = Math.max(0, lane - 1), lean = -1; if (k === 'right') lane = Math.min(2, lane + 1), lean = 1; },
+      press: function (k) { var was = lane; if (k === 'left') lane = Math.max(0, lane - 1), lean = -1; if (k === 'right') lane = Math.min(2, lane + 1), lean = 1; if (lane !== was) sfx('whoosh'); },
       step: function (dt) {
         speed = Math.min(1.3 * S.diff, speed + dt * 0.012); dist += dt * speed * 60; spawn -= dt;
         if (spawn <= 0) { spawn = rnd(0.55, 1.1) / speed; var fish = Math.random() < 0.3; objs.push({ l: Math.floor(Math.random() * 3), z: 1, k: fish ? '🐟' : pick(['🪨', '🌲', '⛄', '🪨']), fish: fish }); }
@@ -191,12 +305,12 @@
         px += (laneX(lane, 0) - px) * Math.min(1, dt * 12); lean *= 0.9;
         for (var i = objs.length - 1; i >= 0; i--) {
           var o = objs[i];
-          if (o.z < 0.08 && o.z > -0.02 && o.l === lane && !o.got) { if (o.fish) { o.got = 1; S.add(10); objs.splice(i, 1); continue; } hit = 1; }
+          if (o.z < 0.08 && o.z > -0.02 && o.l === lane && !o.got) { if (o.fish) { o.got = 1; S.add(10); sfx('ding'); objs.splice(i, 1); continue; } hit = 1; }
           if (o.z < -0.15) objs.splice(i, 1);
         }
         var d = Math.floor(dist / 3); if (d !== S._d) { S._d = d; S.add(1); }
         flakes.forEach(function (f) { f[1] += dt * 60 * speed * f[2]; f[0] += Math.sin(f[1] / 30) * 0.3; if (f[1] > H) { f[1] = -5; f[0] = Math.random() * W; } });
-        if (hit) S.end('Bonk! 🌲');
+        if (hit) { sfx('bonk'); S.end('Bonk! 🌲'); }
       },
       draw: function () {
         var g = c.createLinearGradient(0, 0, 0, hz); g.addColorStop(0, '#9FD3F0'); g.addColorStop(1, '#E3F3FB'); c.fillStyle = g; c.fillRect(0, 0, W, hz + 1);
@@ -227,18 +341,19 @@
         vy += (ty - vy) * e; vx += (tx - vx) * e; y += vy * dt; x = clamp(x + vx * dt, 30, W * 0.7);
         this.pos = [x, y];
         if (y > H - 26) { y = H - 26; vy = 0; }
-        var safe = y <= ice - 6; if (y < ice - 22) { y = ice - 22; vy = Math.max(vy, 0); }
+        var safe = y <= ice - 6; if (safe !== this.up) { if (this.up != null) sfx('splash'); this.up = safe; }   // a splash each time he breaks the surface, up or down
+        if (y < ice - 22) { y = ice - 22; vy = Math.max(vy, 0); }
         sp -= dt; if (sp <= 0) { sp = rnd(0.5, 1.1); fish.push({ x: W + 20, y: rnd(ice + 30, H - 30), k: Math.random() < 0.15 ? '🦐' : '🐟' }); }
         fish.forEach(function (f) { f.x -= base * dt; });
-        for (var i = fish.length - 1; i >= 0; i--) { var f = fish[i]; if (Math.abs(f.x - x) < 26 && Math.abs(f.y - y) < 24) { S.add(f.k === '🦐' ? 3 : 1); fish.splice(i, 1); } else if (f.x < -20) fish.splice(i, 1); }
+        for (var i = fish.length - 1; i >= 0; i--) { var f = fish[i]; if (Math.abs(f.x - x) < 26 && Math.abs(f.y - y) < 24) { S.add(f.k === '🦐' ? 3 : 1); sfx(f.k === '🦐' ? 'shrimp' : 'fish'); fish.splice(i, 1); } else if (f.x < -20) fish.splice(i, 1); }
         next -= dt;
-        if (!foe && next <= 0) { warn = 1.6; foe = { x: W + 80, y: rnd(ice + 40, H - 40), go: false, v: (170 + Math.min(120, t * 3)) * S.diff }; next = rnd(6, 10); }
+        if (!foe && next <= 0) { warn = 1.6; sfx('warn'); foe = { x: W + 80, y: rnd(ice + 40, H - 40), go: false, v: (170 + Math.min(120, t * 3)) * S.diff }; next = rnd(6, 10); }
         if (foe) {
           if (warn > 0) warn -= dt; else foe.go = true;
           if (foe.go) {
             foe.x -= foe.v * dt; if (!safe) foe.y += (y - foe.y) * Math.min(1, dt * 2.2);
             if (!safe && Math.abs(foe.x - x) < 38 && Math.abs(foe.y - y) < 30) return S.end('The sea lion got you! 🦭');
-            if (foe.x < -90) { foe = null; S.add(5); }
+            if (foe.x < -90) { foe = null; S.add(5); sfx('safe'); }
           }
         }
         bub.forEach(function (b) { b[1] -= dt * 30 * b[2]; if (b[1] < ice) { b[1] = H; b[0] = Math.random() * W; } });
@@ -295,18 +410,18 @@
         P.p += dt * ps;
         if (P.p >= 1) {
           P.fr = P.r; P.fc = P.c; P.p = 0;
-          var e = grid[P.r][P.c]; if (e === '.') { grid[P.r][P.c] = ' '; S.add(1); } if (e === '*') { grid[P.r][P.c] = ' '; S.add(5); frozen = 5; }
+          var e = grid[P.r][P.c]; if (e === '.') { grid[P.r][P.c] = ' '; S.add(1); sfx('munch', S.score % 2); } if (e === '*') { grid[P.r][P.c] = ' '; S.add(5); frozen = 5; sfx('freeze'); }
           if (w = steer()) P.want = w;   // decide again at each square, where he can turn
           if (P.want && open(P.r + D[P.want][0], P.c + D[P.want][1])) P.d = P.want;
           if (P.d && open(P.r + D[P.d][0], P.c + D[P.d][1])) { P.r += D[P.d][0]; P.c += D[P.d][1]; } else P.p = 1;
-          if (!left()) { lvl++; grid = M.map(function (r) { return r.split(''); }); reset(); S.add(20); }
+          if (!left()) { lvl++; grid = M.map(function (r) { return r.split(''); }); reset(); S.add(20); sfx('level'); }
         }
         if (frozen > 0) frozen -= dt; else {
           B.p += dt * bs;
           if (B.p >= 1) { B.fr = B.r; B.fc = B.c; B.p = 0; var n = Math.random() < 0.15 ? null : bfs(B.r, B.c, P.r, P.c); if (!n) { var ks = Object.keys(D).filter(function (k) { return open(B.r + D[k][0], B.c + D[k][1]); }); var k2 = pick(ks); n = [B.r + D[k2][0], B.c + D[k2][1]]; } B.r = n[0]; B.c = n[1]; }
         }
         var px = P.fc + (P.c - P.fc) * Math.min(1, P.p), py = P.fr + (P.r - P.fr) * Math.min(1, P.p), bx = B.fc + (B.c - B.fc) * Math.min(1, B.p), by = B.fr + (B.r - B.fr) * Math.min(1, B.p);
-        if (frozen <= 0 && Math.abs(px - bx) < 0.6 && Math.abs(py - by) < 0.6) { lives--; if (lives <= 0) return S.end('The polar bear caught you! 🐻‍❄️'); reset(); }
+        if (frozen <= 0 && Math.abs(px - bx) < 0.6 && Math.abs(py - by) < 0.6) { lives--; if (lives <= 0) return S.end('The polar bear caught you! 🐻‍❄️'); sfx('ouch'); reset(); }
         this.pp = [px, py]; this.bp = [bx, by];
       },
       draw: function () {
@@ -342,8 +457,8 @@
     folk.forEach(retarget);
     return {
       press: function (k) {
-        if (k !== 'honk') return; honkT = 0.35; honkSound(); said = pick(['HONK!', 'HONK HONK!', 'HOOONK!']); saidT = 0.8;
-        folk.forEach(function (f) { if (Math.hypot(f.x - P.x, f.y - P.y) < 70) { if (f.item) { items.push({ x: f.x + rnd(-20, 20), y: f.y + 24, k: f.item }); f.item = null; S.add(2); } f.mad = 4; } });
+        if (k !== 'honk') return; honkT = 0.35; sfx('honk'); said = pick(['HONK!', 'HONK HONK!', 'HOOONK!']); saidT = 0.8;
+        folk.forEach(function (f) { if (Math.hypot(f.x - P.x, f.y - P.y) < 70) { if (f.item) { items.push({ x: f.x + rnd(-20, 20), y: f.y + 24, k: f.item }); f.item = null; S.add(2); setTimeout(function () { sfx('drop'); }, 350); } f.mad = 4; } });
       },
       step: function (dt) {
         var k = S.keys, sp = P.carry ? 120 : 150;
@@ -351,19 +466,19 @@
         P.x = clamp(P.x + mx * sp * dt, 16, W - 16); P.y = clamp(P.y + my * sp * dt, S.top + 16, H - 16);
         time -= dt; honkT -= dt; saidT -= dt;
         if (!P.carry) for (var i = items.length - 1; i >= 0; i--) if (Math.hypot(items[i].x - P.x, items[i].y - P.y) < 26) { P.carry = items[i].k; items.splice(i, 1); break; }
-        if (P.carry && Math.hypot(nest.x - P.x, nest.y - P.y) < 48) { S.add(10); P.carry = null; said = 'Mine now! 😈'; saidT = 1; }
+        if (P.carry && Math.hypot(nest.x - P.x, nest.y - P.y) < 48) { S.add(10); sfx('loot'); P.carry = null; said = 'Mine now! 😈'; saidT = 1; }
         folk.forEach(function (f) {
           var tx = f.tx, ty = f.ty, v = 40 + (lvl - 1) * 6;
           if (f.mad > 0) { f.mad -= dt; tx = P.x; ty = P.y; v = (95 + (lvl - 1) * 10) * S.diff; }
           var dx = tx - f.x, dy = ty - f.y, d = Math.hypot(dx, dy);
           if (d > 4) { f.x += dx / d * v * dt; f.y += dy / d * v * dt; } else if (f.mad <= 0) { f.wait -= dt; if (f.wait <= 0) { retarget(f); f.wait = rnd(0.5, 2); } }
           if (!f.item && f.mad <= 0 && Math.random() < dt * 0.05) f.item = pick(LOOT);
-          if (f.mad > 0 && d < 22) { f.mad = 0; retarget(f); lives--; if (P.carry) { items.push({ x: P.x, y: P.y + 10, k: P.carry }); P.carry = null; } said = 'Shoo! 😠'; saidT = 1; P.x = nest.x + 20; P.y = nest.y - 20; }
+          if (f.mad > 0 && d < 22) { f.mad = 0; retarget(f); lives--; if (P.carry) { items.push({ x: P.x, y: P.y + 10, k: P.carry }); P.carry = null; } said = 'Shoo! 😠'; saidT = 1; sfx('grumble'); P.x = nest.x + 20; P.y = nest.y - 20; }
         });
         if (lives <= 0) return S.end('They chased you off! 😠');
         if (time <= 0) {
           if (S.score < goal()) return S.end('Time’s up! Level ' + lvl + ' · what a menace 😈');
-          lvl++; time = 75; var nf = person(); retarget(nf); folk.push(nf); said = 'Level ' + lvl + '! 🎉'; saidT = 1.6; S.add(10);   // next level: one more tourist, a bit faster
+          lvl++; time = 75; var nf = person(); retarget(nf); folk.push(nf); said = 'Level ' + lvl + '! 🎉'; saidT = 1.6; S.add(10); sfx('level');   // next level: one more tourist, a bit faster
         }
       },
       draw: function () {
@@ -483,7 +598,7 @@
     home();
   }
   function quiz(host, award) {
-    stop();
+    stop(); music('quiz');
     var round = [], n = 0, right = 0, used = {};
     var ph = window.ppPlace().cc === 'PH', qb = QB.filter(function (q) { return ph || !q.ph; });
     while (round.length < 3) { var i = Math.floor(Math.random() * qb.length); if (!used[i]) { used[i] = 1; round.push(qb[i]); } }
@@ -502,7 +617,7 @@
       var inp = $('input', host); if (inp) { inp.focus(); inp.onkeydown = function (e) { if (e.key === 'Enter') check(); }; inp.oninput = function () { var er = $('.qerr', host); if (er) er.hidden = true; }; }
     }
     function next(ok, q, given) {
-      if (ok) right++;
+      if (ok) right++; sfx(ok ? 'right' : 'wrong');
       var ans = q.t === 'fill' ? q.a[0] : q.o[q.a];
       var msg = ok ? pick(['Correct! 🎉', 'Brilliant! 🧠', 'Yes! Gold star ⭐']) : 'Not quite — it’s “' + ans + '”.' + (q.why ? ' ' + q.why : '');
       n++; setTimeout(function () { if (host.isConnected) show(msg, ok ? 'yay' : 'hmm'); }, 50);
@@ -594,6 +709,7 @@
     '.sg .sglyr{background:#13324A;color:#9FB4C4;border-radius:22px;padding:14px;margin:10px 0}.sg .sglyr b{display:block;color:#fff;margin-bottom:6px}.sg .sglyr p{margin:6px 0;font:900 20px/1.4 ' + F + '}.sg .sglyr span.now{color:#F2A33A}.sg .sglyr span.sung{color:#fff}.sg .sglyr button{margin-top:10px;border:0;border-radius:99px;padding:10px 22px;font:900 15px ' + F + ';background:#F2A33A;color:#13324A;cursor:pointer}' +
     '.lrn{font-family:' + F + '}.lrh{display:flex;align-items:center;gap:8px;margin-bottom:8px}.lrh b{font-size:18px;font-weight:900;flex:1}.lrh small{color:var(--muted,#7A8B99);font-weight:800}.lrx{border:0;background:none;font-size:18px;padding:4px}.lrmsg{background:var(--accentSoft,#E3F3EF);border-radius:14px;padding:10px 12px;font-weight:800;margin:6px 0}.lrlang{display:flex;gap:8px;margin:6px 0 10px}.lrlang button{flex:1;border:1.5px solid #237566;background:none;color:#237566;border-radius:99px;padding:8px;font:800 14px ' + F + '}.lrlang button.on{background:#237566;color:#fff}.lrlist{display:grid;grid-template-columns:1fr 1fr;gap:10px}.lrlist button{border:0;background:var(--card,#fff);color:inherit;border-radius:20px;padding:14px 8px;font:inherit;min-height:110px;box-shadow:0 1px 3px rgba(0,0,0,.06)}.lrlist span{display:block;font-size:34px}.lrlist b{display:block;font-weight:900;margin-top:4px}.lrlist small{color:var(--muted,#7A8B99);font-weight:700}.lrtip{font-size:13px;color:var(--muted,#7A8B99);text-align:center;margin-top:10px}.lrbar{height:8px;border-radius:99px;background:var(--line,#E5E9EC);overflow:hidden;margin-bottom:14px}.lrbar i{display:block;height:100%;background:#F2A33A;border-radius:99px;transition:width .3s}.lrcard{background:var(--card,#fff);border-radius:24px;padding:24px 16px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.06)}.lrcard small{display:block;color:var(--muted,#7A8B99);font-weight:800;font-size:15px}.lrcard b{display:block;font-size:28px;font-weight:900;margin:8px 0 14px;color:#237566}.lrcard button{border:1.5px solid var(--line,#E5E9EC);background:none;border-radius:99px;padding:8px 14px;font:800 14px ' + F + ';color:inherit}.lrgo{display:block;width:100%;margin-top:14px;border:0;border-radius:18px;padding:15px;background:#237566;color:#fff;font:900 17px ' + F + '}.lropts{display:flex;flex-direction:column;gap:10px;margin-top:14px}.lropts button{border:1.5px solid var(--line,#E5E9EC);background:var(--card,#fff);color:inherit;border-radius:18px;padding:14px;font:800 17px ' + F + '}.lropts button.ok{background:#DFF3E4;border-color:#3FA55B}.lropts button.no{background:#FBE3E0;border-color:#D9534F}';
   css += '.gx .gopt{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}.gx .gopt button{border:0;background:rgba(255,255,255,.88);color:#13324A;border-radius:99px;padding:8px 12px;min-height:36px;font:800 14px ' + F + ';cursor:pointer}.gx .gopt button[aria-pressed="true"]{background:#13324A;color:#fff}';
+  css += '.gx .gsnd{width:40px;height:40px;flex:none;border-radius:50%;border:0;background:rgba(255,255,255,.9);font-size:17px;cursor:pointer}';
   css += '.gx .ghelp{width:40px;height:40px;flex:none;border-radius:50%;border:0;background:rgba(255,255,255,.9);color:#13324A;font:900 18px ' + F + ';cursor:pointer}' +
     '.gx .ghow{border:0;background:rgba(255,255,255,.88);color:#13324A;border-radius:99px;padding:8px 14px;min-height:36px;font:800 14px ' + F + ';text-decoration:underline;cursor:pointer}' +
     '.ghd{border:0;border-radius:22px;padding:18px 18px 14px;max-width:min(340px,calc(100vw - 32px));background:#fff;color:#13324A;font:700 15px/1.4 ' + F + ';box-shadow:0 10px 40px rgba(19,50,74,.3)}.ghd::backdrop{background:rgba(19,50,74,.45)}.ghd[open]{position:fixed;inset:0;margin:auto;height:fit-content;max-height:calc(100vh - 32px);overflow:auto;z-index:50}' +
