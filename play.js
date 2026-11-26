@@ -131,7 +131,7 @@
   // the garden's igloo: the cozy games room is inside (tap it or its sign to go in)
   var IGLOO = '<ellipse cx="452" cy="370" rx="86" ry="10" fill="#EAF5FB"/><clipPath id="pp-dome"><path d="M392 366 C392 296 508 296 508 366 Z"/></clipPath>' +
     // the stone chimney from the fireplace inside, with a little smoke; it stands behind the dome, so the dome hides its foot
-    '<g class="chim"><g class="smk" fill="#fff"><circle cx="482" cy="284" r="4"/><circle cx="485" cy="276" r="5"/><circle cx="481" cy="267" r="6"/></g>' +
+    '<g class="chim"><g class="smk" fill="#CFD6DC"><circle cx="482" cy="284" r="4"/><circle cx="485" cy="276" r="5"/><circle cx="481" cy="267" r="6"/></g>' +
     '<rect x="474" y="296" width="16" height="44" fill="#B5AAA1" stroke="#8F837A" stroke-width="1.5"/><path d="M474 306 H490 M474 316 H490 M482 296 V306 M478 306 V316 M486 306 V316" stroke="#9C8F86" stroke-width="1.2"/>' +
     '<rect x="471" y="291" width="22" height="6" rx="1.5" fill="#9C8F86" stroke="#7F736B" stroke-width="1.2"/></g>' +
     '<path d="M392 366 C392 296 508 296 508 366 Z" fill="#F4FAFF" stroke="#BCD4E6" stroke-width="2"/><g clip-path="url(#pp-dome)"><ellipse cx="506" cy="352" rx="30" ry="62" fill="#DCEBF5"/>' +
