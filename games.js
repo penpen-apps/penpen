@@ -336,8 +336,11 @@
     return {
       step: function (dt) {
         t += dt; var k = S.keys, base = (90 + Math.min(80, t * 2)) * S.diff;
-        // the joystick sets his speed directly (push further, swim faster) and he gets there in a blink; let go and he floats up slowly
-        var j = S.stick && Math.hypot(S.stick.x, S.stick.y) > DZ ? S.stick : null, ty = j ? j.y * 320 : k.down ? 320 : k.up ? -320 : -70, tx = j ? j.x * 200 : (k.right ? 200 : 0) - (k.left ? 200 : 0), e = Math.min(1, dt * 14);
+        // the joystick sets his speed directly and he gets there in a blink; let go and he floats up slowly.
+        // Speeds follow the size of the water (a full-screen phone has a lot more of it), so top to bottom takes about 0.7s,
+        // and a push past about half way is already full speed, so you don't have to drag your thumb to the very edge.
+        var VY = Math.max(520, H * 1.1), VX = Math.max(300, W * 1.1), j = S.stick && Math.hypot(S.stick.x, S.stick.y) > DZ ? S.stick : null, m = j ? Math.min(1, Math.hypot(j.x, j.y) / 0.55) / Math.hypot(j.x, j.y) : 0;
+        var ty = j ? j.y * m * VY : k.down ? VY : k.up ? -VY : -90, tx = j ? j.x * m * VX : ((k.right ? 1 : 0) - (k.left ? 1 : 0)) * VX, e = Math.min(1, dt * 25);
         vy += (ty - vy) * e; vx += (tx - vx) * e; y += vy * dt; x = clamp(x + vx * dt, 30, W * 0.7);
         this.pos = [x, y];
         if (y > H - 26) { y = H - 26; vy = 0; }
