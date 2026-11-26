@@ -4,7 +4,7 @@
    gets a bit hungry and bored (never below 20) and naps, so he's always fine when you come back.
    A new game starts with an egg: tap it to hatch, then pick his name, colours, eyes and outfit (change them later in Wardrobe).
    Tabs: penpen (feed, rub belly, sleep) · Games · Quiz · Learn · Sing · Shop.
-   Tap the garden's igloo to go inside: a cozy games room where you walk penpen to a thing (goggles = Dive, rug = Chase, sled = Belly Slide, trumpet = Honk!, chalkboard = Quiz, bookshelf = Learn, record player = Sing, wardrobe = Shop) and Play pops up.
+   Tap the garden's igloo to go inside: a cozy games room where you walk penpen to a thing (goggles = Dive, polar bear rug = Chase, sled = Belly Slide, trumpet = Honk!, chalkboard = Quiz, bookshelf = Learn, record player = Sing, wardrobe = Shop) and Play pops up.
    Every expense you log on the trip earns a 🐟. Everything is saved on this phone. */
 (function () {
   var F = 'Nunito,-apple-system,BlinkMacSystemFont,sans-serif';
@@ -130,6 +130,10 @@
   var MUSIC_FILE = '';              // set to a music file (e.g. 'audio/garden.m4a') to play it instead of the code-made tune
   // the garden's igloo: the cozy games room is inside (tap it or its sign to go in)
   var IGLOO = '<ellipse cx="452" cy="370" rx="86" ry="10" fill="#EAF5FB"/><clipPath id="pp-dome"><path d="M392 366 C392 296 508 296 508 366 Z"/></clipPath>' +
+    // the stone chimney from the fireplace inside, with a little smoke; it stands behind the dome, so the dome hides its foot
+    '<g class="chim"><g class="smk" fill="#fff"><circle cx="482" cy="284" r="4"/><circle cx="485" cy="276" r="5"/><circle cx="481" cy="267" r="6"/></g>' +
+    '<rect x="474" y="296" width="16" height="44" fill="#B5AAA1" stroke="#8F837A" stroke-width="1.5"/><path d="M474 306 H490 M474 316 H490 M482 296 V306 M478 306 V316 M486 306 V316" stroke="#9C8F86" stroke-width="1.2"/>' +
+    '<rect x="471" y="291" width="22" height="6" rx="1.5" fill="#9C8F86" stroke="#7F736B" stroke-width="1.2"/></g>' +
     '<path d="M392 366 C392 296 508 296 508 366 Z" fill="#F4FAFF" stroke="#BCD4E6" stroke-width="2"/><g clip-path="url(#pp-dome)"><ellipse cx="506" cy="352" rx="30" ry="62" fill="#DCEBF5"/>' +
     '<path d="M380 352 H520 M380 338 H520 M380 324 H520 M380 312 H520 M404 366 V352 M428 366 V352 M476 366 V352 M500 366 V352 M416 352 V338 M440 352 V338 M464 352 V338 M488 352 V338 M428 338 V324 M452 338 V324 M476 338 V324 M440 324 V312 M464 324 V312" stroke="#C9DCEA" stroke-width="1.6"/></g>' +
     '<path d="M414 372 C414 338 462 338 462 372 Z" fill="#F4FAFF" stroke="#BCD4E6" stroke-width="2"/><path d="M417 358 H459 M426 372 V358 M450 372 V358 M438 358 V346" stroke="#C9DCEA" stroke-width="1.4"/><path d="M426 372 C426 350 450 350 450 372 Z" fill="#5B7A99"/>';
@@ -431,8 +435,9 @@
       '<path d="M534 380 V348" stroke="#8B5530" stroke-width="3" stroke-linecap="round"/><rect x="514" y="334" width="40" height="17" rx="3" fill="#C98A52" stroke="#8B5530" stroke-width="1.5"/>' +
       '<text x="534" y="346" text-anchor="middle" font-family="' + F + '" font-size="9" font-weight="900" fill="#fff">Games</text></g></svg>';
   }
-  // the room, seen from inside the dome: rings of ice blocks curve up and over, a round wood floor with a woven rug,
-  // a crackling fire pit a little left of the middle, a round window, string lights and a crooked fish picture
+  // the room, seen from inside the dome: rings of ice blocks curve up and over, a round wood floor, a stone fireplace
+  // built into the back wall with its chimney running up the dome (the same chimney pokes out of the igloo in the garden),
+  // a round window, string lights and a crooked fish picture
   function iglooArt() {
     var rings = '', joints = '', k, j, prev = null;
     // each ring of blocks is the back half of a circle around the dome, seen in perspective: lower rings are wide, higher ones small
@@ -453,26 +458,31 @@
       bulbs += '<circle class="bulb" cx="' + bx.toFixed(1) + '" cy="' + (by + 4).toFixed(1) + '" r="4" fill="' + ['#F7B955', '#F28AA5', '#8FD3F0', '#B7E08F'][j % 4] + '"/>';
     }
     var floor = [70, 140, 210, 280].map(function (r) { return '<ellipse cx="178" cy="476" rx="' + r + '" ry="' + r * 0.38 + '"/>'; }).join('');
-    var stones = [-34, -24, -12, 0, 12, 24, 34].map(function (dx, i) { return '<ellipse cx="' + (160 + dx) + '" cy="' + (330 + Math.abs(dx) / 34 * -6 + (i % 2)) + '" rx="7" ry="5"/>'; }).join('');
     return '<svg class="gart" viewBox="0 0 360 600" preserveAspectRatio="xMidYMax slice" aria-hidden="true"><defs>' +
       '<radialGradient id="pp-warm" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#FFB45A" stop-opacity=".6"/><stop offset="1" stop-color="#FFB45A" stop-opacity="0"/></radialGradient>' +
       '<radialGradient id="pp-round" cx="178" cy="300" r="330" gradientUnits="userSpaceOnUse"><stop offset=".45" stop-color="#5E87A8" stop-opacity="0"/><stop offset="1" stop-color="#5E87A8" stop-opacity=".42"/></radialGradient></defs>' +
       '<rect width="360" height="600" fill="#D3E8F3"/><g fill="none" stroke="#AFCFE2" stroke-width="1.8">' + rings + '<path d="' + joints + '" stroke-width="1.4"/></g>' +
       // the window (round, on the curve) and a fish picture hung a bit crooked
       '<g transform="translate(266 214) rotate(8)"><ellipse rx="25" ry="29" fill="#C9DCEA"/><ellipse rx="19" ry="23" fill="#28406B"/><circle cx="-6" cy="-8" r="2" fill="#fff"/><circle cx="7" cy="9" r="1.5" fill="#fff"/><circle cx="6" cy="-10" r="5" fill="#FFF3C4"/><path d="M-19 0 H19 M0 -23 V23" stroke="#C9DCEA" stroke-width="3"/></g>' +
+      // the chimney: a stone column up the middle of the back wall, out through the top of the dome (the lights drape over it)
+      '<rect x="162" y="-10" width="32" height="216" fill="#B5AAA1"/><path d="M162 -10 V206 M194 -10 V206" stroke="#8F837A" stroke-width="2"/>' +
+      '<path d="M162 30 H194 M162 70 H194 M162 110 H194 M162 150 H194 M162 190 H194 M178 30 V70 M178 110 V150 M170 -10 V30 M186 70 V110 M170 150 V190" stroke="#9C8F86" stroke-width="1.4"/>' +
       '<g transform="translate(78 214) rotate(-9)"><rect x="-22" y="-17" width="44" height="34" rx="3" fill="#FFF8EE" stroke="#A8683A" stroke-width="4"/><path d="M-10 0 Q0 -10 10 0 Q0 10 -10 0 Z M10 0 L17 -6 V6 Z" fill="#3B8FD9"/><circle cx="-5" cy="-1" r="1.3" fill="#fff"/></g>' +
       '<path d="M24 168 Q101 196 178 132 Q257 196 336 172" fill="none" stroke="#5B7A99" stroke-width="1.5"/>' + bulbs +
-      // the round floor: warm wood rings and a woven rug, with the curved wall meeting it at the back
+      // the round floor: warm wood rings, with the curved wall meeting it at the back
       '<path d="M8 380 A170 100 0 0 1 348 380 V600 H8 Z M-40 380 H8 V600 H-40 Z M348 380 H400 V600 H348 Z" fill="#D29A66"/><path d="M8 380 A170 100 0 0 1 348 380" fill="none" stroke="#9A6438" stroke-width="5"/>' +
       '<g fill="none" stroke="#A8703F" stroke-width="2" opacity=".5">' + floor + '</g>' +
-      '<ellipse cx="178" cy="476" rx="116" ry="44" fill="#E46F5A"/><ellipse cx="178" cy="476" rx="96" ry="36" fill="#F4C542"/><ellipse cx="178" cy="476" rx="74" ry="28" fill="#3FAF6B"/><ellipse cx="178" cy="476" rx="52" ry="20" fill="#F4C542"/><ellipse cx="178" cy="476" rx="30" ry="11" fill="#E46F5A"/>' +
       '<rect width="360" height="600" fill="url(#pp-round)"/><ellipse cx="164" cy="360" rx="190" ry="140" fill="url(#pp-warm)"/>' +
-      // the fire pit: a ring of stones, logs and flames that flicker
-      '<circle cx="160" cy="302" r="52" fill="url(#pp-warm)"/><g fill="#9C8F86" stroke="#7F736B" stroke-width="1.2">' + stones + '</g>' +
-      '<rect x="142" y="322" width="36" height="6" rx="3" fill="#6E4224" transform="rotate(-10 160 325)"/><rect x="142" y="322" width="36" height="6" rx="3" fill="#8B5530" transform="rotate(12 160 325)"/>' +
-      '<g class="flm"><path d="M146 326 Q140 308 152 296 Q150 310 158 314 Q160 302 168 294 Q166 308 174 304 Q180 316 172 326 Z" fill="#F28A2E"/></g>' +
-      '<g class="flm f2"><path d="M152 326 Q150 314 158 306 Q160 316 166 312 Q170 320 166 326 Z" fill="#FFD25A"/></g>' +
-      '<g fill="#8B5530" stroke="#6E4224" stroke-width="1"><rect x="196" y="318" width="26" height="7" rx="3.5"/><rect x="200" y="311" width="22" height="7" rx="3.5"/></g></svg>';
+      // the fireplace, built into the wall under the chimney: a stone arch with a wood mantel, a dark firebox with logs and flames that flicker, and a stone hearth
+      '<g class="hearth"><circle cx="178" cy="262" r="64" fill="url(#pp-warm)"/>' +
+      '<path d="M144 286 V240 Q144 204 178 204 Q212 204 212 240 V286 Z" fill="#B5AAA1" stroke="#8F837A" stroke-width="2"/>' +
+      '<path d="M144 232 H158 M198 232 H212 M144 258 H157 M199 258 H212 M151 232 V258 M205 232 V258 M150 214 L160 222 M206 214 L196 222 M178 204 V214" stroke="#9C8F86" stroke-width="1.4"/>' +
+      '<path d="M157 286 V244 Q157 222 178 222 Q199 222 199 244 V286 Z" fill="#3A2A24"/><rect x="136" y="198" width="84" height="8" rx="2" fill="#8B5530" stroke="#6E4224" stroke-width="1"/>' +
+      '<path d="M136 284 H220 L228 296 H128 Z" fill="#9C8F86" stroke="#7F736B" stroke-width="1.2"/>' +
+      '<rect x="160" y="276" width="36" height="6" rx="3" fill="#6E4224" transform="rotate(-10 178 279)"/><rect x="160" y="276" width="36" height="6" rx="3" fill="#8B5530" transform="rotate(12 178 279)"/>' +
+      '<g class="flm"><path d="M164 280 Q158 262 170 250 Q168 264 176 268 Q178 256 186 248 Q184 262 192 258 Q198 270 190 280 Z" fill="#F28A2E"/></g>' +
+      '<g class="flm f2"><path d="M170 280 Q168 268 176 260 Q178 270 184 266 Q188 274 184 280 Z" fill="#FFD25A"/></g>' +
+      '<g fill="#8B5530" stroke="#6E4224" stroke-width="1"><rect x="232" y="282" width="26" height="7" rx="3.5"/><rect x="236" y="275" width="22" height="7" rx="3.5"/></g></g></svg>';
   }
   // the eight things around the round room, near and far: [id, name, what it is, % across, % up, width in px when near, drawing]
   var ROOM = [
@@ -1112,10 +1122,10 @@
     '#pp-play .iitem{position:absolute;transform:translateX(-50%) scale(var(--d,1));transform-origin:50% 100%;border:0;background:none;padding:0 0 18px;cursor:pointer;-webkit-tap-highlight-color:transparent}#pp-play .iitem svg{display:block;width:100%;height:auto;overflow:visible;transition:filter .2s}' +
     '#pp-play .iitem .itag{position:absolute;left:50%;bottom:0;transform:translateX(-50%) scale(calc(1 / var(--d,1)));transform-origin:50% 100%;white-space:nowrap;background:rgba(255,255,255,.85);color:#13324A;border-radius:99px;padding:1px 8px;font:900 11.5px/16px ' + F + '}' +
     '#pp-play .iitem.near svg{filter:drop-shadow(0 0 6px #FFE58A) drop-shadow(0 0 2px #fff);animation:ppnear .9s ease-in-out infinite alternate}#pp-play .iitem.near .itag{background:#F7B955}#pp-play .iitem:focus-visible{outline:3px solid #fff;outline-offset:2px;border-radius:12px}@keyframes ppnear{to{transform:translateY(-4px)}}' +
-    '#pp-play .igl .flm{transform-box:fill-box;transform-origin:50% 100%;animation:ppflm .45s ease-in-out infinite alternate}#pp-play .igl .flm.f2{animation-duration:.33s}@keyframes ppflm{to{transform:scale(.88,1.12)}}#pp-play .igl .bulb{animation:ppglow 1.6s ease-in-out infinite alternate}#pp-play .igl .bulb:nth-of-type(2n){animation-delay:.8s}' +
+    '#pp-play .igl .flm{transform-box:fill-box;transform-origin:50% 100%;animation:ppflm .45s ease-in-out infinite alternate}#pp-play .igl .flm.f2{animation-duration:.33s}@keyframes ppflm{to{transform:scale(.88,1.12)}}#pp-play .igl .bulb{animation:ppglow 1.6s ease-in-out infinite alternate}#pp-play .smk circle{opacity:.7;transform-box:fill-box;transform-origin:center;animation:ppsmk 3s ease-out infinite backwards}#pp-play .smk circle:nth-child(2){animation-delay:1s}#pp-play .smk circle:nth-child(3){animation-delay:2s}@keyframes ppsmk{0%{opacity:0;transform:translate(0,14px) scale(.5)}25%{opacity:.8}100%{opacity:0;transform:translate(4px,-10px) scale(1.4)}}#pp-play .igl .bulb:nth-of-type(2n){animation-delay:.8s}' +
     '#pp-play .iplay{position:absolute;left:14px;bottom:calc(24px + env(safe-area-inset-bottom));z-index:60;border:0;border-radius:99px;background:#3FAF6B;color:#fff;font:900 17px ' + F + ';padding:14px 20px;box-shadow:0 4px 0 #2B8550,0 8px 18px rgba(0,0,0,.2);cursor:pointer;animation:pppop .25s ease-out}#pp-play .iplay[hidden]{display:none}@keyframes pppop{from{transform:scale(.6);opacity:0}}' +
     '#pp-play .ijoy{position:absolute;right:16px;bottom:calc(16px + env(safe-area-inset-bottom));z-index:60;width:112px;height:112px;border-radius:50%;background:rgba(255,255,255,.55);box-shadow:inset 0 0 0 2px rgba(19,50,74,.2);display:flex;align-items:center;justify-content:center;touch-action:none;cursor:grab}#pp-play .ijoy i{width:50px;height:50px;border-radius:50%;background:#13324A;box-shadow:0 4px 10px rgba(19,50,74,.3);pointer-events:none}#pp-play .ijoy.on i{background:#237566}' +
-    '@media (prefers-reduced-motion: reduce){#pp-play .walker{transition:none}#pp-play .pen,#pp-play .walker .pen.eat,#pp-play .walker .pen.tk,#pp-play .flm,#pp-play .bulb,#pp-play .glow,#pp-play .iitem.near svg,#pp-play .iplay{animation:none}}' +
+    '@media (prefers-reduced-motion: reduce){#pp-play .walker{transition:none}#pp-play .pen,#pp-play .walker .pen.eat,#pp-play .walker .pen.tk,#pp-play .flm,#pp-play .bulb,#pp-play .smk circle,#pp-play .glow,#pp-play .iitem.near svg,#pp-play .iplay{animation:none}}' +
     '.pp-heart{position:fixed;z-index:99990;font-size:24px;pointer-events:none;animation:pphrt 1.2s ease-out forwards}@keyframes pphrt{to{transform:translateY(-70px) scale(1.4);opacity:0}}' +
     '.pp-drag{position:fixed;z-index:99990;font-size:40px;pointer-events:none;transform:translate(-50%,-60%)}' +
     '.pp-pt{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);z-index:99970;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:16px;padding:9px 14px;font:800 14px ' + F + ';box-shadow:0 8px 20px rgba(0,0,0,.15);max-width:86vw;text-align:center}.pp-pt.out{opacity:0;transition:.35s}';
