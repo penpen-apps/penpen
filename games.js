@@ -56,13 +56,17 @@
     stop();
     var G = GAMES[id], O = gset();
     function opts() { return chips('diff', DIFF, O.diff) + (id === 'honk' ? chips('scene', SCENES, O.scene) : ''); }
-    host.innerHTML = '<div class="gx" data-g="' + id + '"><div class="gtop"><button type="button" class="gback" aria-label="Back to games">‹ Games</button><b>' + G.t + '</b><button type="button" class="ghelp" aria-label="How to play" title="How to play">?</button><span class="gs">0</span></div>' +
+    // the game fills the phone: the picture runs edge to edge under a floating back arrow, How to play and the score, with the controls in a band at the bottom
+    host.innerHTML = '<div class="gx" data-g="' + id + '" role="region" aria-label="' + G.t + '"><div class="gtop"><button type="button" class="gback" aria-label="Back to games">‹</button><button type="button" class="ghelp" aria-label="How to play" title="How to play">?</button><span class="gs" aria-label="Score">0</span></div>' +
       '<div class="gstage"><canvas></canvas><div class="gover"><button type="button" class="gstart"><span>▶</span>Start</button><p>' + G.how + '</p><button type="button" class="ghow">How to play</button>' + opts() + '</div></div><div class="gctl"></div>' +
       '<dialog class="ghd" aria-label="How to play ' + G.t + '"><b>How to play ' + G.t + '</b><p>' + HELP[id][0] + '</p><ol>' + HELP[id][1].map(function (x) { return '<li>' + x + '</li>'; }).join('') + '</ol><form method="dialog"><button>Got it</button></form></dialog></div>';
-    var cv = $('canvas', host), stage = $('.gstage', host), W = Math.min(host.clientWidth || 340, 480), H = Math.round(Math.min(Math.max(300, innerHeight - 330), W * 1.3));
-    var dpr = Math.min(2, window.devicePixelRatio || 1); cv.width = W * dpr; cv.height = H * dpr; cv.style.width = W + 'px'; cv.style.height = H + 'px'; stage.style.height = H + 'px';
+    // size the picture to the space the screen gives it (no layout, as in tests: the old phone-sized box); wide screens keep a phone-width picture
+    var cv = $('canvas', host), stage = $('.gstage', host), W = Math.min(stage.clientWidth || host.clientWidth || 340, stage.clientWidth ? 600 : 480), H = Math.round(stage.clientHeight || Math.min(Math.max(300, innerHeight - 330), W * 1.3));
+    var dpr = Math.min(2, window.devicePixelRatio || 1); cv.width = W * dpr; cv.height = H * dpr; cv.style.width = W + 'px'; cv.style.height = H + 'px'; if (!stage.clientHeight) stage.style.height = H + 'px';
     var c = cv.getContext('2d'); c.scale(dpr, dpr);
-    var S = { id: id, host: host, c: c, W: W, H: H, keys: {}, raf: 0, on: false, score: 0, done: done, game: null, diff: DIFF[O.diff][1], scene: O.scene };
+    // S.top: how far down the picture the floating ‹ ? score bar reaches, so games keep their own top text and the player clear of it
+    var sr = stage.getBoundingClientRect(), top = sr.height ? Math.max(0, Math.round($('.gtop', host).getBoundingClientRect().bottom - sr.top)) : 0;
+    var S = { id: id, host: host, c: c, W: W, H: H, top: top, keys: {}, raf: 0, on: false, score: 0, done: done, game: null, diff: DIFF[O.diff][1], scene: O.scene };
     cur = S;
     var over = $('.gover', host), ctl = $('.gctl', host);
     $('.gback', host).onclick = function () { stop(); if (done) done(null); };
@@ -250,11 +254,13 @@
   };
 
   /* ---------- Chase: a little maze, a hungry polar bear ---------- */
+  // a tall phone gets a taller level (17 rows, same width), so the maze fills the screen; shorter screens keep the 13-row one
+  var TALL = ['###########', '#.........#', '#.##.#.##.#', '#*#..#..#*#', '#.#.###.#.#', '#.........#', '###.#.#.###', '#...#.#...#', '#.###.###.#', '#.........#', '#.#.###.#.#', '#.#.....#.#', '#.##.#.##.#', '#.........#', '#.##.#.##.#', '#*...#...*#', '###########'];
   var MAZE = ['###########', '#.........#', '#.##.#.##.#', '#*#..#..#*#', '#.#.###.#.#', '#.........#', '###.#.#.###', '#...#.#...#', '#.###.###.#', '#.........#', '#.##.#.##.#', '#*...#...*#', '###########'];
   MAKERS.chase = function (S) {
-    var c = S.c, W = S.W, H = S.H, R = MAZE.length, C = MAZE[0].length, cs = Math.floor(Math.min(W / C, H / R)), ox = (W - cs * C) / 2, oy = (H - cs * R) / 2;
-    var grid = MAZE.map(function (r) { return r.split(''); }), lives = 3, lvl = 1;
-    var P = { r: 9, c: 5, fr: 9, fc: 5, d: null, want: null, p: 1 }, B = { r: 5, c: 5, fr: 5, fc: 5, p: 1 }, frozen = 0;
+    var c = S.c, W = S.W, H = S.H, T = S.top ? S.top + 20 : 0, M = (H - T) * MAZE[0].length / W >= 16 ? TALL : MAZE, R = M.length, C = M[0].length, cs = Math.floor(Math.min(W / C, (H - T) / R)), ox = (W - cs * C) / 2, oy = T + (H - T - cs * R) / 2;   // the maze sits below the floating bar, room for the hearts line above it
+    var grid = M.map(function (r) { return r.split(''); }), lives = 3, lvl = 1, PR = R - 4;   // penpen starts 4 rows up from the bottom, the bear in row 5
+    var P = { r: PR, c: 5, fr: PR, fc: 5, d: null, want: null, p: 1 }, B = { r: 5, c: 5, fr: 5, fc: 5, p: 1 }, frozen = 0;
     function left() { var n = 0; grid.forEach(function (r) { r.forEach(function (x) { if (x === '.' || x === '*') n++; }); }); return n; }
     function open(r, cc) { return grid[r] && grid[r][cc] && grid[r][cc] !== '#'; }
     var D = { up: [-1, 0], down: [1, 0], left: [0, -1], right: [0, 1] };
@@ -265,7 +271,7 @@
       while (p && !(p[0] === fr && p[1] === fc)) { cur2 = p; p = prev[p[0] + ',' + p[1]]; }
       return cur2;
     }
-    function reset() { P.r = P.fr = 9; P.c = P.fc = 5; P.p = 1; P.d = P.want = null; B.r = B.fr = 5; B.c = B.fc = 5; B.p = 1; frozen = 1.5; }
+    function reset() { P.r = P.fr = PR; P.c = P.fc = 5; P.p = 1; P.d = P.want = null; B.r = B.fr = 5; B.c = B.fc = 5; B.p = 1; frozen = 1.5; }
     return {
       press: function (k) { if (D[k]) P.want = k; },
       step: function (dt) {
@@ -276,7 +282,7 @@
           var e = grid[P.r][P.c]; if (e === '.') { grid[P.r][P.c] = ' '; S.add(1); } if (e === '*') { grid[P.r][P.c] = ' '; S.add(5); frozen = 5; }
           if (P.want && open(P.r + D[P.want][0], P.c + D[P.want][1])) P.d = P.want;
           if (P.d && open(P.r + D[P.d][0], P.c + D[P.d][1])) { P.r += D[P.d][0]; P.c += D[P.d][1]; } else P.p = 1;
-          if (!left()) { lvl++; grid = MAZE.map(function (r) { return r.split(''); }); reset(); S.add(20); }
+          if (!left()) { lvl++; grid = M.map(function (r) { return r.split(''); }); reset(); S.add(20); }
         }
         if (frozen > 0) frozen -= dt; else {
           B.p += dt * bs;
@@ -325,7 +331,7 @@
       step: function (dt) {
         var k = S.keys, sp = P.carry ? 120 : 150;
         var j = S.stick && Math.hypot(S.stick.x, S.stick.y) > 0.2 ? S.stick : null, mx = j ? j.x : (k.right ? 1 : 0) - (k.left ? 1 : 0), my = j ? j.y : (k.down ? 1 : 0) - (k.up ? 1 : 0);
-        P.x = clamp(P.x + mx * sp * dt, 16, W - 16); P.y = clamp(P.y + my * sp * dt, 16, H - 16);
+        P.x = clamp(P.x + mx * sp * dt, 16, W - 16); P.y = clamp(P.y + my * sp * dt, S.top + 16, H - 16);
         time -= dt; honkT -= dt; saidT -= dt;
         if (!P.carry) for (var i = items.length - 1; i >= 0; i--) if (Math.hypot(items[i].x - P.x, items[i].y - P.y) < 26) { P.carry = items[i].k; items.splice(i, 1); break; }
         if (P.carry && Math.hypot(nest.x - P.x, nest.y - P.y) < 48) { S.add(10); P.carry = null; said = 'Mine now! 😈'; saidT = 1; }
@@ -356,7 +362,7 @@
         drawPen(c, P.x, P.y, 52, honkT > 0 ? -0.15 : 0); if (P.carry) emoji(c, P.carry, P.x + 18, P.y - 18, 20);
         if (honkT > 0) { c.strokeStyle = 'rgba(19,50,74,.35)'; c.lineWidth = 3; c.beginPath(); c.arc(P.x, P.y, 70 * (1 - honkT / 0.35) + 10, 0, 7); c.stroke(); }
         if (saidT > 0) txt(c, said, P.x, P.y - 40, 16, '#13324A');
-        txt(c, '❤️'.repeat(Math.max(0, lives)) + '   ⏱ ' + Math.ceil(time) + '   Lv ' + lvl + ' · goal ' + goal(), 8, 14, 14, '#13324A', 'left');
+        txt(c, '❤️'.repeat(Math.max(0, lives)) + '   ⏱ ' + Math.ceil(time) + '   Lv ' + lvl + ' · goal ' + goal(), 8, S.top + 14, 14, '#13324A', 'left');
       }
     };
   };
@@ -547,15 +553,18 @@
     }
   }
 
-  var css = '.gx{font-family:' + F + '}.gx .gtop{display:flex;align-items:center;gap:8px;margin-bottom:8px}.gx .gtop b{flex:1;font-size:18px;font-weight:900;text-align:center}.gx .gs{font-weight:900;font-size:18px;min-width:60px;text-align:right}' +
-    '.gx .gback{border:0;background:var(--chip,#EEE);color:inherit;border-radius:99px;padding:8px 12px;font:800 14px ' + F + '}' +
-    '.gx .gstage{position:relative;border-radius:22px;overflow:hidden;box-shadow:0 6px 20px rgba(19,50,74,.15)}.gx canvas{display:block;touch-action:none}' +
+  // full screen: .gx covers the phone; the stage takes all the height the control band leaves (the band is a fixed height, so the picture never resizes mid-game)
+  var css = '.gx{font-family:' + F + ';position:fixed;inset:0;z-index:70;display:flex;flex-direction:column;background:#CFE2EE;color:#13324A}' +
+    '.gx .gtop{position:absolute;top:calc(8px + env(safe-area-inset-top));left:8px;right:8px;z-index:3;display:flex;align-items:center;gap:8px;pointer-events:none}.gx .gtop>*{pointer-events:auto}' +
+    '.gx .gtop .ghelp{margin-left:auto}.gx .gs{font-weight:900;font-size:16px;min-width:44px;text-align:center;background:rgba(255,255,255,.9);color:#13324A;border-radius:99px;padding:6px 12px}' +
+    '.gx .gback{width:40px;height:40px;flex:none;border:0;border-radius:50%;background:rgba(255,255,255,.9);color:#13324A;font:900 24px/1 ' + F + ';padding:0 0 3px;cursor:pointer}' +
+    '.gx .gstage{position:relative;flex:1;min-height:0;overflow:hidden;display:flex;justify-content:center;background:#BFE0F2}.gx canvas{display:block;touch-action:none}' +
     '.gx .gover{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:rgba(246,241,232,.55);backdrop-filter:blur(2px);padding:20px;text-align:center}.gx .gover p{margin:0;font-weight:800;font-size:15px;color:#13324A;max-width:300px;background:rgba(255,255,255,.85);border-radius:16px;padding:10px 12px}' +
     '.gstart{width:130px;height:130px;border-radius:50%;border:0;background:#237566;color:#fff;font:900 18px ' + F + ';display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;box-shadow:0 0 0 10px rgba(35,117,102,.18);animation:gpulse 1.6s ease-in-out infinite;cursor:pointer}.gstart span{font-size:38px;line-height:1}' +
     '.gstart.sm{width:110px;height:110px;margin:16px auto 0;font-size:15px}@keyframes gpulse{50%{box-shadow:0 0 0 18px rgba(35,117,102,.08)}}' +
     '.gx .gclose{border:0;background:rgba(255,255,255,.92);color:#13324A;border-radius:99px;padding:10px 18px;font:900 15px ' + F + ';cursor:pointer}.gx .gres{background:#fff;border-radius:18px;padding:12px 16px}.gx .gres b{display:block;font-size:20px;font-weight:900;color:#13324A}.gx .gres span{font-weight:800;color:#3B5568}' +
     '.gcd{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:900 110px ' + F + ';color:#fff;text-shadow:0 6px 24px rgba(19,50,74,.45);pointer-events:none}.gcd.pop{animation:gcd .7s ease-out}.gcd.go{font-size:80px;color:#F2A33A}@keyframes gcd{from{transform:scale(1.8);opacity:0}30%{opacity:1}to{transform:scale(1)}}' +
-    '.gctl{display:flex;gap:10px;justify-content:center;margin-top:12px;min-height:74px;flex-wrap:wrap}.gctl button{width:74px;height:74px;border-radius:50%;border:0;background:#13324A;color:#fff;font:900 26px ' + F + ';touch-action:none;user-select:none;-webkit-user-select:none;cursor:pointer}.gctl button.on{background:#237566;transform:scale(.94)}' +
+    '.gctl{flex:none;box-sizing:border-box;height:calc(150px + env(safe-area-inset-bottom));padding:0 12px env(safe-area-inset-bottom);display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap}.gctl button{width:74px;height:74px;border-radius:50%;border:0;background:#13324A;color:#fff;font:900 26px ' + F + ';touch-action:none;user-select:none;-webkit-user-select:none;cursor:pointer}.gctl button.on{background:#237566;transform:scale(.94)}' +
     '.gctl.lr button{width:120px;border-radius:40px}.gctl.stk{align-items:center;gap:22px}.gjoy{width:128px;height:128px;border-radius:50%;background:var(--chip,#E3EDF3);box-shadow:inset 0 0 0 2px rgba(19,50,74,.18);display:flex;align-items:center;justify-content:center;touch-action:none;cursor:grab}.gjoy i{width:56px;height:56px;border-radius:50%;background:#13324A;box-shadow:0 4px 10px rgba(19,50,74,.3);pointer-events:none}.gjoy.on i{background:#237566}.gctl button[data-k=honk]{height:72px!important}.gctl,.gctl button,.gx{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}.gctl button[data-k="honk"]{width:96px;border-radius:40px;background:#F2A33A;color:#13324A;font-size:18px}' +
     '.qz{font-family:' + F + ';text-align:center}.qz .prof{display:inline-block;animation:pphop 2s ease-in-out infinite}.qz .prof.yay{animation:qyay .6s ease-out 2}.qz .prof.hmm{animation:qhmm .5s ease-in-out 2}@keyframes qyay{50%{transform:translateY(-14px) rotate(-5deg)}}@keyframes qhmm{25%{transform:rotate(-8deg)}75%{transform:rotate(8deg)}}' +
     '.qz .qb{background:var(--card,#fff);border-radius:22px;padding:14px 16px;margin:6px 0 12px;position:relative}.qz .qb:before{content:"";position:absolute;top:-9px;left:50%;margin-left:-9px;border:9px solid transparent;border-top:0;border-bottom-color:var(--card,#fff)}' +
@@ -566,10 +575,9 @@
     '.sg{font-family:' + F + ';text-align:center}.sg .sgpen{position:relative;display:inline-block}.sg .sgpen .sgm{position:absolute;right:-18px;bottom:8px;font-size:28px;background:none!important;width:auto!important;height:auto!important}.sg .sgpen.on svg{animation:qyay .5s ease-in-out infinite}' +
     '.sg .sglist{display:flex;flex-direction:column;gap:8px;margin:8px 0}.sg .sglist button{border:0;background:var(--card,#fff);color:inherit;border-radius:18px;padding:12px 14px;text-align:left;font:inherit;cursor:pointer}.sg .sglist b{display:block;font-weight:900}.sg .sglist small{color:var(--muted,#6B7C8A);font-weight:700}' +
     '.sg .sglyr{background:#13324A;color:#9FB4C4;border-radius:22px;padding:14px;margin:10px 0}.sg .sglyr b{display:block;color:#fff;margin-bottom:6px}.sg .sglyr p{margin:6px 0;font:900 20px/1.4 ' + F + '}.sg .sglyr span.now{color:#F2A33A}.sg .sglyr span.sung{color:#fff}.sg .sglyr button{margin-top:10px;border:0;border-radius:99px;padding:10px 22px;font:900 15px ' + F + ';background:#F2A33A;color:#13324A;cursor:pointer}' +
-    '.lrn{font-family:' + F + '}.lrh{display:flex;align-items:center;gap:8px;margin-bottom:8px}.lrh b{font-size:18px;font-weight:900;flex:1}.lrh small{color:var(--muted,#7A8B99);font-weight:800}.lrx{border:0;background:none;font-size:18px;padding:4px}.lrmsg{background:var(--accentSoft,#E3F3EF);border-radius:14px;padding:10px 12px;font-weight:800;margin:6px 0}.lrlang{display:flex;gap:8px;margin:6px 0 10px}.lrlang button{flex:1;border:1.5px solid #237566;background:none;color:#237566;border-radius:99px;padding:8px;font:800 14px ' + F + '}.lrlang button.on{background:#237566;color:#fff}.lrlist{display:grid;grid-template-columns:1fr 1fr;gap:10px}.lrlist button{border:0;background:var(--card,#fff);color:inherit;border-radius:20px;padding:14px 8px;font:inherit;min-height:110px;box-shadow:0 1px 3px rgba(0,0,0,.06)}.lrlist span{display:block;font-size:34px}.lrlist b{display:block;font-weight:900;margin-top:4px}.lrlist small{color:var(--muted,#7A8B99);font-weight:700}.lrtip{font-size:13px;color:var(--muted,#7A8B99);text-align:center;margin-top:10px}.lrbar{height:8px;border-radius:99px;background:var(--line,#E5E9EC);overflow:hidden;margin-bottom:14px}.lrbar i{display:block;height:100%;background:#F2A33A;border-radius:99px;transition:width .3s}.lrcard{background:var(--card,#fff);border-radius:24px;padding:24px 16px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.06)}.lrcard small{display:block;color:var(--muted,#7A8B99);font-weight:800;font-size:15px}.lrcard b{display:block;font-size:28px;font-weight:900;margin:8px 0 14px;color:#237566}.lrcard button{border:1.5px solid var(--line,#E5E9EC);background:none;border-radius:99px;padding:8px 14px;font:800 14px ' + F + ';color:inherit}.lrgo{display:block;width:100%;margin-top:14px;border:0;border-radius:18px;padding:15px;background:#237566;color:#fff;font:900 17px ' + F + '}.lropts{display:flex;flex-direction:column;gap:10px;margin-top:14px}.lropts button{border:1.5px solid var(--line,#E5E9EC);background:var(--card,#fff);color:inherit;border-radius:18px;padding:14px;font:800 17px ' + F + '}.lropts button.ok{background:#DFF3E4;border-color:#3FA55B}.lropts button.no{background:#FBE3E0;border-color:#D9534F}' +
-    '.gcards{display:grid;grid-template-columns:1fr 1fr;gap:10px}.gcards button{border:0;background:var(--card,#fff);color:inherit;border-radius:20px;padding:16px 10px;font:inherit;cursor:pointer;min-height:120px}.gcards span{display:block;font-size:40px}.gcards b{display:block;font-weight:900;font-size:16px;margin-top:4px}.gcards small{display:block;color:var(--muted,#6B7C8A);font-weight:700;font-size:12px}';
+    '.lrn{font-family:' + F + '}.lrh{display:flex;align-items:center;gap:8px;margin-bottom:8px}.lrh b{font-size:18px;font-weight:900;flex:1}.lrh small{color:var(--muted,#7A8B99);font-weight:800}.lrx{border:0;background:none;font-size:18px;padding:4px}.lrmsg{background:var(--accentSoft,#E3F3EF);border-radius:14px;padding:10px 12px;font-weight:800;margin:6px 0}.lrlang{display:flex;gap:8px;margin:6px 0 10px}.lrlang button{flex:1;border:1.5px solid #237566;background:none;color:#237566;border-radius:99px;padding:8px;font:800 14px ' + F + '}.lrlang button.on{background:#237566;color:#fff}.lrlist{display:grid;grid-template-columns:1fr 1fr;gap:10px}.lrlist button{border:0;background:var(--card,#fff);color:inherit;border-radius:20px;padding:14px 8px;font:inherit;min-height:110px;box-shadow:0 1px 3px rgba(0,0,0,.06)}.lrlist span{display:block;font-size:34px}.lrlist b{display:block;font-weight:900;margin-top:4px}.lrlist small{color:var(--muted,#7A8B99);font-weight:700}.lrtip{font-size:13px;color:var(--muted,#7A8B99);text-align:center;margin-top:10px}.lrbar{height:8px;border-radius:99px;background:var(--line,#E5E9EC);overflow:hidden;margin-bottom:14px}.lrbar i{display:block;height:100%;background:#F2A33A;border-radius:99px;transition:width .3s}.lrcard{background:var(--card,#fff);border-radius:24px;padding:24px 16px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.06)}.lrcard small{display:block;color:var(--muted,#7A8B99);font-weight:800;font-size:15px}.lrcard b{display:block;font-size:28px;font-weight:900;margin:8px 0 14px;color:#237566}.lrcard button{border:1.5px solid var(--line,#E5E9EC);background:none;border-radius:99px;padding:8px 14px;font:800 14px ' + F + ';color:inherit}.lrgo{display:block;width:100%;margin-top:14px;border:0;border-radius:18px;padding:15px;background:#237566;color:#fff;font:900 17px ' + F + '}.lropts{display:flex;flex-direction:column;gap:10px;margin-top:14px}.lropts button{border:1.5px solid var(--line,#E5E9EC);background:var(--card,#fff);color:inherit;border-radius:18px;padding:14px;font:800 17px ' + F + '}.lropts button.ok{background:#DFF3E4;border-color:#3FA55B}.lropts button.no{background:#FBE3E0;border-color:#D9534F}';
   css += '.gx .gopt{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}.gx .gopt button{border:0;background:rgba(255,255,255,.88);color:#13324A;border-radius:99px;padding:8px 12px;min-height:36px;font:800 14px ' + F + ';cursor:pointer}.gx .gopt button[aria-pressed="true"]{background:#13324A;color:#fff}';
-  css += '.gx .ghelp{width:36px;height:36px;flex:none;border-radius:50%;border:0;background:var(--chip,#EEE);color:inherit;font:900 18px ' + F + ';cursor:pointer}.gx .gs{min-width:44px}' +
+  css += '.gx .ghelp{width:40px;height:40px;flex:none;border-radius:50%;border:0;background:rgba(255,255,255,.9);color:#13324A;font:900 18px ' + F + ';cursor:pointer}' +
     '.gx .ghow{border:0;background:rgba(255,255,255,.88);color:#13324A;border-radius:99px;padding:8px 14px;min-height:36px;font:800 14px ' + F + ';text-decoration:underline;cursor:pointer}' +
     '.ghd{border:0;border-radius:22px;padding:18px 18px 14px;max-width:min(340px,calc(100vw - 32px));background:#fff;color:#13324A;font:700 15px/1.4 ' + F + ';box-shadow:0 10px 40px rgba(19,50,74,.3)}.ghd::backdrop{background:rgba(19,50,74,.45)}.ghd[open]{position:fixed;inset:0;margin:auto;height:fit-content;max-height:calc(100vh - 32px);overflow:auto;z-index:50}' +
     '.ghd b{display:block;font-size:19px;font-weight:900}.ghd p{margin:6px 0 4px;font-weight:800}.ghd ol{margin:6px 0 12px;padding-left:22px}.ghd li{margin:6px 0}.ghd li b{display:inline;font-size:inherit}.ghd form{margin:0}.ghd form button{width:100%;min-height:48px;border:0;border-radius:16px;background:#237566;color:#fff;font:900 16px ' + F + ';cursor:pointer}';
@@ -577,7 +585,6 @@
 
   window.ppGames = {
     list: GAMES,
-    cards: function (best) { return '<div class="gcards">' + Object.keys(GAMES).map(function (k) { return '<button type="button" data-game="' + k + '"><span>' + GAMES[k].e + '</span><b>' + GAMES[k].t + '</b><small>' + (best && best[k] ? 'Best ' + best[k] : 'Works offline') + '</small></button>'; }).join('') + '</div>'; },
     open: function (id, host, done) { return shell(host, id, done); }, quiz: quiz, learn: learn, sing: sing, stop: stop, _m: MAKERS
   };
 })();
